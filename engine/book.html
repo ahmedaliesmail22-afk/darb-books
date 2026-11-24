@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<!-- =============================================================================
+اسم الملف: book.html (الكتاب والكتيب التشريحي التفاعلي ثلاثي الأبعاد لمنظومة «درب»)
+المسار: dist/book.html
+الوظيفة والغرض الأساسي:
+  واجهة عرض واستعراض تفاعلية مجسمة (3D Interactive Flipbook) تحاكي تصفح كتاب ورقي
+  حقيقي بغلاف جلدي مذهب، ومؤثرات حركية، وأصوات تقليب الورق الحية، مع فهرس تفاعلي
+  كامل يغطي كافة أبواب ومكونات المنظومة المشروحة في DARB_ANATOMICAL_BOOK.md.
+
+المعمارية التقنية والمؤثرات:
+  - محرك ثلاثي الأبعاد (CSS 3D Transforms / Perspective / Shading) بدون مكتبات خارجية.
+  - محرك صوتي اصطناعي لتقليب الورق (Procedural Web Audio API Sound Synthesis).
+  - دعم العرض المزدوج (Dual-Page Spread) للحواسيب والعرض الفردي المتجاوب للهواتف الذكية.
+  - بنية كائنية معيارية قابلة للإضافة والتحديث الدائم عبر مصفوفة PAGES.
+  - دعم ثيمات متعددة: ورق المخطوطات (Sepia)، الثيم الليلي (Dark)، وورق الطباعة (Light).
+============================================================================= -->
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>سِفْرُ دَرْب — الكتاب التشريحي التفاعلي للمنظومة</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg-dark: #0a0e17;
+    --paper-sepia: #fbf7ee;
+    --paper-sepia-txt: #2c251e;
+    --paper-sepia-line: #e3d9c6;
+    --paper-dark: #141c2c;
+    --paper-dark-txt: #e2e8f0;
+    --paper-dark-line: #24324a;
+    --gold: #d4af37;
+    --gold-light: #f3e5ab;
+    --gold-dark: #997a15;
+    --leather: #1c130d;
+    --accent: #3b82f6;
+    --spine-shadow: rgba(0, 0, 0, 0.22);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    overflow: hidden; background: var(--bg-dark);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Amiri", "Traditional Arabic", Tahoma, sans-serif;
+    display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+    user-select: none;
+  }
+
+  /* Header Top Bar */
+  .top-bar {
+    width: 100%; height: 50px; background: rgba(12, 17, 29, 0.85);
+    backdrop-filter: blur(10px); border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 18px; z-index: 100; color: var(--gold-light);
+  }
+  .book-brand {
+    display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+  .brand-icon {
+    font-size: 20px; filter: drop-shadow(0 0 6px var(--gold));
+  }
+  .top-actions {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .icon-btn {
+    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(212, 175, 55, 0.3);
+    color: var(--gold-light); border-radius: 8px; width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    font-size: 15px; transition: all 0.2s;
+  }
+  .icon-btn:hover { background: rgba(212, 175, 55, 0.2); transform: translateY(-1px); }
+  .icon-btn:active { transform: scale(0.95); }
+
+  /* 3D Stage Environment */
+  .stage {
+    flex: 1; width: 100%; display: flex; justify-content: center; align-items: center;
+    perspective: 2200px; padding: 12px; position: relative;
+    background: radial-gradient(circle at center, #182236 0%, #080c14 100%);
+  }
+
+  /* The 3D Book Container */
+  .book {
+    position: relative; width: 920px; height: 600px;
+    transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.7), 0 0 100px rgba(212, 175, 55, 0.1);
+  }
+
+  /* Book Spread Wrapper (Left & Right Pages) */
+  .spread {
+    display: flex; width: 100%; height: 100%; position: absolute;
+    top: 0; left: 0; border-radius: 12px; overflow: hidden;
+  }
+
+  /* Single Page Leaf */
+  .page-leaf {
+    width: 50%; height: 100%; position: relative;
+    padding: 38px 34px 44px; overflow-y: auto; overflow-x: hidden;
+    background: var(--paper-sepia); color: var(--paper-sepia-txt);
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* Custom Scrollbar */
+  .page-leaf::-webkit-scrollbar { width: 4px; }
+  .page-leaf::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.4); border-radius: 4px; }
+
+  /* Right Page Spine Shadow */
+  .page-leaf.right-leaf {
+    border-top-right-radius: 12px; border-bottom-right-radius: 12px;
+    box-shadow: inset -22px 0 28px -10px var(--spine-shadow);
+    border-left: 1px solid rgba(0,0,0,0.12);
+  }
+
+  /* Left Page Spine Shadow */
+  .page-leaf.left-leaf {
+    border-top-left-radius: 12px; border-bottom-left-radius: 12px;
+    box-shadow: inset 22px 0 28px -10px var(--spine-shadow);
+  }
+
+  /* Book Spine Physical Seam */
+  .book-spine-line {
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 3px;
+    transform: translateX(-50%); background: linear-gradient(to right, rgba(0,0,0,0.35), rgba(212,175,55,0.4), rgba(0,0,0,0.35));
+    z-index: 10; pointer-events: none;
+  }
+
+  /* Theme: Dark Paper */
+  body.theme-dark .page-leaf {
+    background: var(--paper-dark); color: var(--paper-dark-txt);
+  }
+  body.theme-dark .page-leaf.right-leaf { border-left-color: rgba(255,255,255,0.06); }
+
+  /* Theme: Crisp White */
+  body.theme-light .page-leaf {
+    background: #ffffff; color: #1a202c;
+  }
+
+  /* Book Cover Style (Front & Back) */
+  .page-cover {
+    background: radial-gradient(circle at 40% 30%, #342416 0%, #150e09 100%) !important;
+    color: var(--gold-light) !important;
+    display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+    border: 3px solid var(--gold); border-radius: 12px;
+    box-shadow: inset 0 0 35px rgba(0,0,0,0.85); text-align: center; padding: 40px 28px;
+    position: relative; overflow: hidden;
+  }
+  .page-cover::before {
+    content: ''; position: absolute; inset: 12px;
+    border: 1px dashed rgba(212, 175, 55, 0.5); border-radius: 8px; pointer-events: none;
+  }
+  .cover-emblem {
+    font-size: 68px; filter: drop-shadow(0 0 15px var(--gold));
+    margin-top: 15px; animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+  }
+  .cover-title {
+    font-size: 32px; font-weight: 900; margin: 10px 0 6px; color: var(--gold);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9), 0 0 20px rgba(212, 175, 55, 0.4);
+    letter-spacing: 1px;
+  }
+  .cover-subtitle {
+    font-size: 15px; color: var(--gold-light); opacity: 0.9; line-height: 1.6;
+    max-width: 85%;
+  }
+  .cover-badges {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 15px;
+  }
+  .cover-badge {
+    background: rgba(212, 175, 55, 0.15); border: 1px solid var(--gold);
+    color: var(--gold-light); font-size: 12px; padding: 4px 12px; border-radius: 20px;
+  }
+  .cover-footer {
+    font-size: 12px; opacity: 0.75; letter-spacing: 0.5px;
+  }
+
+  /* Page Content Typography */
+  .page-header-tag {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--gold); padding-bottom: 6px; margin-bottom: 18px;
+    font-size: 12px; color: var(--gold-dark); font-weight: 700;
+  }
+  body.theme-dark .page-header-tag { color: var(--gold); }
+  .page-title {
+    font-size: 20px; font-weight: 800; margin: 0 0 12px; color: #1e293b;
+    display: flex; align-items: center; gap: 8px;
+  }
+  body.theme-dark .page-title { color: #f8fafc; }
+  .page-body {
+    font-size: 13.5px; line-height: 1.85; text-align: justify;
+  }
+  .page-body p { margin: 0 0 12px; }
+  .page-body strong { color: var(--gold-dark); }
+  body.theme-dark .page-body strong { color: var(--gold-light); }
+
+  /* Interactive Elements in Book */
+  .callout {
+    background: rgba(212, 175, 55, 0.1); border-right: 3px solid var(--gold);
+    padding: 10px 14px; border-radius: 6px; margin: 12px 0; font-size: 13px;
+  }
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0;
+  }
+  .stat-box {
+    background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 8px; padding: 10px; text-align: center;
+  }
+  body.theme-dark .stat-box {
+    background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08);
+  }
+  .stat-num { font-size: 22px; font-weight: 800; color: var(--gold); display: block; }
+  .stat-label { font-size: 11px; opacity: 0.8; }
+
+  /* Table of Contents Index Cards */
+  .toc-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 12px; margin-bottom: 8px; border-radius: 8px;
+    background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06);
+    cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 600;
+  }
+  body.theme-dark .toc-item {
+    background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.06);
+  }
+  .toc-item:hover {
+    background: rgba(212, 175, 55, 0.15); border-color: var(--gold);
+    transform: translateX(-4px); color: var(--gold);
+  }
+  .toc-page-num {
+    background: var(--gold); color: #000; border-radius: 12px;
+    padding: 2px 8px; font-size: 11px; font-weight: bold;
+  }
+
+  /* Page Footer Numbers */
+  .page-footer {
+    position: absolute; bottom: 12px; left: 30px; right: 30px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; opacity: 0.65; border-top: 1px dashed rgba(0,0,0,0.15);
+    padding-top: 6px;
+  }
+  body.theme-dark .page-footer { border-top-color: rgba(255,255,255,0.15); }
+
+  /* Flip Animations */
+  .flip-anim-forward {
+    animation: flipForward 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .flip-anim-backward {
+    animation: flipBackward 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @keyframes flipForward {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(-18deg) scale(0.98); }
+    100% { transform: rotateY(0deg); }
+  }
+  @keyframes flipBackward {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(18deg) scale(0.98); }
+    100% { transform: rotateY(0deg); }
+  }
+
+  /* Control Dock Bottom Bar */
+  .bottom-dock {
+    width: 100%; height: 64px; background: rgba(12, 17, 29, 0.9);
+    backdrop-filter: blur(12px); border-top: 1px solid rgba(212, 175, 55, 0.25);
+    display: flex; justify-content: center; align-items: center; gap: 20px;
+    z-index: 100; padding: 0 20px;
+  }
+  .nav-arrow-btn {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    border: none; color: #000; font-weight: 800; font-size: 16px;
+    padding: 10px 22px; border-radius: 30px; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35); transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px; font-family: inherit;
+  }
+  .nav-arrow-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); }
+  .nav-arrow-btn:active { transform: scale(0.96); }
+  .page-indicator {
+    color: var(--gold-light); font-size: 14px; font-weight: 700;
+    min-width: 130px; text-align: center;
+  }
+  .progress-bar-container {
+    width: 180px; height: 6px; background: rgba(255,255,255,0.1);
+    border-radius: 3px; overflow: hidden; cursor: pointer;
+  }
+  .progress-fill {
+    height: 100%; width: 0%; background: var(--gold); transition: width 0.3s;
+  }
+
+  /* Responsive for Mobile Devices */
+  @media (max-width: 960px) {
+    .book { width: 100%; max-width: 480px; height: 92%; }
+    .spread { flex-direction: column; }
+    .page-leaf { width: 100%; height: 100%; border-radius: 12px !important; }
+    .page-leaf.left-leaf { display: none; }
+    .page-leaf.active-mobile { display: block; }
+    .book-spine-line { display: none; }
+    .progress-bar-container { display: none; }
+    .cover-title { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header Top Bar -->
+<header class="top-bar">
+  <div class="book-brand">
+    <span class="brand-icon">✨</span>
+    <span>سِفْرُ دَرْبِ التَّشْرِيحِيّ</span>
+  </div>
+  <div class="top-actions">
+    <button class="icon-btn" id="btnToc" title="الفهرس السريع">📑</button>
+    <button class="icon-btn" id="btnSound" title="كتم/تشغيل صوت الورق">🔊</button>
+    <button class="icon-btn" id="btnTheme" title="تبديل الثيم">📜</button>
+    <button class="icon-btn" id="btnFullscreen" title="ملء الشاشة">⛶</button>
+  </div>
+</header>
+
+<!-- 3D Book Stage -->
+<main class="stage" id="stage">
+  <div class="book" id="bookElement">
+    <!-- Physical Spine Line -->
+    <div class="book-spine-line"></div>
+    
+    <!-- Open Spread Container -->
+    <div class="spread">
+      <!-- Right Page (Earlier Page in RTL Arabic) -->
+      <article class="page-leaf right-leaf" id="rightPage">
+        <!-- Injected Dynamically -->
+      </article>
+
+      <!-- Left Page (Next Page in RTL Arabic) -->
+      <article class="page-leaf left-leaf" id="leftPage">
+        <!-- Injected Dynamically -->
+      </article>
+    </div>
+  </div>
+</main>
+
+<!-- Bottom Navigation Dock -->
+<footer class="bottom-dock">
+  <button class="nav-arrow-btn" id="btnPrev">
+    <span>السابق</span> ◀
+  </button>
+  
+  <div class="progress-bar-container" id="progressTrack">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <span class="page-indicator" id="pageIndicator">غلاف الكتاب</span>
+
+  <button class="nav-arrow-btn" id="btnNext">
+    ▶ <span>التالي</span>
+  </button>
+</footer>
+
+<script>
+// =============================================================================
+// المحرك التفاعلي ثلاثي الأبعاد وتقليب الصفحات (3D Flipbook Core Engine)
+// =============================================================================
+
+// التكامل مع واجهة Telegram WebApp
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+// -----------------------------------------------------------------------------
+// محرك الصوت الاصطناعي لتقليب الورق (Web Audio API Synthesizer)
+// -----------------------------------------------------------------------------
+let audioCtx = null;
+let soundEnabled = true;
+
+function playPaperTurnSound() {
+  if (!soundEnabled) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const bufferSize = audioCtx.sampleRate * 0.08; // 80ms
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1; // ضجيج أبيض
+    }
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1400; // تردد حفيف الورق الطبيعي
+    filter.Q.value = 3.0;
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.22, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    noise.start();
+  } catch (e) {
+    // تجاوز في حال تقييد الصوت من المتصفح
+  }
+}
+
+// -----------------------------------------------------------------------------
+// قاعدة بيانات صفحات الكتاب الكاملة (Modular Data-Driven Book Pages)
+// مستوحاة بالتفصيل من docs/DARB_ANATOMICAL_BOOK.md
+// -----------------------------------------------------------------------------
+const PAGES = [
+  // صفحة 0: الغلاف الخارجي الأمامي
+  {
+    isCover: true,
+    html: `
+      <div class="page-cover">
+        <div class="cover-emblem">📖</div>
+        <div>
+          <div class="cover-title">سِفْرُ دَرْب</div>
+          <div class="cover-subtitle">الكِتَابُ التَّشْرِيحِيُّ الكَامِلُ لِمَنْظُومَةِ التَّعْلِيمِ الذَّكِيِّ عَبْرَ تِيلِيجْرَام</div>
+          <div class="cover-badges">
+            <span class="cover-badge">نسخة الإنتاج المستقرة 2026</span>
+            <span class="cover-badge">78 ملفاً مشروحاً</span>
+            <span class="cover-badge">39 جدولاً معمارياً</span>
+            <span class="cover-badge">خالٍ تماماً من AI التوليدي</span>
+          </div>
+        </div>
+        <div class="cover-footer">
+          منشور كمرجع تشريحي مفتوح للمطورين والمراجعين والتربويين
+        </div>
+      </div>
+    `
+  },
+
+  // صفحة 1: صفحة التقديم والرؤية التأسيسية
+  {
+    header: "التقديم والرؤية المعمارية",
+    title: "✨ فلسفة تأسيس منصة «درب»",
+    html: `
+      <p>تُعد منصة <strong>«درب»</strong> قفزة نوعية في هندسة النظم المدرسية الذكية؛ إذ انطلقت من رؤية تهدف إلى كسر الحاجز التقني بين المدرسة والأسرة، واستبدال التطبيقات التقليدية المعقدة بواجهة تفاعلية فورية ومحبوبة يعيش فيها الجميع يومياً: <strong>تيليجرام</strong>.</p>
+      
+      <div class="callout">
+        <strong>الهدف الأسمى:</strong> تمكين الأسرة من متابعة التحصيل، الحضور، رصد الفجوات، والامتحانات الفصلية لحظة بلحظة، مع توفير بيئة تنافسية شيقة (التلعيب والنزالات 1v1) تحبب الطلاب في التعلم.
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box"><span class="stat-num">0.3s</span><span class="stat-label">سرعة استجابة الواجهات</span></div>
+        <div class="stat-box"><span class="stat-num">100%</span><span class="stat-label">حتمية بلا هلوسة علمية</span></div>
+        <div class="stat-box"><span class="stat-num">52</span><span class="stat-label">نقطة نهاية سحابية</span></div>
+        <div class="stat-box"><span class="stat-num">178</span><span class="stat-label">دالة استعلام في store.js</span></div>
+      </div>
+
+      <p>يستعرض هذا السفر تفاصيل البنية التحتية، وقاعدة البيانات، وآلة الحالات FSM، ومحركات الجدولة والتقارير، وصولاً إلى تطبيقات الويب المصغرة Mini Apps والسياسات القانونية.</p>
+    `
+  },
+
+  // صفحة 2: الفهرس العام التفاعلي (الأبواب 1 - 4)
+  {
+    header: "الفهرس العام التفاعلي (1/2)",
+    title: "📑 فهرس محتويات السفر",
+    html: `
+      <p>اضغط على أي باب للانتقال الفوري لصفحاته وتشريحه الهندسي:</p>
+      <div class="toc-item" onclick="goToPage(4)">
+        <span>الباب الأول: الأسس المعمارية والهندسية</span>
+        <span class="toc-page-num">ص 4</span>
+      </div>
+      <div class="toc-item" onclick="goToPage(6)">
+        <span>الباب الثاني: التشريح الهيكلي لقاعدة البيانات (39 جدولاً)</span>
+        <span class="toc-page-num">ص 6</span>
+      </div>
+      <div class="toc-item" onclick="goToPage(8)">
+        <span>الباب الثالث: المحرك التفاعلي وآلة الحالات FSM</span>
+        <span class="toc-page-num">ص 8</span>
+      </div>
+      <div class="toc-item" onclick="goToPage(10)">
+        <span>الباب الرابع: تشريح محركات المنطق البرمجي (16 مكتبة)</span>
+        <span class="toc-page-num">ص 10</span>
+      </div>
+      <div class="callout">
+        💡 <em>نصيحة للقارئ:</em> يمكنك تقليب الصفحات بالسحب باللمس أو بالأسهم من لوحة المفاتيح.
+      </div>
+    `
+  },
+
+  // صفحة 3: الفهرس العام التفاعلي (الأبواب 5 - 7)
+  {
+    header: "الفهرس العام التفاعلي (2/2)",
+    title: "📑 فهرس محتويات السفر (تابع)",
+    html: `
+      <div class="toc-item" onclick="goToPage(12)">
+        <span>الباب الخامس: واجهات الـ API السحابية (52 نقطة)</span>
+        <span class="toc-page-num">ص 12</span>
+      </div>
+      <div class="toc-item" onclick="goToPage(14)">
+        <span>الباب السادس: تطبيقات الويب المصغرة (Mini Apps)</span>
+        <span class="toc-page-num">ص 14</span>
+      </div>
+      <div class="toc-item" onclick="goToPage(16)">
+        <span>الباب السابع: هندسة الإطلاق والنشر السحابي والتشغيل</span>
+        <span class="toc-page-num">ص 16</span>
+      </div>
+      <div class="toc-item" onclick="goToPage(18)">
+        <span>خاتمة المشروع ومواصفات الأمان والحفظ</span>
+        <span class="toc-page-num">ص 18</span>
+      </div>
+      <div class="stat-grid" style="margin-top:20px;">
+        <div class="stat-box"><span class="stat-num">7</span><span class="stat-label">أبواب موسوعية</span></div>
+        <div class="stat-box"><span class="stat-num">87KB</span><span class="stat-label">حجم الكتاب النصي الكامل</span></div>
+      </div>
+    `
+  },
+
+  // صفحة 4: الباب الأول (الرؤية وقيود تيليجرام)
+  {
+    header: "الباب الأول: الأسس المعمارية والهندسية",
+    title: "🏛️ معمارية المنظومة وقيود تيليجرام",
+    html: `
+      <p>اعتمدت منصة «درب» بنية خوادم سحابية لامركزية <strong>(Serverless Endpoints)</strong> تتكامل مع واجهات تيليجرام وتطبيقات الويب المصغرة Mini Apps.</p>
+      
+      <div class="callout">
+        <strong>سقف الـ 64 بايت (Telegram Constraint):</strong> يرفض تيليجرام أي زر شفاف يزيد طول بياناته عن 64 بايت. ابتكرنا بروتوكول <code>Micro-Prefix Routing</code> مثل <code>p:add</code> و <code>c:12:sub</code> لتمرير الأوامر بكثافة عالية في أقل من 12 بايت!
+      </div>
+
+      <p><strong>سقف الـ 4096 حرفاً:</strong> تُقلم الرسائل وتُدعم بروابط الـ Mini App لفتح التقارير البيانية المطولة دون التعرض لخطأ رفض الرسائل.</p>
+      <p><strong>منع تكرار النقر (Debouncing):</strong> استدعاء فوري لـ <code>answerCallbackQuery</code> وتحديث الرسالة موضعياً (In-Place Edit) لمنع تكرار القيد عند ضعف الاتصال.</p>
+    `
+  },
+
+  // صفحة 5: الباب الأول (مصدر الحقيقة وخلو AI)
+  {
+    header: "الباب الأول: الأسس المعمارية والهندسية",
+    title: "🛡️ وحدة مصدر الحقيقة وخلو AI التوليدي",
+    html: `
+      <p><strong>مبدأ وحدة مصدر الحقيقة (Single Source of Truth):</strong></p>
+      <p>لا توجد أي حسابات موازية أو تخمينية؛ نسب الحضور تُستخرج من جدول <code>attendance</code>، والدرجات من <code>grades</code>، والنقاط من دفتر الأستاذ <code>points_ledger</code>. ما يظهر لولي الأمر يطابق 100% ما يراه المعلم والمدير.</p>
+
+      <div class="callout">
+        <strong>خلو تام من الذكاء الاصطناعي التوليدي (Zero Hallucination):</strong>
+        استبعدت المنظومة نماذج الذكاء التوليدي التجارية لحماية العملية التعليمية من أي هلوسة في تصحيح المسائل أو القواعد. بنك الأسئلة معتمد بشرياً 100% بواسطة المعلمين والمشرفين.
+      </div>
+
+      <p>تعتمد خوارزميات تحديد المستوى والتدريب العلاجي على معادلات إحصائية حتمية واضحة تضمن العدالة والشفافية الأكاديمية التامة.</p>
+    `
+  },
+
+  // صفحة 6: الباب الثاني (قاعدة البيانات 39 جدولاً - 1)
+  {
+    header: "الباب الثاني: هيكل قاعدة البيانات",
+    title: "🗄️ تشريح الجداول الـ 39 ونظام Drizzle ORM",
+    html: `
+      <p>تدار قاعدة البيانات عبر <strong>Drizzle ORM</strong> مع معايير SQL ونمط <code>WAL Mode</code> لكتابة متزامنة فائقة السرعة تمنع تلف البيانات.</p>
+      
+      <p><strong>الجداول الأساسية:</strong></p>
+      <ul>
+        <li><code>users</code>: الهويات والأدوار (ولي أمر، طالب، معلم، مدير) والمعرف الرقمي لتيليجرام.</li>
+        <li><code>sessions</code>: آلة الحالات FSM والحمولة اللحظية المؤقتة للمحادثة.</li>
+        <li><code>activity_log</code>: الصندوق الأسود الأمني لتوثيق كل حركة إدارية أو أكاديمية.</li>
+        <li><code>children</code>: سجل الطلاب، المراحل الدراسية، وكود التحقق السري لربط الحساب.</li>
+        <li><code>subjects</code> & <code>child_subjects</code>: المقررات وجدول الربط المتعدد مع فهارس فريدة مركبة لمنع ازدواجية القيد.</li>
+      </ul>
+    `
+  },
+
+  // صفحة 7: الباب الثاني (قاعدة البيانات - 2)
+  {
+    header: "الباب الثاني: هيكل قاعدة البيانات",
+    title: "⚡ الانضباط، التلعيب، وبنك الأسئلة",
+    html: `
+      <p><strong>الانضباط والحضور:</strong></p>
+      <ul>
+        <li><code>attendance</code>: رصد الحضور (حاضر، متأخر، غائب، بعذر) مع قيد فريد يمنع تكرار الرصد في نفس اليوم والمادة.</li>
+        <li><code>qr_attendance_tokens</code>: باركود التحضير الذكي المؤقت ذاتي الإبطال بعد 10 دقائق.</li>
+      </ul>
+
+      <p><strong>منظومة التلعيب المحاسبية (Accounting Ledger):</strong></p>
+      <div class="callout">
+        <code>points_ledger</code>: دفتر أستاذ قيود النقاط غير القابل للحذف. رصيد الطالب هو حاصل <code>SUM(points)</code> لحركات الحضور (+10) والواجبات (+15) والاختبارات (+20) والنزالات (+25).
+      </div>
+
+      <p><strong>بنوك الأسئلة والنزالات:</strong></p>
+      <ul>
+        <li><code>questions</code>: بنك الأسئلة المعتمد بالخيارات الأربعة والصعوبة والمفاهيم.</li>
+        <li><code>battles</code> & <code>battle_rounds</code>: حلبة المواجهات التنافسية الثنائية 1v1.</li>
+      </ul>
+    `
+  },
+
+  // صفحة 8: الباب الثالث (آلة الحالات FSM)
+  {
+    header: "الباب الثالث: المحرك التفاعلي لتيليجرام",
+    title: "⚙️ آلة الحالة المنتهية (28 حالة في STATE)",
+    html: `
+      <p>تضمن آلة الحالات في <code>config.js</code> فهم سياق كل كلمة يرسلها المستخدم عبر المحادثة.</p>
+      
+      <div class="stat-grid">
+        <div class="stat-box"><span class="stat-num">28</span><span class="stat-label">حالة FSM معتمدة</span></div>
+        <div class="stat-box"><span class="stat-num">21</span><span class="stat-label">مسار تنفيذ في message.js</span></div>
+      </div>
+
+      <p><strong>أمثلة لحالات التحول التتابعي:</strong></p>
+      <ol>
+        <li><code>PARENT_ADD_CHILD_NAME</code> ← استقبال الاسم الثلاثي.</li>
+        <li><code>PARENT_ADD_CHILD_GRADE</code> ← استقبال الصف الدراسي.</li>
+        <li><code>PARENT_ADD_CHILD_AGE</code> ← استقبال العمر وحفظ السجل.</li>
+        <li><code>PLACEMENT_RUNNING</code> ← وضع خوض اختبار المستوى ومنع مقاطعة الطالب.</li>
+        <li><code>TEACHER_ADD_QUESTION_*</code> ← مسار بناء السؤال خياراً بخيار وتحديد الجواب.</li>
+      </ol>
+    `
+  },
+
+  // صفحة 9: الباب الثالث (معالجات message.js و callback_query.js)
+  {
+    header: "الباب الثالث: المحرك التفاعلي لتيليجرام",
+    title: "📡 تشريح معالجات الرسائل والأزرار",
+    html: `
+      <p><strong>معالج الرسائل (handlers/message.js):</strong></p>
+      <p>يعمل عبر 5 طبقات تصفية تبدأ بفرز رسائل المجموعات، ثم الأوامر القياسية (<code>/start</code>, <code>/cancel</code>)، ثم بوابة الحصانة القانونية الإلزامية التي تحجب استخدام البوت في حال عدم قبول سياسة الخصوصية والشروط، وأخيراً فك تشفير حالات FSM.</p>
+
+      <p><strong>معالج الأزرار الشفافة (handlers/callback_query.js):</strong></p>
+      <div class="callout">
+        يتحقق المعالج في كل ضغطة زر من ملكية ولي الأمر للطالب المستهدف عبر <code>getChildForParent</code> لمنع أي محاولة وصول غير مصرح عبر تزوير معرفات الأزرار.
+      </div>
+      <p>يتم توجيه الضغطات بالبادئات المقتضبة: <code>p_</code> لولي الأمر، <code>t_</code> للمعلم، <code>c_</code> للابن، و <code>q_</code> لاعتمادات بنك الأسئلة.</p>
+    `
+  },
+
+  // صفحة 10: الباب الرابع (محركات المكتبات 16 ملفاً)
+  {
+    header: "الباب الرابع: تشريح محركات المنطق البرمجي",
+    title: "🧠 محركات التقارير والجدولة والتلعيب",
+    html: `
+      <p><strong>محرك التقارير الأسبوعية (reports.js):</strong></p>
+      <p>يحسب بدقة نافذة الأسبوع من الإثنين إلى الأحد، ويجمع الحضور، والمعدل التراكمي، والأخطاء المستجدة، ويصيغ رسالة تيليجرام الأنيقة مع رابط الـ Mini App.</p>
+
+      <p><strong>محرك الجدولة (scheduler.js):</strong></p>
+      <p>يعمل بتوقيت مكة المكرمة (UTC+3)، ويطلق الموجز الصباحي لأيام العمل، والتقرير الأسبوعي الشامل كل أحد تلقائياً.</p>
+
+      <p><strong>سلم رتب الشرف (gamification.js):</strong></p>
+      <ul>
+        <li>🌱 <strong>البرونزية:</strong> 0 - 99 نقطة (بداية الانطلاق).</li>
+        <li>🥈 <strong>الفضية:</strong> 100 - 299 نقطة (متقدم مثابر).</li>
+        <li>🥇 <strong>الذهبية:</strong> 300 - 599 نقطة (بطل متميز).</li>
+        <li>💎 <strong>الألماسية:</strong> 600+ نقطة (فارس المنصة المتصدر).</li>
+      </ul>
+    `
+  },
+
+  // صفحة 11: الباب الرابع (store.js بـ 178 دالة)
+  {
+    header: "الباب الرابع: تشريح محركات المنطق البرمجي",
+    title: "💾 خزانة التخزين الشاملة (store.js)",
+    html: `
+      <p>يحتوي ملف <code>store.js</code> على <strong>178 دالة معتمدة وموثقة بالكامل</strong> تشكل القلب النابض لكافة العمليات الأكاديمية والتشغيلية:</p>
+      
+      <div class="stat-grid">
+        <div class="stat-box"><span class="stat-num">178</span><span class="stat-label">دالة استعلام وتعديل</span></div>
+        <div class="stat-box"><span class="stat-num">3,462</span><span class="stat-label">سطر كود موثق بالكامل</span></div>
+      </div>
+
+      <p><strong>أبرز المجموعات الوظيفية:</strong></p>
+      <ul>
+        <li>دوال الطلاب والمقررات وعزل الأسر (<code>getChildForParent</code>).</li>
+        <li>دوال كشف الطلاب المتعثرين ورادار الخطط العلاجية (<code>getWeakTopics</code>).</li>
+        <li>دوال بنوك الأسئلة واعتماد المشرفين (<code>moderateSubject</code>, <code>moderateQuestion</code>).</li>
+        <li>دوال إدارة باقات المدارس والفوترة (<code>updateSchoolSubscription</code>).</li>
+      </ul>
+    `
+  },
+
+  // صفحة 12: الباب الخامس (الـ 52 نقطة نهاية السحابية)
+  {
+    header: "الباب الخامس: واجهات الـ API السحابية",
+    title: "🌐 شبكة الـ 52 نقطة نهاية السحابية (Endpoints)",
+    html: `
+      <p>تتصل تطبيقات الويب المصغرة Mini Apps بالخادم السحابي عبر جسر تيليجرام <code>tg.Serverless.call</code>.</p>
+      
+      <div class="callout">
+        <strong>بروتوكول الأمان الرباعي:</strong> فحص توقيع <code>ctx.initData</code> ← فحص تسجيل الحساب ← فحص الصلاحيات RBAC ← عزل البيانات وحماية المستأجر.
+      </div>
+
+      <p><strong>تصنيف نقاط النهاية الـ 52:</strong></p>
+      <ul>
+        <li><strong>النزالات والاختبارات (1-10):</strong> <code>createBattle</code>, <code>submitBattle</code>, <code>getQuizQuestions</code>, <code>studentSubmitQuiz</code>...</li>
+        <li><strong>الشهادات والامتحانات (11-20):</strong> <code>getStudentCertificates</code>, <code>verifyCertificate</code>, <code>getTermReportCard</code>...</li>
+        <li><strong>لوحات التحكم (21-30):</strong> <code>getDashboard</code>, <code>getChildDetail</code>, <code>getTeacherDashboard</code>, <code>getTimetable</code>...</li>
+        <li><strong>التحضير والواجبات (31-41):</strong> <code>studentClaimQRAttendance</code>, <code>teacherBatchAttendance</code>, <code>teacherGradeSubmission</code>...</li>
+        <li><strong>المدارس والحوكمة (42-52):</strong> <code>manageSchool</code>, <code>upgradeSubscription</code>, <code>sendBroadcast</code>, <code>runCronTasks</code>...</li>
+      </ul>
+    `
+  },
+
+  // صفحة 13: الباب الخامس (التحضير بـ QR والخطط العلاجية)
+  {
+    header: "الباب الخامس: واجهات الـ API السحابية",
+    title: "📱 التحضير الذكي بـ QR وسد الفجوات",
+    html: `
+      <p><strong>نظام التحضير الذكي بباركود QR:</strong></p>
+      <p>تولد نقطة <code>teacherGenerateQR.js</code> رمزاً مشفراً فريداً صالحاً لـ 10 دقائق فقط. يمسح الطالب الرمز من شاشة الفصل عبر نقطة <code>studentClaimQRAttendance.js</code>، فيُسجل حاضراً فوراً وتُمنح له نقاط الانضباط.</p>
+
+      <p><strong>محرك سد الفجوات المهارية (Remedial Radar):</strong></p>
+      <div class="callout">
+        عند تعثر الطالب بنسبة دون 60% في أي مهارة، ترصده نقطة <code>getRemedialDrill.js</code> وتولد له تمريناً علاجياً متدرجاً. عند إتمامه بنجاح، تعتمد نقطة <code>submitRemedialDrill.js</code> إتقان المهارة وتُغلق الفجوة.
+      </div>
+    `
+  },
+
+  // صفحة 14: الباب السادس (تطبيقات الويب المصغرة Mini Apps)
+  {
+    header: "الباب السادس: تطبيقات الويب المصغرة",
+    title: "🎨 هندسة تطبيقات الصفحة الواحدة (SPA)",
+    html: `
+      <p>صُممت تطبيقات الويب الأربعة في مجلد <code>dist/</code> بجافاسكريبت الصافية (Vanilla JS) دون أي أطر عمل ثقيلة:</p>
+
+      <div class="stat-grid">
+        <div class="stat-box"><span class="stat-num">&lt; 80KB</span><span class="stat-label">حجم الصفحة الكامل</span></div>
+        <div class="stat-box"><span class="stat-num">0.25s</span><span class="stat-label">زمن الفتح والتحميل</span></div>
+      </div>
+
+      <p><strong>بوابات المنظومة الأربع:</strong></p>
+      <ul>
+        <li><code>index.html</code>: بوابة الطالب وولي الأمر (الدرجات، الحضور، النزالات، والشهادات).</li>
+        <li><code>teacher.html</code>: بوابة المعلم (التحضير السريع بالبطاقات، باركود QR، وتصحيح الواجبات).</li>
+        <li><code>admin.html</code>: بوابة الإدارة المركزية (مؤشرات الأداء، رادار التعثر، والاعتمادات).</li>
+        <li><code>school.html</code>: بوابة المدرسة المستقلة (إدارة المعلمين وتجديد اشتراك SaaS).</li>
+      </ul>
+    `
+  },
+
+  // صفحة 15: الباب السادس (رسوم SVG الصافية والتوافق الطباعي)
+  {
+    header: "الباب السادس: تطبيقات الويب المصغرة",
+    title: "📊 رسوم SVG الصافية والطباعة الرسمية",
+    html: `
+      <p><strong>محرك الرسوم البيانية الخالص (Pure SVG):</strong></p>
+      <p>ابتكر مهندسو المنصة دوال رسم بياني مباشرة بالـ SVG دون استيراد أي مكتبات ضخمة:</p>
+      <ul>
+        <li><code>renderGradeChart</code>: يرسم منحنى تطور الدرجات مع تدرج لوني انسيابي خفيف.</li>
+        <li><code>renderAttendanceDonut</code>: يرسم مخطط الدونات الدائري للحضور بمحيط دائرة <code>251.327px</code> مقسم بدقة هندسية بين الحضور والغياب والتأخر.</li>
+      </ul>
+
+      <div class="callout">
+        <strong>معايير الطباعة الرسمية (@media print):</strong>
+        عند طلب طباعة كشف الدرجات الفصلي أو شهادة التفوق، تتحول الصفحة تلقائياً إلى خلفية بيضاء نقية بهوامش ورق <code>A4</code> قياسية مع إطار ذهبي مذهب وختم الاعتماد الرسمي.
+      </div>
+    `
+  },
+
+  // صفحة 16: الباب السابع (النشر والجدولة السحابية)
+  {
+    header: "الباب السابع: النشر والتشغيل والحوكمة",
+    title: "🚀 الإطلاق والجدولة السحابية والأمان",
+    html: `
+      <p><strong>إعدادات البيئة السحابية والخطاف (Webhook):</strong></p>
+      <p>يتم ربط توكن البوت وتسجيل رابط الاستقبال المشفر مع تيليجرام لضمان استلام التفاعلات دون تأخير عبر معمارية Serverless سريعة.</p>
+
+      <p><strong>مشغل الجدولة الدوري المشفر (Cron Engine):</strong></p>
+      <div class="callout">
+        تُستدعى نقطة <code>runCronTasks.js</code> كل 10 دقائق برمز أمان مشفر <code>CONFIG.CRON_SECRET</code> لتشغيل الموجز الصباحي والتقارير الأسبوعية وتذكيرات المذاكرة بدقة ودون إمكانية للاختراق الخارجي.
+      </div>
+
+      <p><strong>التشريعات والسياسات القانونية:</strong></p>
+      <p>تتضمن المنظومة صفحات مستقلة لسياسة الخصوصية وحماية بيانات الأطفال (<code>privacy.html</code>)، وشروط الاستخدام (<code>terms-of-use.html</code>)، واتفاقية مستوى الخدمة (<code>terms-of-service.html</code>).</p>
+    `
+  },
+
+  // صفحة 17: الباب السابع (النسخ الاحتياطي والفحص الآلي)
+  {
+    header: "الباب السابع: النشر والتشغيل والحوكمة",
+    title: "🧪 النسخ الاحتياطي الثلاثي والفحص الآلي",
+    html: `
+      <p><strong>استراتيجية النسخ الاحتياطي الثلاثي:</strong></p>
+      <ol>
+        <li>نسخة المجلد النظيفة المعزولة: <code>telegram-edu-bot-backup-clean</code>.</li>
+        <li>أرشيف ZIP المضغوط المشفر بمجموع SHA-256 اختباري معتمد.</li>
+        <li>نمط <code>WAL Mode</code> في SQLite لمنع تلف البيانات عند انقطاع الطاقة.</li>
+      </ol>
+
+      <p><strong>منظومة الفحص الآلي المستمر (Continuous Verification):</strong></p>
+      <div class="stat-grid">
+        <div class="stat-box"><span class="stat-num">100%</span><span class="stat-label">اجتياز check.cjs الثابت</span></div>
+        <div class="stat-box"><span class="stat-num">45/45</span><span class="stat-label">نجاح الاختبارات البرمجية</span></div>
+      </div>
+      <p>تضمن أداة <code>check.cjs</code> واختبارات <code>npm test</code> عدم كسر أي مفتاح واجهة أو دالة تخزين قبل أي تحديث.</p>
+    `
+  },
+
+  // صفحة 18: الخاتمة والمواصفات
+  {
+    header: "خاتمة السفر والمواصفات الرسمية",
+    title: "🌟 خاتمة المشروع ومواصفات السجل",
+    html: `
+      <p>يمثل مشروع <strong>«درب»</strong> قمة التكامل الهندسي والتربوي؛ حيث يدمج متانة البنية البرمجية، وجمال التجربة البصرية، وعدالة التقييم الحتمي، في منظومة واحدة تخدم مستقبل التعليم العربي.</p>
+
+      <div class="callout">
+        <strong>تأكيد الأمان والحفظ المحلي:</strong>
+        كافة ملفات الشيفرة المصدرية الـ 78 والتوثيقات المكتوبة محفوظة محلياً بالكامل على خادمكم المحلي، ولم يتم رفع أو دفع أي بايت للسحابة أو لجيت هاب تنفيذاً للتعليمات الصارمة.
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box"><span class="stat-num">2026</span><span class="stat-label">سنة الاعتماد والإنتاج</span></div>
+        <div class="stat-box"><span class="stat-num">78</span><span class="stat-label">ملفاً مكتملاً وموثقاً</span></div>
+      </div>
+
+      <p style="text-align:center;margin-top:20px;color:var(--gold);font-weight:bold;">
+        تم بحمد الله وتوفيقه تدوين سفر درب كمرجع تشريحي مفتوح دائم.
+      </p>
+    `
+  },
+
+  // صفحة 19: الغلاف الخارجي الخلفي
+  {
+    isCover: true,
+    html: `
+      <div class="page-cover">
+        <div class="cover-emblem">✨</div>
+        <div>
+          <div class="cover-title" style="font-size:24px;">مَنْظُومَةُ دَرْبِ التَّعْلِيمِيَّة</div>
+          <div class="cover-subtitle" style="margin-top:10px;">
+            نظام متكامل يربط الطالب والأسرة والمدرسة برؤية هندسية رصينة وأداء لحظي فائق.
+          </div>
+          <div style="margin:25px 0;">
+            <div style="font-family:monospace;font-size:18px;color:var(--gold);letter-spacing:4px;">||| | |||| | ||| |||| | |</div>
+            <div style="font-size:11px;opacity:0.75;margin-top:4px;">DARB-SYSTEM-CORE-2026-STABLE</div>
+          </div>
+        </div>
+        <div class="cover-footer">
+          جميع حقوق الشيفرة والتوثيق محفوظة محلياً بالكامل © 2026
+        </div>
+      </div>
+    `
+  }
+];
+
+// -----------------------------------------------------------------------------
+// إدارة حالة القارئ وتقليب الصفحات (State & Page Flipping Logic)
+// -----------------------------------------------------------------------------
+let currentSpreadIndex = 0; // فهرس الزوج الحالي (0 = الغلاف الأمامي)
+const totalSpreads = Math.ceil(PAGES.length / 2);
+
+const rightPageEl = document.getElementById('rightPage');
+const leftPageEl = document.getElementById('leftPage');
+const pageIndicatorEl = document.getElementById('pageIndicator');
+const progressFillEl = document.getElementById('progressFill');
+const bookEl = document.getElementById('bookElement');
+
+function renderSpread(direction = 'none') {
+  const rightIndex = currentSpreadIndex * 2;
+  const leftIndex = rightIndex + 1;
+
+  const rightData = PAGES[rightIndex];
+  const leftData = PAGES[leftIndex];
+
+  // تشغيل صوت تقليب الورق
+  if (direction !== 'none') {
+    playPaperTurnSound();
+  }
+
+  // تطبيق مؤثر الحركة ثلاثي الأبعاد
+  bookEl.classList.remove('flip-anim-forward', 'flip-anim-backward');
+  void bookEl.offsetWidth; // إعادة تهيئة الحركة
+  if (direction === 'forward') bookEl.classList.add('flip-anim-forward');
+  if (direction === 'backward') bookEl.classList.add('flip-anim-backward');
+
+  // تعبئة الصفحة اليمنى
+  if (rightData) {
+    if (rightData.isCover) {
+      rightPageEl.innerHTML = rightData.html;
+    } else {
+      rightPageEl.innerHTML = `
+        <div class="page-header-tag">
+          <span>${rightData.header || 'سِفْرُ دَرْب'}</span>
+          <span>منظومة درب التعليمية</span>
+        </div>
+        <h2 class="page-title">${rightData.title}</h2>
+        <div class="page-body">${rightData.html}</div>
+        <div class="page-footer">
+          <span>صفحة ${rightIndex}</span>
+          <span>سِفْرُ دَرْب — الكتاب التشريحي</span>
+        </div>
+      `;
+    }
+  } else {
+    rightPageEl.innerHTML = '';
+  }
+
+  // تعبئة الصفحة اليسرى
+  if (leftData) {
+    if (leftData.isCover) {
+      leftPageEl.innerHTML = leftData.html;
+    } else {
+      leftPageEl.innerHTML = `
+        <div class="page-header-tag">
+          <span>${leftData.header || 'سِفْرُ دَرْب'}</span>
+          <span>منظومة درب التعليمية</span>
+        </div>
+        <h2 class="page-title">${leftData.title}</h2>
+        <div class="page-body">${leftData.html}</div>
+        <div class="page-footer">
+          <span>سِفْرُ دَرْب — الكتاب التشريحي</span>
+          <span>صفحة ${leftIndex}</span>
+        </div>
+      `;
+    }
+  } else {
+    leftPageEl.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;opacity:0.2;">✨</div>';
+  }
+
+  // تحديث المؤشرات
+  updateIndicators();
+}
+
+function updateIndicators() {
+  const rightIndex = currentSpreadIndex * 2;
+  const leftIndex = rightIndex + 1;
+
+  if (currentSpreadIndex === 0) {
+    pageIndicatorEl.textContent = 'الغلاف الأمامي';
+  } else if (rightIndex >= PAGES.length - 2) {
+    pageIndicatorEl.textContent = 'الغلاف الخلفي';
+  } else {
+    pageIndicatorEl.textContent = 'صفحة ' + rightIndex + ' - ' + leftIndex + ' من ' + (PAGES.length - 1);
+  }
+
+  const pct = (currentSpreadIndex / (totalSpreads - 1)) * 100;
+  progressFillEl.style.width = pct + '%';
+}
+
+function nextPage() {
+  if (currentSpreadIndex < totalSpreads - 1) {
+    currentSpreadIndex++;
+    renderSpread('forward');
+  }
+}
+
+function prevPage() {
+  if (currentSpreadIndex > 0) {
+    currentSpreadIndex--;
+    renderSpread('backward');
+  }
+}
+
+function goToPage(pageNumber) {
+  const targetSpread = Math.floor(pageNumber / 2);
+  if (targetSpread >= 0 && targetSpread < totalSpreads) {
+    const dir = targetSpread > currentSpreadIndex ? 'forward' : 'backward';
+    currentSpreadIndex = targetSpread;
+    renderSpread(dir);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// ربط أزرار التحكم وأحداث الواجهة
+// -----------------------------------------------------------------------------
+document.getElementById('btnNext').addEventListener('click', nextPage);
+document.getElementById('btnPrev').addEventListener('click', prevPage);
+
+// نقر شريط التقدم للانتقال السريع
+document.getElementById('progressTrack').addEventListener('click', (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const ratio = (e.clientX - rect.left) / rect.width;
+  // في الواجهة العربية RTL نقلب النسبة
+  const spread = Math.round((1 - ratio) * (totalSpreads - 1));
+  currentSpreadIndex = Math.max(0, Math.min(totalSpreads - 1, spread));
+  renderSpread('forward');
+});
+
+// زر الفهرس السريع
+document.getElementById('btnToc').addEventListener('click', () => {
+  goToPage(2);
+});
+
+// زر كتم / تشغيل الصوت
+const btnSoundEl = document.getElementById('btnSound');
+btnSoundEl.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  btnSoundEl.textContent = soundEnabled ? '🔊' : '🔇';
+  btnSoundEl.title = soundEnabled ? 'كتم صوت الورق' : 'تشغيل صوت الورق';
+});
+
+// زر تبديل الثيمات (Sepia / Dark / Light)
+const themes = ['theme-sepia', 'theme-dark', 'theme-light'];
+let currentThemeIndex = 0;
+const btnThemeEl = document.getElementById('btnTheme');
+btnThemeEl.addEventListener('click', () => {
+  document.body.classList.remove(themes[currentThemeIndex]);
+  currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+  document.body.classList.add(themes[currentThemeIndex]);
+  const icons = ['📜', '🌙', '☀️'];
+  btnThemeEl.textContent = icons[currentThemeIndex];
+});
+
+// زر ملء الشاشة (Fullscreen)
+document.getElementById('btnFullscreen').addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+});
+
+// التنقل بالأسهم من لوحة المفاتيح
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === ' ') {
+    nextPage();
+  } else if (e.key === 'ArrowRight' || e.key === 'PageUp') {
+    prevPage();
+  } else if (e.key === 'Home') {
+    goToPage(0);
+  } else if (e.key === 'End') {
+    goToPage(PAGES.length - 1);
+  }
+});
+
+// دعم سحب الشاشة باللمس للهواتف الذكية (Swipe Gestures)
+let touchStartX = 0;
+window.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+  const touchEndX = e.changedTouches[0].screenX;
+  const diff = touchEndX - touchStartX;
+  if (diff > 50) {
+    prevPage(); // سحب لليمين
+  } else if (diff < -50) {
+    nextPage(); // سحب لليسار
+  }
+}, { passive: true });
+
+// التحميل والتشغيل الأولي
+renderSpread('none');
+</script>
+</body>
+</html>

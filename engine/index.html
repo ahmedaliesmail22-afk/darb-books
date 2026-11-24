@@ -1,0 +1,2892 @@
+<!DOCTYPE html>
+<!-- =============================================================================
+اسم الملف: story.html (ملحمة درب — الكتاب والكتيب القصصي والروائي التفاعلي ثلاثي الأبعاد)
+المسار: dist/story.html
+الإصدار: 3.0 المطور — متوافق مع الحواسيب والهواتف الذكية وسحابة تيليجرام
+الوظيفة والغرض الأساسي:
+  1. عرض مجسم لكتاب حقيقي: غلاف أمامي مفرد ملء الورقة، ثم صفحات مزدوجة بالحواسيب،
+     وصفحات فردية متسلسلة بالهواتف مع تخطي الصفحات الفارغة فقط وإظهار كافة المحتويات.
+  2. منع التمرير العمودي نهائياً وضبط حجم النصوص والهوامش بدقة عالية على كافة الشاشات.
+  3. محرك تقليب الورق الحقيقي بزاوية 180° مع محاذاة كعب المنتصف وتعبئة وجهي الورقة (الأمامي والخلفي).
+  4. شعار درب الأصلي وبوصلة ذهبية SVG مدمجة كلياً بالرمز داخل الغلافين بدون أي أطراف بيضاء.
+  5. مسرح كرتوني حركي عبر HTML5 Canvas لجميع الفصول (1 إلى 7) مع حركة فيزيائية مستمرة.
+  6. محرك راوي صوتي متطور يدعم مشغل audio مع بديل Web Speech API الفصيح،
+     وتجاهل أخطاء الإلغاء، والانتقال التلقائي من الغلاف لصفحة الإهداء عند بدء القراءة.
+  7. اتجاهات أسهم وزوايا تقليب مطابقة 100% لمنطق القراءة العربية الفصيحة (RTL).
+============================================================================= -->
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>بوابة درب — المحرك التفاعلي ثلاثي الأبعاد للكتب والروايات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg-dark: #070a10;
+    --paper-sepia: #fcf8ee;
+    --paper-sepia-txt: #241d15;
+    --paper-sepia-line: #e4d8c2;
+    --paper-sepia-accent: #875c1c;
+    --paper-dark: #101624;
+    --paper-dark-txt: #e6edf8;
+    --paper-dark-line: #22304d;
+    --paper-dark-accent: #58a6ff;
+    --paper-light: #ffffff;
+    --paper-light-txt: #1a202c;
+    --paper-light-line: #edf2f7;
+    --gold: #d4af37;
+    --gold-light: #f7ebc2;
+    --gold-glow: rgba(212, 175, 55, 0.45);
+    --gold-dark: #8c6f16;
+    --leather-navy: #0c1424;
+    --spine-shadow: rgba(0, 0, 0, 0.28);
+    --page-font: "Amiri", "Traditional Arabic", serif;
+    --ui-font: "Cairo", "Tajawal", -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    overflow: hidden; background: var(--bg-dark);
+    font-family: var(--ui-font);
+    display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+    user-select: none; color: #f0f4f8;
+  }
+
+  /* -------------------------------------------------------------
+     شريط التحكم العلوي (Top Navigation Bar)
+     ------------------------------------------------------------- */
+  .top-bar {
+    width: 100%; height: 50px; background: rgba(10, 15, 26, 0.94);
+    backdrop-filter: blur(12px); border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 16px; z-index: 100;
+  }
+  .book-brand {
+    display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px;
+    color: var(--gold-light); letter-spacing: 0.5px;
+  }
+  .brand-icon {
+    font-size: 20px; filter: drop-shadow(0 0 8px var(--gold));
+  }
+  .top-actions {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .btn-action {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(212, 175, 55, 0.3);
+    color: var(--gold-light); border-radius: 8px; padding: 5px 11px;
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    font-size: 12.5px; font-weight: 700; transition: all 0.25s ease;
+    font-family: var(--ui-font);
+  }
+  .btn-action:hover {
+    background: rgba(212, 175, 55, 0.2); transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+  }
+  .btn-action.narrator-active {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(220, 38, 38, 0.3));
+    border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow);
+    animation: narratorPulse 2s infinite ease-in-out;
+  }
+  @keyframes narratorPulse {
+    0%, 100% { box-shadow: 0 0 8px var(--gold-glow); }
+    50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.7); }
+  }
+
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 8px; display: flex;
+    align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.25); color: var(--gold-light);
+    cursor: pointer; font-size: 15px; transition: all 0.2s;
+  }
+  .icon-btn:hover { background: rgba(212, 175, 55, 0.2); transform: translateY(-1px); }
+
+  /* -------------------------------------------------------------
+     شريط الراوي الصوتي المصغر (Floating Narrator Player Bar)
+     ------------------------------------------------------------- */
+  .narrator-bar {
+    position: absolute; top: 56px; right: 20px; z-index: 110;
+    background: rgba(14, 20, 34, 0.96); backdrop-filter: blur(14px);
+    border: 1px solid var(--gold); border-radius: 12px;
+    padding: 7px 14px; display: none; align-items: center; gap: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.65), 0 0 20px rgba(212, 175, 55, 0.2);
+    animation: slideDown 0.3s ease;
+  }
+  .narrator-bar.show { display: flex; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .narrator-eq {
+    display: flex; align-items: flex-end; gap: 3px; height: 16px;
+  }
+  .narrator-eq span {
+    width: 3px; background: var(--gold); border-radius: 2px; height: 3px;
+    transition: height 0.15s ease;
+  }
+  .narrator-playing .narrator-eq span:nth-child(1) { animation: eqAnim 0.7s infinite alternate 0.1s; }
+  .narrator-playing .narrator-eq span:nth-child(2) { animation: eqAnim 0.7s infinite alternate 0.3s; }
+  .narrator-playing .narrator-eq span:nth-child(3) { animation: eqAnim 0.7s infinite alternate 0.2s; }
+  .narrator-playing .narrator-eq span:nth-child(4) { animation: eqAnim 0.7s infinite alternate 0.4s; }
+  @keyframes eqAnim {
+    0% { height: 3px; }
+    100% { height: 16px; }
+  }
+  .narrator-text-status {
+    font-size: 11.5px; font-weight: 600; color: var(--gold-light); min-width: 135px;
+  }
+  .narrator-btn {
+    background: rgba(212, 175, 55, 0.15); border: 1px solid rgba(212, 175, 55, 0.3);
+    color: #fff; border-radius: 6px; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    font-size: 12px; transition: all 0.2s;
+  }
+  .narrator-btn:hover { background: var(--gold); color: #000; }
+  .speed-select {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(212, 175, 55, 0.3);
+    color: var(--gold-light); border-radius: 6px; padding: 2px 5px; font-size: 11px;
+    outline: none; cursor: pointer; font-family: var(--ui-font);
+  }
+
+  /* -------------------------------------------------------------
+     بيئة المسرح ثلاثية الأبعاد (3D Stage Environment)
+     ------------------------------------------------------------- */
+  .stage {
+    flex: 1; width: 100%; display: flex; justify-content: center; align-items: center;
+    perspective: 2500px; padding: 8px; position: relative;
+    background: radial-gradient(circle at center, #131c2e 0%, #060910 100%);
+    overflow: hidden;
+  }
+
+  .stage::before {
+    content: ''; position: absolute; width: 100%; height: 100%;
+    background-image: radial-gradient(rgba(212, 175, 55, 0.08) 1px, transparent 1px);
+    background-size: 32px 32px; pointer-events: none; opacity: 0.6;
+  }
+
+  /* -------------------------------------------------------------
+     حاوية الكتاب ثلاثية الأبعاد وهيكلية الغلاف المغلق/المفتوح
+     ------------------------------------------------------------- */
+  .book {
+    position: relative; width: 940px; height: 610px;
+    transform-style: preserve-3d;
+    box-shadow: 0 35px 70px rgba(0,0,0,0.75), 0 0 100px rgba(212, 175, 55, 0.1);
+    border-radius: 8px; transition: width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s ease;
+  }
+
+  /* حالة الكتاب المغلق على الغلاف الأمامي أو الخلفي */
+  .book.book-closed-front,
+  .book.book-closed-back {
+    width: 470px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 70px rgba(212, 175, 55, 0.15);
+  }
+
+  .book::after {
+    content: ''; position: absolute; inset: -5px;
+    background: linear-gradient(135deg, #16243b 0%, #080d17 100%);
+    border-radius: 12px; z-index: -1;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 15px 35px rgba(0,0,0,0.8);
+    transition: all 0.45s ease;
+  }
+
+  /* ناشرة الكتاب (Spread) */
+  .spread {
+    display: flex; width: 100%; height: 100%; position: absolute;
+    top: 0; left: 0; border-radius: 6px; overflow: hidden;
+    background: var(--paper-sepia);
+  }
+
+  /* -------------------------------------------------------------
+     ورقة الصفحة (Page Leaf) — منع التمرير العمودي نهائياً
+     ------------------------------------------------------------- */
+  .page-leaf {
+    width: 50%; height: 100%; position: relative;
+    padding: 28px 30px 32px;
+    overflow: hidden !important; /* منع أي Scrollbar نهائياً */
+    background: var(--paper-sepia); color: var(--paper-sepia-txt);
+    transition: background 0.3s, color 0.3s;
+    font-family: var(--page-font);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+
+  /* عند إغلاق الكتاب، الصفحة تأخذ العرض الكامل 100% بدون أي هوامش */
+  .book.book-closed-front .page-leaf.right-leaf,
+  .book.book-closed-back .page-leaf.right-leaf {
+    width: 100% !important;
+    border-radius: 6px;
+    padding: 0 !important;
+  }
+  .book.book-closed-front .page-leaf.left-leaf,
+  .book.book-closed-back .page-leaf.left-leaf {
+    display: none !important;
+  }
+
+  /* طيات وظلال كعب الكتاب في المنتصف بالحواسيب */
+  .page-leaf.right-leaf {
+    border-top-right-radius: 6px; border-bottom-right-radius: 6px;
+    box-shadow: inset -24px 0 28px -12px var(--spine-shadow);
+    border-left: 1px solid rgba(0,0,0,0.12);
+  }
+  .page-leaf.left-leaf {
+    border-top-left-radius: 6px; border-bottom-left-radius: 6px;
+    box-shadow: inset 24px 0 28px -12px var(--spine-shadow);
+  }
+
+  /* -------------------------------------------------------------
+     تقشير زاوية الورق التفاعلي في الأطراف الخارجية (Corner Peel)
+     ------------------------------------------------------------- */
+  .corner-peel-hotspot {
+    position: absolute; bottom: 0; width: 60px; height: 60px;
+    z-index: 50; cursor: pointer;
+  }
+  .right-leaf .corner-peel-hotspot { right: 0; }
+  .left-leaf .corner-peel-hotspot { left: 0; }
+
+  .corner-peel-curl {
+    position: absolute; bottom: 0; width: 0; height: 0;
+    transition: all 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+    pointer-events: none; opacity: 0;
+  }
+  /* الزاوية اليمنى السفلية للصفحة اليمنى (للرجوع للسابق) */
+  .right-leaf .corner-peel-curl {
+    right: 0; border-style: solid;
+    border-width: 0 32px 32px 0;
+    border-color: transparent transparent var(--paper-sepia-line) transparent;
+    filter: drop-shadow(-4px -4px 6px rgba(0,0,0,0.25));
+  }
+  /* الزاوية اليسرى السفلية للصفحة اليسرى (للتقدم للتالي) */
+  .left-leaf .corner-peel-curl {
+    left: 0; border-style: solid;
+    border-width: 0 0 32px 32px;
+    border-color: transparent transparent var(--paper-sepia-line) transparent;
+    filter: drop-shadow(4px -4px 6px rgba(0,0,0,0.25));
+  }
+  .right-leaf .corner-peel-hotspot:hover ~ .corner-peel-curl {
+    opacity: 1; border-width: 0 44px 44px 0;
+  }
+  .left-leaf .corner-peel-hotspot:hover ~ .corner-peel-curl {
+    opacity: 1; border-width: 0 0 44px 44px;
+  }
+
+  /* -------------------------------------------------------------
+     محرك تقليب الورق ثلاثي الأبعاد بزاوية 180° الحقيقي (True 3D Leaf Turn)
+     ------------------------------------------------------------- */
+  .turning-leaf-container {
+    position: absolute; top: 0; width: 50%; height: 100%;
+    transform-style: preserve-3d; z-index: 60; pointer-events: none;
+  }
+  /* التقليب للأمام (التالي): تنقلب الورقة اليسرى فوق كعب المنتصف إلى اليمين */
+  .turning-leaf-container.turn-forward {
+    left: 0; transform-origin: right center;
+    animation: turnPage180Fwd 0.62s cubic-bezier(0.3, 0.05, 0.2, 1) forwards;
+  }
+  /* التقليب للخلف (السابق): تنقلب الورقة اليمنى فوق كعب المنتصف إلى اليسار */
+  .turning-leaf-container.turn-backward {
+    right: 0; transform-origin: left center;
+    animation: turnPage180Bwd 0.62s cubic-bezier(0.3, 0.05, 0.2, 1) forwards;
+  }
+
+  @keyframes turnPage180Fwd {
+    0% {
+      transform: rotateY(0deg);
+      box-shadow: -8px 0 20px rgba(0,0,0,0.15);
+    }
+    50% {
+      box-shadow: 25px 0 35px rgba(0,0,0,0.4);
+    }
+    100% {
+      transform: rotateY(180deg);
+      box-shadow: 0 0 0 transparent;
+    }
+  }
+
+  @keyframes turnPage180Bwd {
+    0% {
+      transform: rotateY(0deg);
+      box-shadow: 8px 0 20px rgba(0,0,0,0.15);
+    }
+    50% {
+      box-shadow: -25px 0 35px rgba(0,0,0,0.4);
+    }
+    100% {
+      transform: rotateY(-180deg);
+      box-shadow: 0 0 0 transparent;
+    }
+  }
+
+  .turning-leaf-face {
+    position: absolute; inset: 0; backface-visibility: hidden;
+    padding: 28px 30px; background: var(--paper-sepia);
+    color: var(--paper-sepia-txt); overflow: hidden;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.06);
+    font-family: var(--page-font);
+  }
+  .turning-leaf-face.back {
+    transform: rotateY(180deg);
+  }
+
+  /* -------------------------------------------------------------
+     تصميم الغلاف الملكي الفاخر (ملء الورقة بالكامل بدون هوامش)
+     ------------------------------------------------------------- */
+  .cover-royal {
+    width: 100%; height: 100%; display: flex; flex-direction: column;
+    justify-content: space-between; align-items: center;
+    background: radial-gradient(circle at 50% 32%, #182845 0%, #0c1424 75%, #060b14 100%);
+    border: 3px solid var(--gold); border-radius: 6px;
+    padding: 30px 22px; position: relative; text-align: center;
+    color: var(--gold-light); box-shadow: inset 0 0 60px rgba(0,0,0,0.85);
+    box-sizing: border-box;
+  }
+  .cover-royal::before {
+    content: ''; position: absolute; inset: 8px;
+    border: 1px dashed rgba(212, 175, 55, 0.4); pointer-events: none;
+    border-radius: 4px;
+  }
+  .cover-header-ornament {
+    font-size: 20px; color: var(--gold); letter-spacing: 4px;
+  }
+  .cover-title-group h1 {
+    font-size: 29px; font-weight: 900; margin: 8px 0 4px;
+    background: linear-gradient(135deg, #fff 0%, #ffea9f 50%, #d4af37 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px; font-family: var(--ui-font);
+  }
+  .cover-title-group h2 {
+    font-size: 14px; font-weight: 600; color: #a9bede; margin: 0;
+    font-family: var(--page-font);
+  }
+
+  /* الشعار المتجهي والبوصلة الذهبية */
+  .cover-emblem-wrap {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; margin: 8px auto;
+  }
+  .cover-logo-svg {
+    filter: drop-shadow(0 0 14px rgba(212, 175, 55, 0.5));
+    border-radius: 14px;
+  }
+  .golden-compass-svg {
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.6));
+    animation: compassBreathing 4s infinite ease-in-out;
+  }
+  @keyframes compassBreathing {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.5)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 16px rgba(212, 175, 55, 0.8)); }
+  }
+
+  .cover-footer-meta {
+    font-size: 11px; color: #8fa5c7; font-family: var(--ui-font);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+
+  /* -------------------------------------------------------------
+     تنسيق نصوص ومحتويات صفحات الكتاب
+     ------------------------------------------------------------- */
+  .page-header-tag {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--gold-dark); border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    padding-bottom: 5px; margin-bottom: 12px; font-family: var(--ui-font); font-weight: 700;
+  }
+  .page-title {
+    font-family: var(--ui-font); font-size: 19px; font-weight: 800;
+    margin: 0 0 10px 0; color: #b8860b; line-height: 1.35;
+    position: relative; padding-bottom: 6px;
+  }
+  .page-title::after {
+    content: ''; position: absolute; bottom: 0; right: 0; width: 40px; height: 2px;
+    background: var(--gold); border-radius: 2px;
+  }
+  .page-body {
+    font-size: 14.5px; line-height: 1.72; text-align: justify;
+    text-justify: inter-word; flex: 1;
+  }
+  .page-footer {
+    margin-top: 12px; padding-top: 6px; border-top: 1px solid rgba(0,0,0,0.07);
+    display: flex; justify-content: space-between; font-size: 10.5px;
+    color: #887865; font-family: var(--ui-font);
+  }
+
+  /* صفحة عنوان الفصل ونبذته التمهيدية (Chapter Hero Page) */
+  .chapter-hero {
+    height: 100%; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    padding: 10px 14px; position: relative;
+  }
+  .chapter-hero-badge {
+    background: rgba(212, 175, 55, 0.12); color: var(--gold-dark);
+    border: 1px solid var(--gold); border-radius: 20px;
+    padding: 4px 14px; font-size: 11.5px; font-weight: 800; font-family: var(--ui-font);
+    margin-bottom: 14px;
+  }
+  .chapter-hero-title {
+    font-size: 24px; font-weight: 900; color: #875c1c; font-family: var(--ui-font);
+    margin: 0 0 14px; line-height: 1.4;
+  }
+  .chapter-hero-desc {
+    font-size: 15.5px; line-height: 1.85; color: #4a3e31; max-width: 90%;
+    margin: 0 0 20px; font-style: italic;
+  }
+  .chapter-hero-meta {
+    font-size: 12px; color: #7d6c5a; font-family: var(--ui-font);
+    border-top: 1px dashed rgba(212, 175, 55, 0.35); padding-top: 12px; width: 85%;
+  }
+
+  /* الصفحة البيضاء الفاصلة */
+  .page-blank-separator {
+    height: 100%; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; opacity: 0.35;
+    color: var(--gold-dark); font-size: 22px;
+  }
+  .page-blank-separator::after {
+    content: '❖'; font-size: 18px;
+  }
+
+  .epic-quote {
+    background: rgba(212, 175, 55, 0.08); border-right: 3px solid var(--gold);
+    padding: 9px 13px; margin: 10px 0; border-radius: 0 6px 6px 0;
+    font-style: italic; color: #5c4314; font-size: 14px; line-height: 1.65;
+  }
+  .epic-quote cite {
+    display: block; font-size: 11px; font-weight: 700; color: var(--gold-dark);
+    margin-top: 4px; font-style: normal; font-family: var(--ui-font);
+  }
+  .milestone-badge {
+    background: rgba(0, 0, 0, 0.035); border: 1px dashed var(--gold);
+    border-radius: 6px; padding: 7px 11px; margin: 8px 0;
+    display: flex; align-items: center; gap: 8px; font-family: var(--ui-font);
+    font-size: 12.5px; font-weight: 600;
+  }
+  .code-capsule {
+    background: #0d1420; color: #68d391; padding: 6px 10px; border-radius: 5px;
+    font-family: Consolas, monospace; font-size: 12px;
+    direction: ltr; text-align: left; margin: 8px 0; overflow-x: auto;
+    border-left: 3px solid #38a169;
+  }
+
+  /* -------------------------------------------------------------
+     الفهرس الأنيق المنقح
+     ------------------------------------------------------------- */
+  .toc-hint-banner {
+    font-size: 11.5px; color: #7a6854; font-style: italic; margin-bottom: 12px;
+    background: rgba(212, 175, 55, 0.09); border-radius: 6px; padding: 6px 10px;
+    border-right: 2px solid var(--gold); font-family: var(--ui-font);
+  }
+  .toc-clean-list {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toc-item {
+    position: relative; padding: 7px 10px; border-radius: 6px;
+    background: rgba(0, 0, 0, 0.02); border: 1px solid rgba(212, 175, 55, 0.2);
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; transition: all 0.2s ease; overflow: hidden;
+  }
+  .toc-item:hover {
+    background: rgba(212, 175, 55, 0.12); border-color: var(--gold);
+    transform: translateX(-2px);
+  }
+  .toc-item-title {
+    font-size: 13.5px; font-weight: 700; color: #875c1c; font-family: var(--ui-font);
+  }
+  .toc-item-sub {
+    font-size: 11px; color: #6e604f; margin-top: 2px;
+  }
+  .toc-leader-dots {
+    flex: 1; border-bottom: 1px dotted rgba(212, 175, 55, 0.4); margin: 0 10px;
+  }
+  .toc-page-tag {
+    font-weight: 800; font-size: 12.5px; color: var(--gold-dark); font-family: var(--ui-font);
+  }
+
+  .hold-ring-svg {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 24px; height: 24px; pointer-events: none; opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .hold-ring-svg circle.bg { stroke: rgba(212, 175, 55, 0.25); stroke-width: 2.5; fill: none; }
+  .hold-ring-svg circle.prog {
+    stroke: var(--gold); stroke-width: 2.5; fill: none;
+    stroke-dasharray: 63; stroke-dashoffset: 63;
+    transform: rotate(-90deg); transform-origin: 50% 50%;
+    transition: stroke-dashoffset 0.6s linear;
+  }
+  .toc-item.holding .hold-ring-svg { opacity: 1; }
+  .toc-item.holding .hold-ring-svg circle.prog { stroke-dashoffset: 0; }
+
+  /* -------------------------------------------------------------
+     النافذة السينمائية الكرتونية والإنفوجرافيك المتحركة
+     ------------------------------------------------------------- */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(4, 7, 14, 0.85); backdrop-filter: blur(12px);
+    display: none; justify-content: center; align-items: center; padding: 14px;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .modal-overlay.active { display: flex; opacity: 1; }
+
+  .cinematic-window {
+    width: 720px; max-width: 95vw; max-height: 92vh;
+    background: linear-gradient(145deg, #0e1524, #080d16);
+    border: 2px solid var(--gold); border-radius: 16px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 40px var(--gold-glow);
+    padding: 20px 24px; color: #e6edf8; position: relative;
+    overflow-y: auto; transform: scale(0.94); transition: transform 0.3s ease;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .modal-overlay.active .cinematic-window { transform: scale(1); }
+
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.25); padding-bottom: 10px;
+  }
+  .modal-title-wrap h3 {
+    margin: 0; font-size: 18px; font-weight: 800; color: var(--gold-light);
+    font-family: var(--ui-font);
+  }
+  .modal-title-wrap p {
+    margin: 3px 0 0; font-size: 12px; color: #94a3b8; font-family: var(--ui-font);
+  }
+  .modal-close-btn {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(212,175,55,0.3);
+    color: var(--gold-light); width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    font-size: 15px; transition: all 0.2s;
+  }
+  .modal-close-btn:hover { background: var(--gold); color: #000; }
+
+  .cartoon-stage-wrapper {
+    width: 100%; height: 240px; background: #050912;
+    border-radius: 10px; border: 1px solid rgba(212, 175, 55, 0.3);
+    position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+  }
+  #cartoonCanvas {
+    width: 100%; height: 100%; display: block;
+  }
+
+  .story-stages-nav {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .stage-tab {
+    background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 7px 8px; cursor: pointer; text-align: center;
+    font-family: var(--ui-font); font-size: 11px; font-weight: 700; color: #94a3b8;
+    transition: all 0.2s ease;
+  }
+  .stage-tab:hover { background: rgba(255,255,255,0.08); }
+  .stage-tab.active-tab {
+    background: rgba(212, 175, 55, 0.18); border-color: var(--gold);
+    color: var(--gold-light); box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+  }
+
+  .active-scene-card {
+    background: rgba(255, 255, 255, 0.035); border-radius: 8px;
+    border-right: 4px solid var(--gold); padding: 10px 14px;
+    min-height: 56px;
+  }
+  .scene-card-label {
+    font-size: 12px; font-weight: 800; color: var(--gold-light); margin-bottom: 4px;
+  }
+  .scene-card-desc {
+    font-size: 13px; line-height: 1.6; color: #cbd5e1; margin: 0;
+  }
+
+  .modal-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .btn-jump-book {
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    color: #0b0f19; font-weight: 800; font-size: 12.5px; border: none;
+    padding: 7px 16px; border-radius: 7px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; font-family: var(--ui-font);
+    transition: transform 0.2s;
+  }
+  .btn-jump-book:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--gold-glow); }
+  .btn-replay-anim {
+    background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 12px; border-radius: 7px; cursor: pointer; font-size: 11.5px;
+    font-family: var(--ui-font); transition: all 0.2s;
+  }
+  .btn-replay-anim:hover { color: #fff; border-color: #fff; }
+
+  /* -------------------------------------------------------------
+     إضاءة الراوي المتزامنة
+     ------------------------------------------------------------- */
+  .narrator-active-glow {
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.12)) !important;
+    border-radius: 4px; padding: 2px 4px;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.35);
+    color: #1a1202 !important;
+  }
+
+  /* -------------------------------------------------------------
+     الشريط السفلي (Bottom Bar)
+     ------------------------------------------------------------- */
+  .bottom-bar {
+    width: 100%; height: 52px; background: rgba(10, 15, 26, 0.94);
+    backdrop-filter: blur(12px); border-top: 1px solid rgba(212, 175, 55, 0.25);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px; z-index: 100; color: var(--gold-light);
+  }
+  .nav-btn {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(212, 175, 55, 0.3);
+    color: var(--gold-light); border-radius: 8px; padding: 5px 13px;
+    cursor: pointer; font-size: 12.5px; font-weight: 700;
+    display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+    font-family: var(--ui-font);
+  }
+  .nav-btn:hover { background: rgba(212, 175, 55, 0.2); transform: translateY(-1px); }
+
+  .progress-wrap {
+    flex: 1; max-width: 460px; margin: 0 20px; display: flex;
+    flex-direction: column; gap: 4px; align-items: center;
+  }
+  .progress-track {
+    width: 100%; height: 5px; background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px; cursor: pointer; position: relative; overflow: hidden;
+  }
+  .progress-fill {
+    position: absolute; right: 0; top: 0; height: 100%;
+    background: linear-gradient(to left, var(--gold), #ffdf79);
+    width: 0%; transition: width 0.3s ease; border-radius: 3px;
+  }
+  .page-indicator {
+    font-size: 11.5px; font-weight: 700; color: #a0aec0; font-family: var(--ui-font);
+  }
+
+  /* -------------------------------------------------------------
+     الثيمات المتعددة (Sepia / Dark / Light)
+     ------------------------------------------------------------- */
+  body.theme-dark { --bg-dark: #05070c; }
+  body.theme-dark .page-leaf,
+  body.theme-dark .turning-leaf-face {
+    background: var(--paper-dark); color: var(--paper-dark-txt);
+  }
+  body.theme-dark .page-leaf.right-leaf {
+    box-shadow: inset -24px 0 28px -12px rgba(0,0,0,0.6);
+    border-left: 1px solid rgba(255,255,255,0.06);
+  }
+  body.theme-dark .page-leaf.left-leaf {
+    box-shadow: inset 24px 0 28px -12px rgba(0,0,0,0.6);
+  }
+  body.theme-dark .page-title { color: #58a6ff; }
+  body.theme-dark .page-title::after { background: #58a6ff; }
+  body.theme-dark .chapter-hero-title { color: #58a6ff; }
+  body.theme-dark .chapter-hero-desc { color: #cbd5e1; }
+  body.theme-dark .toc-item { background: rgba(255,255,255,0.03); border-color: rgba(88,166,255,0.2); }
+  body.theme-dark .toc-item-title { color: #93c5fd; }
+  body.theme-dark .toc-item-sub { color: #cbd5e1; }
+  body.theme-dark .toc-hint-banner { background: rgba(88,166,255,0.08); border-color: #58a6ff; color: #93c5fd; }
+  body.theme-dark .milestone-badge { background: rgba(255,255,255,0.03); border-color: #58a6ff; color: #e2e8f0; }
+
+  body.theme-light .page-leaf,
+  body.theme-light .turning-leaf-face {
+    background: var(--paper-light); color: var(--paper-light-txt);
+  }
+
+  /* -------------------------------------------------------------
+     التجاوب مع الهواتف الذكية (Responsive Mobile Single Page View)
+     ------------------------------------------------------------- */
+  @media (max-width: 960px) {
+    .book { width: 95vw !important; height: 82vh !important; }
+    .page-leaf.left-leaf { display: none !important; }
+    .page-leaf.right-leaf {
+      width: 100% !important; border-radius: 6px; box-shadow: none !important;
+      padding: 18px 18px 24px !important;
+    }
+    .page-title {
+      font-size: 16.5px !important; margin-bottom: 6px !important;
+    }
+    .page-body {
+      font-size: 13px !important; line-height: 1.62 !important;
+    }
+    .epic-quote {
+      padding: 7px 10px !important; font-size: 12px !important; margin: 6px 0 !important;
+    }
+    .milestone-badge {
+      padding: 5px 8px !important; font-size: 11px !important; margin: 6px 0 !important;
+    }
+    .code-capsule {
+      padding: 4px 7px !important; font-size: 11px !important; margin: 5px 0 !important;
+    }
+    .chapter-hero-title {
+      font-size: 19px !important; margin-bottom: 8px !important;
+    }
+    .chapter-hero-desc {
+      font-size: 13px !important; line-height: 1.65 !important; margin-bottom: 12px !important;
+    }
+    .chapter-hero-meta {
+      font-size: 10.5px !important; padding-top: 8px !important;
+    }
+    .stage { padding: 4px; }
+    .top-actions .btn-text-label { display: none; }
+    .story-stages-nav { grid-template-columns: repeat(2, 1fr); }
+    .cinematic-window { padding: 14px 16px; }
+    .narrator-bar { right: 8px; left: 8px; }
+  }
+
+/* ==========================================================================
+   📚 Library, Video, & Celebration Modal Styles
+   ========================================================================== */
+.library-card {
+  max-width: 640px !important;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.library-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 15px;
+}
+.edition-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  text-align: right;
+  position: relative;
+}
+.edition-card:hover {
+  border-color: #d4af37;
+  transform: translateY(-2px);
+  background: rgba(30, 41, 59, 0.95);
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.15);
+}
+.edition-card.active {
+  border-color: #f59e0b;
+  background: rgba(45, 33, 15, 0.85);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+}
+.edition-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.edition-title {
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: #ffea9f;
+  margin: 0 0 6px;
+}
+.edition-desc {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.edition-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+}
+.edition-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Video Modal */
+.video-card {
+  max-width: 820px !important;
+  width: 95% !important;
+  padding: 16px !important;
+  background: #0b0f19 !important;
+  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85) !important;
+}
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  aspect-ratio: 16 / 9;
+}
+.video-wrapper video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+}
+
+/* Celebration Modal */
+.celebration-card {
+  max-width: 480px !important;
+  text-align: center;
+  padding: 35px 25px !important;
+  background: radial-gradient(circle at center, #1e293b 0%, #0b0f19 100%) !important;
+  border: 2px solid #d4af37 !important;
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.35) !important;
+}
+.celebration-badge {
+  font-size: 4rem;
+  margin-bottom: 12px;
+  animation: bounce 1s infinite alternate;
+}
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-8px); }
+}
+.celebration-card h2 {
+  color: #f59e0b;
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+.celebration-card p {
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+.celebration-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.celebration-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  transition: all 0.2s;
+}
+.celebration-btn:hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: #d4af37;
+}
+.celebration-btn.primary {
+  background: linear-gradient(135deg, #d4af37, #f59e0b);
+  color: #0b0f19;
+  border: none;
+}
+.celebration-btn.primary:hover {
+  opacity: 0.9;
+  transform: scale(1.03);
+}
+
+</style>
+</head>
+<body class="theme-sepia">
+
+<!-- مشغل الصوت الخفي لملفات الرواية الصوتية المسجلة مسبقاً -->
+<audio id="narratorAudioPlayer" preload="none" style="display:none;"></audio>
+
+<!-- الشريط العلوي -->
+<header class="top-bar">
+  <div class="book-brand">
+    <span class="brand-icon">📜</span>
+    <span>مَلْحَمَةُ دَرْب: السِّيرَةُ التَّقْنِيَّةُ</span>
+  </div>
+
+  <div class="top-actions">
+    <!-- زر تفعيل وضع الراوي الصوتي -->
+    <button class="btn-action" id="btnToggleNarrator" title="تفعيل وضع الراوي الصوتي التلقائي">
+      <span>🎙️</span>
+      <span class="btn-text-label">وضع الراوي</span>
+    </button>
+
+    <!-- زر الفهرس -->
+    <button class="btn-action" id="btnToc" title="الانتقال إلى الفهرس">
+      <span>📑</span>
+      <span class="btn-text-label">الفهرس</span>
+    </button>
+
+    <!-- تبديل الثيم -->
+    <button class="icon-btn" id="btnTheme" title="تبديل الثيم">📜</button>
+
+    <!-- ملء الشاشة -->
+    <button class="icon-btn" id="btnFullscreen" title="ملء الشاشة">⛶</button>
+  </div>
+</header>
+
+<!-- شريط الراوي المصغر -->
+<div class="narrator-bar" id="narratorBar">
+  <div class="narrator-eq">
+    <span></span><span></span><span></span><span></span>
+  </div>
+  <div class="narrator-text-status" id="narratorStatus">جاهز للرواية...</div>
+  <button class="narrator-btn" id="btnNarratorPlay" title="تشغيل / إيقاف مؤقت">▶</button>
+  <button class="narrator-btn" id="btnNarratorStop" title="إيقاف نهائي">⏹</button>
+  <select class="speed-select" id="narratorSpeed" title="سرعة القراءة">
+    <option value="0.85">0.85x هادئ</option>
+    <option value="1.0" selected>1.0x متزن</option>
+    <option value="1.15">1.15x سريع</option>
+  </select>
+</div>
+
+<!-- بيئة المسرح ثلاثية الأبعاد والكتاب -->
+<main class="stage" id="stage">
+  <div class="book book-closed-front" id="book">
+    <div class="spread">
+      <!-- الصفحة اليمنى (Right Page) -->
+      <div class="page-leaf right-leaf" id="rightPage">
+        <div class="corner-peel-hotspot" id="cornerHotspotRight" title="انقر للرجوع للصفحة السابقة"></div>
+        <div class="corner-peel-curl"></div>
+      </div>
+      <!-- الصفحة اليسرى (Left Page) -->
+      <div class="page-leaf left-leaf" id="leftPage">
+        <div class="corner-peel-hotspot" id="cornerHotspotLeft" title="انقر لتقليب الصفحة التالية"></div>
+        <div class="corner-peel-curl"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- الشريط السفلي للتحكم وتتبع القراءة -->
+<footer class="bottom-bar">
+  <div class="page-nav-btns">
+    <button class="nav-btn" id="btnPrev" title="الصفحة السابقة (رجوع للخلف)">
+      <span>▶</span>
+      <span>السابق</span>
+    </button>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track" id="progressTrack" title="انقر للقفز المباشر">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="page-indicator" id="pageIndicator">الغلاف الأمامي</div>
+  </div>
+
+  <div class="page-nav-btns">
+    <button class="nav-btn" id="btnNext" title="الصفحة التالية (تقدم للأمام)">
+      <span>التالي</span>
+      <span>◀</span>
+    </button>
+  </div>
+</footer>
+
+<!-- النافذة السينمائية الكرتونية والإنفوجرافيك المتحركة -->
+<div class="modal-overlay" id="storyModalOverlay">
+  <div class="cinematic-window" id="cinematicWindow">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <h3 id="modalChapterTitle">🎯 كواليس الفصل: الرسوم الكرتونية والإنفوجرافيك</h3>
+        <p id="modalChapterSubtitle">شاهد بصرياً خطوات البناء، التحديات، الحلول، والانتصار</p>
+      </div>
+      <button class="modal-close-btn" id="modalCloseBtn" title="إغلاق">✕</button>
+    </div>
+
+    <!-- مسرح العرض الكرتوني الحركي عبر Canvas -->
+    <div class="cartoon-stage-wrapper">
+      <canvas id="cartoonCanvas" width="670" height="240"></canvas>
+    </div>
+
+    <!-- أزرار مراحل المشهد الأربعة -->
+    <div class="story-stages-nav" id="storyStagesNav">
+      <div class="stage-tab active-tab" data-stage="0">🎯 1. التحدي والاحتياج</div>
+      <div class="stage-tab" data-stage="1">⚠️ 2. العثرة والخطأ</div>
+      <div class="stage-tab" data-stage="2">💡 3. الحل العبقري</div>
+      <div class="stage-tab" data-stage="3">🏆 4. النتيجة والأثر</div>
+    </div>
+
+    <!-- بطاقة شرح المرحلة النشطة -->
+    <div class="active-scene-card">
+      <div class="scene-card-label" id="sceneCardLabel">🎯 التحدي والاحتياج الواقعي</div>
+      <p class="scene-card-desc" id="sceneCardDesc">جارٍ تحميل تفاصيل المشهد...</p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-replay-anim" id="btnReplayAnim">↺ إعادة تشغيل المشهد</button>
+      <button class="btn-jump-book" id="btnJumpBook">
+        <span>📖</span>
+        <span>اقرأ الفصل كاملاً في الكتاب</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================================================
+// شعار درب الأصلي المتجهي والبوصلة الذهبية (INLINE VECTOR SVG ASSETS)
+// =============================================================================
+const DARB_LOGO_SVG = `
+  <svg class="cover-logo-svg" viewBox="0 0 512 512" width="66" height="66">
+    <defs>
+      <linearGradient id="pathGrad" x1="50%" y1="100%" x2="50%" y2="0%">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2"/>
+        <stop offset="40%" stop-color="#60a5fa"/>
+        <stop offset="85%" stop-color="#38bdf8"/>
+        <stop offset="100%" stop-color="#fef08a"/>
+      </linearGradient>
+      <linearGradient id="bookLeft" x1="0%" y1="50%" x2="100%" y2="50%">
+        <stop offset="0%" stop-color="#1d4ed8"/>
+        <stop offset="100%" stop-color="#3b82f6"/>
+      </linearGradient>
+      <linearGradient id="bookRight" x1="0%" y1="50%" x2="100%" y2="50%">
+        <stop offset="0%" stop-color="#3b82f6"/>
+        <stop offset="100%" stop-color="#2563eb"/>
+      </linearGradient>
+      <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#fef08a"/>
+        <stop offset="40%" stop-color="#eab308"/>
+        <stop offset="100%" stop-color="#ca8a04"/>
+      </linearGradient>
+      <filter id="starGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="16" result="blur1"/>
+        <feGaussianBlur stdDeviation="6" result="blur2"/>
+        <feMerge>
+          <feMergeNode in="blur1"/>
+          <feMergeNode in="blur2"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <!-- إطار الشعار المدمج -->
+    <rect width="512" height="512" rx="110" fill="#0d182b" stroke="#d4af37" stroke-width="6"/>
+    <!-- أجنحة الكتاب -->
+    <path d="M 256 370 C 210 335 150 330 96 345 C 96 265 106 200 256 220 Z" fill="url(#bookLeft)" opacity="0.95"/>
+    <path d="M 256 370 C 210 338 150 334 100 345" stroke="#60a5fa" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M 256 370 C 302 335 362 330 416 345 C 416 265 406 200 256 220 Z" fill="url(#bookRight)" opacity="0.95"/>
+    <path d="M 256 370 C 302 338 362 334 412 345" stroke="#93c5fd" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- مسار درب الصاعد -->
+    <path d="M 256 425 C 235 375 220 310 240 230 C 248 195 256 160 256 140 C 256 160 264 195 272 230 C 292 310 277 375 256 425 Z" fill="url(#pathGrad)"/>
+    <path d="M 256 420 L 256 145" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+    <!-- قبعة التخرج -->
+    <polygon points="256,128 326,148 256,168 186,148" fill="#1e293b" stroke="#60a5fa" stroke-width="2.5"/>
+    <path d="M 220 160 C 220 180 292 180 292 160 Z" fill="#0f172a" stroke="#3b82f6" stroke-width="1.5"/>
+    <path d="M 256 148 C 285 152 300 170 302 188" fill="none" stroke="url(#goldGrad)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="302" cy="190" r="3.5" fill="#fef08a"/>
+    <!-- نجمة التميز المضيئة -->
+    <g transform="translate(256, 108)" filter="url(#starGlow)">
+      <path d="M 0 -36 Q 0 0 36 0 Q 0 0 0 36 Q 0 0 -36 0 Q 0 0 0 -36 Z" fill="url(#goldGrad)"/>
+      <circle cx="0" cy="0" r="7" fill="#ffffff"/>
+    </g>
+  </svg>
+`;
+
+const GOLDEN_COMPASS_SVG = `
+  <svg class="golden-compass-svg" viewBox="0 0 100 100" width="76" height="76">
+    <defs>
+      <radialGradient id="compassBg" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#142138"/>
+        <stop offset="100%" stop-color="#090f1a"/>
+      </radialGradient>
+      <linearGradient id="needleGold" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#fff0a8"/>
+        <stop offset="50%" stop-color="#d4af37"/>
+        <stop offset="100%" stop-color="#8c6f16"/>
+      </linearGradient>
+    </defs>
+    <circle cx="50" cy="50" r="47" fill="url(#compassBg)" stroke="#d4af37" stroke-width="2"/>
+    <circle cx="50" cy="50" r="43" fill="none" stroke="rgba(212,175,55,0.4)" stroke-width="1" stroke-dasharray="2 3"/>
+    <polygon points="50,11 54,44 50,50 46,44" fill="url(#needleGold)"/>
+    <polygon points="50,89 54,56 50,50 46,56" fill="#8c6f16"/>
+    <polygon points="11,50 44,46 50,50 44,54" fill="#d4af37"/>
+    <polygon points="89,50 56,46 50,50 56,54" fill="url(#needleGold)"/>
+    <polygon points="22,22 47,44 50,50 44,47" fill="#b38f24"/>
+    <polygon points="78,22 53,44 50,50 56,47" fill="#b38f24"/>
+    <polygon points="22,78 47,56 50,50 44,53" fill="#b38f24"/>
+    <polygon points="78,78 53,56 50,50 56,53" fill="#b38f24"/>
+    <text x="50" y="24" fill="#ffea9f" font-size="7.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">ش</text>
+    <text x="50" y="83" fill="#ffea9f" font-size="7.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">ج</text>
+    <text x="21" y="52.5" fill="#ffea9f" font-size="7.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">غ</text>
+    <text x="79" y="52.5" fill="#ffea9f" font-size="7.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">ق</text>
+    <circle cx="50" cy="50" r="4.5" fill="#d4af37"/>
+    <circle cx="50" cy="50" r="2" fill="#ffffff"/>
+  </svg>
+`;
+
+// =============================================================================
+// مصفوفة النشرات الكاملة (SPREADS DATA ARCHITECTURE)
+// =============================================================================
+const SPREADS = [
+  // ---------------------------------------------------------------------------
+  // نشرة 0: الغلاف الملكي الأمامي مغلقاً
+  // ---------------------------------------------------------------------------
+  {
+    isFrontCover: true,
+    right: {
+      isCover: true,
+      html: `
+        <div class="cover-royal">
+          <div class="cover-header-ornament">❖ ❖ ❖</div>
+          <div class="cover-title-group">
+            <div style="font-size: 12px; color: #d4af37; font-weight: 700; margin-bottom: 2px;">الوثيقة التاريخية الكبرى</div>
+            <h1>مَلْحَمَةُ دَرْب</h1>
+            <h2>السِّيرَةُ التَّقْنِيَّةُ وَالقِصَّةُ الكَامِلَةُ لِبِنَاءِ المَنْظُومَة</h2>
+            <div style="font-size: 12px; color: #9bb7e0; margin-top: 5px;">مِنْ شَرَارَةِ الفِكْرَةِ.. إِلَى مَعَانَقَةِ السَّحَاب</div>
+          </div>
+
+          <div class="cover-emblem-wrap">
+            ${DARB_LOGO_SVG}
+            ${GOLDEN_COMPASS_SVG}
+          </div>
+
+          <div class="cover-footer-meta">
+            <div>منشورات الفريق الهندسي المؤسس لمنظومة درب</div>
+            <div>الإصدار السحابي التوثيقي الشامل — Revision 23</div>
+            <div style="font-family: monospace; font-size: 9.5px; color: #d4af37; margin-top: 3px;">SHA256: 57c1b13e9a72d...</div>
+          </div>
+        </div>
+      `
+    },
+    left: null
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 1: داخل الغلاف + بيان الإهداء
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 1,
+    pageLeftNum: 2,
+    right: {
+      isBlank: true,
+      header: "خَلْفِيَّةُ الغِلَاف",
+      html: `<div class="page-blank-separator" title="ورقة داخل الغلاف"></div>`
+    },
+    left: {
+      header: "مُقَدِّمَةُ المَلْحَمَة",
+      title: "بَيَانُ الإِهْدَاءِ وَعَهْدُ البِنَاء",
+      html: `
+        <div class="epic-quote narratable">
+          «ليس الإنجاز أن تكتب آلاف الأسطر من الشيفرة البرمجية؛ بل أن تحول كل سطر إلى نبض حي، يصنع فارقاً حقيقياً في يوم طالب، ويمنح طمأنينة لقلب ولي أمر، ويوفر للمعلم أداة تمكنه من قيادة فصله بعدالة وإتقان.»
+          <cite>— من مقدمة الفريق المؤسس لمنظومة درب</cite>
+        </div>
+        <p class="narratable">
+          نضع بين يديك هذا السِّفْر ليس بوصفه دليلاً هندسياً مجرداً، بل سيرة ملحمية تدون رحلة صراع تقني خاضه مهندسون واجهوا أعتى القيود الرقمية.
+        </p>
+        <div class="milestone-badge narratable">
+          <span>🏛️</span>
+          <div>منظومة تعليمية ذكية متكاملة تعمل كلياً على سحابة تيليجرام اللامركزية.</div>
+        </div>
+        <p class="narratable">
+          ستقرأ تفاصيل الليالي التي توقفت فيها الخوادم بسبب 64 بايت، وكيف أنقذت الشفرة من خطأ التعبيرات النمطية، والسر الحسابي لمحيط دائرة الحضور بدقة الميكرون، وصولاً لاجتياز الاختبارات الـ 45 بلا خطأ.
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 2: الفهرس المنقح الأنيق (بدون شارات صفراء)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 3,
+    pageLeftNum: 4,
+    right: {
+      header: "خَرِيطَةُ الطَّرِيق (1)",
+      title: "فِهْرِسُ مَحَطَّاتِ المَلْحَمَة",
+      html: `
+        <div class="toc-hint-banner">
+          💡 تلميح: انقر للانتقال للصفحة، أو <b>اضغط مطولاً (600ms)</b> لمشاهدة العرض الكرتوني الحركي لكواليس وتحديات الفصل!
+        </div>
+        <div class="toc-clean-list">
+          <div class="toc-item" data-chapter="1" data-spread="3">
+            <div>
+              <div class="toc-item-title">1. الفصل الأول: نداء الاستغاثة ومخاض الفكرة</div>
+              <div class="toc-item-sub">أزمة التطبيقات المدرسية ولماذا اخترنا تيليجرام</div>
+            </div>
+            <div class="toc-leader-dots"></div>
+            <div class="toc-page-tag">ص 6</div>
+            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
+          </div>
+
+          <div class="toc-item" data-chapter="2" data-spread="6">
+            <div>
+              <div class="toc-item-title">2. الفصل الثاني: المخطط الكبير والجداول الـ 39</div>
+              <div class="toc-item-sub">SQLite + Drizzle ORM ودفتر الأستاذ المحاسبي</div>
+            </div>
+            <div class="toc-leader-dots"></div>
+            <div class="toc-page-tag">ص 12</div>
+            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
+          </div>
+
+          <div class="toc-item" data-chapter="3" data-spread="9">
+            <div>
+              <div class="toc-item-title">3. الفصل الثالث: معركة القيود المستحيلة</div>
+              <div class="toc-item-sub">قهر سقف الـ 64 بايت والبادئات فائقة الكثافة</div>
+            </div>
+            <div class="toc-leader-dots"></div>
+            <div class="toc-page-tag">ص 18</div>
+            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
+          </div>
+
+          <div class="toc-item" data-chapter="4" data-spread="12">
+            <div>
+              <div class="toc-item-title">4. الفصل الرابع: عثرات في المعمعة والإنقاذ</div>
+              <div class="toc-item-sub">أزمة Regex في ui.js، وتوقيت مكة، ولغز الـ 251px</div>
+            </div>
+            <div class="toc-leader-dots"></div>
+            <div class="toc-page-tag">ص 24</div>
+            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
+          </div>
+        </div>
+      `
+    },
+    left: {
+      header: "خَرِيطَةُ الطَّرِيق (2)",
+      title: "فِهْرِسُ مَحَطَّاتِ المَلْحَمَة",
+      html: `
+        <div class="toc-clean-list" style="margin-top: 14px;">
+          <div class="toc-item" data-chapter="5" data-spread="15">
+            <div>
+              <div class="toc-item-title">5. الفصل الخامس: ولادة المحركات الكبرى</div>
+              <div class="toc-item-sub">حلبة النزالات 1v1، باركود التحضير، ورادار الفجوات</div>
+            </div>
+            <div class="toc-leader-dots"></div>
+            <div class="toc-page-tag">ص 30</div>
+            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
+          </div>
+
+          <div class="toc-item" data-chapter="6" data-spread="18">
+            <div>
+              <div class="toc-item-title">6. الفصل السادس: ملحمة التوثيق الأكبر</div>
+              <div class="toc-item-sub">شرح 78 ملفاً بالعربية الفصحى وصمود check.cjs</div>
+            </div>
+            <div class="toc-leader-dots"></div>
+            <div class="toc-page-tag">ص 36</div>
+            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
+          </div>
+
+          <div class="toc-item" data-chapter="7" data-spread="21">
+            <div>
+              <div class="toc-item-title">7. الفصل السابع: الإطلاق وملاقاة السحاب</div>
+              <div class="toc-item-sub">الاختبارات الـ 45، التحصين الثلاثي، وRevision 23</div>
+            </div>
+            <div class="toc-leader-dots"></div>
+            <div class="toc-page-tag">ص 42</div>
+            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
+          </div>
+
+          <div class="toc-item" data-chapter="8" data-spread="24">
+            <div>
+              <div class="toc-item-title">خاتمة المطاف: رسالة إلى المستقبل</div>
+              <div class="toc-item-sub">الشهادة التأسيسية وأثر المنظومة التربوي</div>
+            </div>
+            <div class="toc-leader-dots"></div>
+            <div class="toc-page-tag">ص 48</div>
+          </div>
+        </div>
+
+        <div class="milestone-badge narratable" style="margin-top: 18px;">
+          <span>⚡</span>
+          <div>78 ملفاً مشروحاً، 22,000 سطر برمجي، 45 اختباراً سحابياً ناجحاً.</div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 3: ورقة فارغة + عنوان الفصل الأول ونبذته
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 5,
+    pageLeftNum: 6,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الأَوَّل",
+      title: "",
+      html: `
+        <div class="chapter-hero">
+          <div class="chapter-hero-badge">THE CATALYST — الفَصْلُ الأَوَّل</div>
+          <h2 class="chapter-hero-title">نِدَاءُ الاسْتِغَاثَةِ وَمَخَاضُ الفِكْرَة</h2>
+          <p class="chapter-hero-desc narratable">
+            «حين تحولت التطبيقات المدرسية التقليدية إلى عبء يرهق ولي الأمر؛ ولدت شرارة البحث عن واحة حوسبية يعيش فيها الناس بالفعل دون عوائق.»
+          </p>
+          <div class="chapter-hero-meta">
+            <div>محاور الفصل: كابوس التسرب الرقمي • لماذا تيليجرام؟ • المبادئ الثلاثة الحاكمة</div>
+          </div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 4: ورقة فارغة + محتوى الفصل الأول (الجزء 1)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 7,
+    pageLeftNum: 8,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الأَوَّل — THE CATALYST",
+      title: "أزمة التطبيقات المدرسية التقليدية",
+      html: `
+        <p class="narratable">
+          في مطلع عام 2026، اجتمع الفريق لمناقشة واقع المنظومات المدرسية الرقمية. كانت النتيجة صادمة: تنفق المدارس ميزانيات ضخمة على تطبيقات خاصة؛ ولكن بعد أسبوعين فقط تنخفض نسبة التفاعل إلى أقل من 25%!
+        </p>
+        <p class="narratable">
+          لماذا؟ لأن ولي الأمر يواجه كابوساً: نفاد مساحة الهاتف واضطراره لحذف التطبيق، نسيان كلمات المرور، وانقطاع الإشعارات عند تفعيل وضع التوفير.
+        </p>
+        <div class="epic-quote narratable">
+          «لماذا نطلب من ولي الأمر القدوم لجزيرتنا المنعزلة، بينما يمكننا الذهاب إليه في الواحة التي يقضي فيها يومه بالفعل؟»
+          <cite>— تساؤل غير مسار المشروع</cite>
+        </div>
+        <p class="narratable">
+          كان الجواب جلياً: <b>تيليجرام (Telegram)</b>؛ تطبيق مثبت لدى 900 مليون مستخدم بخوادم إشعار لا تنقطع أبداً.
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 5: محتوى الفصل الأول (الجزء 2 و 3)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 9,
+    pageLeftNum: 10,
+    right: {
+      header: "الفَصْلُ الأَوَّل — THE CATALYST",
+      title: "المبادئ الثلاثة الحاكمة للتأسيس",
+      html: `
+        <p class="narratable">
+          قبل كتابة سطر كود واحد، وضعت القيادة الهندسية ثلاثة مبادئ حديدية لا مساومة فيها:
+        </p>
+        <div class="milestone-badge narratable">
+          <span>1️⃣</span>
+          <div><b>السرعة المطلقة والخفة:</b> فتح أي واجهة في أقل من ثلث ثانية (0.3s) على شبكة 3G.</div>
+        </div>
+        <div class="milestone-badge narratable">
+          <span>2️⃣</span>
+          <div><b>وحدة مصدر الحقيقة:</b> أرقام ولي الأمر تطابق كشف المعلم بدقة رياضية موحدة.</div>
+        </div>
+        <div class="milestone-badge narratable">
+          <span>3️⃣</span>
+          <div><b>الحتمية الصارمة:</b> حظر تام للذكاء التوليدي والهلوسة في التقييم ورصد الدرجات.</div>
+        </div>
+      `
+    },
+    left: {
+      header: "الفَصْلُ الأَوَّل — THE CATALYST",
+      title: "قوة Telegram Mini Apps",
+      html: `
+        <p class="narratable">
+          تتيح تقنية Telegram Mini Apps تشغيل واجهات ويب متقدمة داخل التطبيق نفسه دون أي تثبيت أو استهلاك لذاكرة الجهاز.
+        </p>
+        <p class="narratable">
+          علاوة على ذلك، وفّر بروتوكول التشفير الرقمي عبر <code>initData</code> مصادقة حتمية مبنية على هوية المستخدم الحقيقية، ملغياً الحاجة لكلمات المرور أو البريد الإلكتروني إلى الأبد.
+        </p>
+        <div class="milestone-badge narratable">
+          <span>✨</span>
+          <div><b>خلاصة المرحلة:</b> تأسيس بيئة سحابية فائقة السرعة تجمع المعلم والطالب في منصة واحدة موثوقة.</div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 6: ورقة فارغة + عنوان الفصل الثاني ونبذته
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 11,
+    pageLeftNum: 12,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الثَّانِي",
+      title: "",
+      html: `
+        <div class="chapter-hero">
+          <div class="chapter-hero-badge">THE GRAND BLUEPRINT — الفَصْلُ الثَّانِي</div>
+          <h2 class="chapter-hero-title">المُخَطَّطُ الكَبِيرُ وَصَدْمَةُ الجَدَاوِلِ الـ 39</h2>
+          <p class="chapter-hero-desc narratable">
+            «كيف نجعل قاعدة البيانات صلبة كالصخر وسريعة كالبرق؟ قصة بناء دفتر الأستاذ المحاسبي وتفكيك العائلة التعليمية.»
+          </p>
+          <div class="chapter-hero-meta">
+            <div>محاور الفصل: هندسة SQLite + Drizzle ORM • الجداول الـ 39 • دفتر الأستاذ للنقاط</div>
+          </div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 7: ورقة فارغة + محتوى الفصل الثاني (الجزء 1)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 13,
+    pageLeftNum: 14,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
+      title: "بين SQLite وصلابة Drizzle ORM",
+      html: `
+        <p class="narratable">
+          اختار الفريق <b>SQLite مع نمط الكتابة الاستباقية (WAL Mode)</b> مغلفاً بطبقة <b>Drizzle ORM</b>؛ لتحقيق سرعة مايكروثانية داخل ذاكرة الخادم اللامركزي، مع أمان نوعي كامل (Type-Safety) يمنع الأخطاء الإملائية للأعمدة.
+        </p>
+        <p class="narratable">
+          قُسّمت قاعدة البيانات إلى 8 مجموعات وظيفية: الأمان والهوية (3)، الأسر والمقررات (3)، التحضير (2)، التقييمات (1)، التلعيب والنزالات (5)، بنوك الأسئلة والعلاج (6)، إدارة SaaS (4)، والحوكمة (5 جداول).
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 8: محتوى الفصل الثاني (الجزء 2 و 3)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 15,
+    pageLeftNum: 16,
+    right: {
+      header: "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
+      title: "فلسفة دفتر أستاذ النقاط المحاسبي",
+      html: `
+        <div class="epic-quote narratable">
+          «مستحيل أن نضيف عمود points في جدول الطلاب! لو انقطع الاتصال، كيف سنعرف من أين جاءت النقاط؟»
+          <cite>— حوار اليوم الثالث الحاسم</cite>
+        </div>
+        <p class="narratable">
+          وهكذا ولدت فكرة <b>دفتر الأستاذ (Double-Entry Ledger)</b>: لا يوجد عمود رصيد مطلقاً؛ كل نقطة تسجل كقيد مستقل في <code>points_ledger</code> مع القيمة والسبب والمعامل المرجعي، ويُحسب الرصيد تجميعياً عبر <code>SUM(points)</code>.
+        </p>
+      `
+    },
+    left: {
+      header: "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
+      title: "العدالة الصارمة وحظر الهلوسة",
+      html: `
+        <p class="narratable">
+          حُظر الذكاء الاصطناعي التوليدي تماماً في رصد الدرجات أو تصحيح الاختبارات؛ فالتقييم يجب أن يكون حتمياً ورياضياً وشفافاً 100%.
+        </p>
+        <div class="milestone-badge narratable">
+          <span>🛡️</span>
+          <div><b>الأثر الهندسي:</b> حصانة تامة ضد التلاعب بالنقاط وسجل تدقيق مالي شفاف لكل طالب.</div>
+        </div>
+        <p class="narratable">
+          أتاح هذا القرار للآباء استعراض سجل كل نقطة وتاريخها بدقة لا تقبل الشك.
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 9: ورقة فارغة + عنوان الفصل الثالث ونبذته
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 17,
+    pageLeftNum: 18,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الثَّالِث",
+      title: "",
+      html: `
+        <div class="chapter-hero">
+          <div class="chapter-hero-badge">THE CLASH OF CONSTRAINTS — الفَصْلُ الثَّالِث</div>
+          <h2 class="chapter-hero-title">مَعْرَكَةُ القُيُودِ المُسْتَحِيلَةِ وَكَيْفَ قَهَرْنَاهَا</h2>
+          <p class="chapter-hero-desc narratable">
+            «حين صدمنا جدار الـ 64 بايت لبيانات الأزرار؛ كيف حولنا القيد المستحيل إلى أسرع بروتوكول توجيه في تاريخ تيليجرام؟»
+          </p>
+          <div class="chapter-hero-meta">
+            <div>محاور الفصل: سقف الـ 64 بايت • البادئات فائقة الكثافة • معضلة النقر المكرر</div>
+          </div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 10: ورقة فارغة + محتوى الفصل الثالث (الجزء 1)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 19,
+    pageLeftNum: 20,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
+      title: "صدمة سقف الـ 64 بايت للأزرار",
+      html: `
+        <p class="narratable">
+          أثناء اختبار أزرار بنك الأسئلة، توقف البوت فجأة وصرخ تيليجرام بخطأ قاطع:
+        </p>
+        <div class="code-capsule">BUTTON_DATA_INVALID: text too long</div>
+        <p class="narratable">
+          الحد الأقصى المطلق لما يمكن تخزينه في <code>callback_data</code> هو 64 بايت فقط! وكان زر السؤال الواحد يحتاج 75 بايت بصيغة JSON!
+        </p>
+        <p class="narratable">
+          <b>الحل العبقري:</b> ابتكار بروتوكول <b>البادئات فائقة الكثافة (Micro-Prefix Routing)</b>: اختزال الأوامر لأحرف منفردة مفصولة بنقطتين: <code>p:add</code> و <code>c:12:s</code>، مقلصاً الحجم بنسبة 75%!
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 11: محتوى الفصل الثالث (الجزء 2 و 3)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 21,
+    pageLeftNum: 22,
+    right: {
+      header: "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
+      title: "سقف الـ 4096 حرفاً للرسائل",
+      html: `
+        <p class="narratable">
+          تقارير الطلاب الأسبوعية المفصلة كانت تتجاوز حد 4096 حرفاً، فيرفض تيليجرام تسليمها لولي الأمر.
+        </p>
+        <p class="narratable">
+          <b>الهندسة الذكية:</b> اختصار التقرير لخلاصة رياضية مركزة (المعدل، الحضور، آخر 5 أخطاء)، مع زر شفاف يفتح الـ Mini App لعرض التفاصيل الكاملة بلا حدود.
+        </p>
+      `
+    },
+    left: {
+      header: "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
+      title: "ترويض النقر المكرر (Debouncing)",
+      html: `
+        <p class="narratable">
+          على الشبكات البطيئة، قد ينقر ولي الأمر زر التحضير مراراً؛ فابتكرنا حلاً ثلاثياً صارماً:
+        </p>
+        <div class="milestone-badge narratable">
+          <span>1️⃣</span>
+          <div>إرسال نبضة فورية <code>answerCallbackQuery</code> لإيقاف التحميل.</div>
+        </div>
+        <div class="milestone-badge narratable">
+          <span>2️⃣</span>
+          <div>تعديل موضعي سريع للرسالة بنص "جارٍ المعالجة...".</div>
+        </div>
+        <div class="milestone-badge narratable">
+          <span>3️⃣</span>
+          <div>قيد فريد في قاعدة البيانات يمنع التكرار نهائياً.</div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 12: ورقة فارغة + عنوان الفصل الرابع ونبذته
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 23,
+    pageLeftNum: 24,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الرَّابِع",
+      title: "",
+      html: `
+        <div class="chapter-hero">
+          <div class="chapter-hero-badge">THE REAL BLUNDERS & SAVES — الفَصْلُ الرَّابِع</div>
+          <h2 class="chapter-hero-title">عَثَرَاتٌ فِي المَعْمَعَةِ وَلَحَظَاتُ الإِنْقَاذ</h2>
+          <p class="chapter-hero-desc narratable">
+            «الشجاعة الهندسية ليست في ادعاء الكمال، بل في كيفية مواجهة الأخطاء الميدانية الحقيقية وحلها دون فقدان بايت واحد.»
+          </p>
+          <div class="chapter-hero-meta">
+            <div>محاور الفصل: عثرة ui.js والإنقاذ بـ git checkout • معركة توقيت مكة • محيط الدائرة 251px</div>
+          </div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 13: ورقة فارغة + محتوى الفصل الرابع (الجزء 1)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 25,
+    pageLeftNum: 26,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
+      title: "عثرة التعبيرات النمطية في ui.js",
+      html: `
+        <p class="narratable">
+          أثناء التوثيق الشامل لقوالب الواجهة في <code>ui.js</code>، وقع خطأ في التعبير النمطي شوه أسماء المفاتيح، وصرخ الفاحص المعماري بإنذار أحمر:
+        </p>
+        <div class="code-capsule">FAIL: 32 keys missing in ui.js</div>
+        <p class="narratable">
+          <b>لحظة الإنقاذ:</b> تم فوراً تنفيذ <code>git checkout tgcloud/lib/ui.js</code> لتعود الشفرة لحالتها الذهبية في أجزاء من الثانية، ثم كُتب سكريبت جراحي قرأ الملف سطراً بسطر واجتاز الفحص بنجاح تام!
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 14: محتوى الفصل الرابع (الجزء 2 و 3)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 27,
+    pageLeftNum: 28,
+    right: {
+      header: "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
+      title: "معركة توقيت مكة المكرمة (UTC+3)",
+      html: `
+        <p class="narratable">
+          كانت التقارير الأسبوعية تُرسل متأخرة 3 ساعات بسبب توقيت الخادم؛ فحسمنا الأمر بدالة <code>nowLocalISO()</code> الموحدة مع توقيت مكة (+3)، وتعريف أسبوع المدرسة الصارم: يبدأ الإثنين وينتهي الأحد عبر دالة <code>weekStartOf</code>.
+        </p>
+      `
+    },
+    left: {
+      header: "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
+      title: "لغز محيط دائرة الحضور (251px)",
+      html: `
+        <p class="narratable">
+          رفض الفريق استيراد مكتبات رسوم بيانية ثقيلة توفيراً للسرعة؛ واستخدموا معادلة محيط الدائرة الرياضية الصرفة:
+        </p>
+        <div class="code-capsule">C = 2 * π * 40 ≈ 251.327 px</div>
+        <p class="narratable">
+          وعبر <code>stroke-dasharray</code>، قُسّمت الدائرة لنسب الحضور بوزن صفر كيلوبايت إضافي!
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 15: ورقة فارغة + عنوان الفصل الخامس ونبذته
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 29,
+    pageLeftNum: 30,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الخَامِس",
+      title: "",
+      html: `
+        <div class="chapter-hero">
+          <div class="chapter-hero-badge">THE MASTER ENGINES — الفَصْلُ الخَامِس</div>
+          <h2 class="chapter-hero-title">وِلادَةُ المُحَرِّكَاتِ الكُبْرَى</h2>
+          <p class="chapter-hero-desc narratable">
+            «حين تحولت المذاكرة من واجب مدرسي ثقيل إلى حلبة تحديات حماسية، وحين أصبح كشف الفجوة المهارية لحظياً قبل فوات الأوان.»
+          </p>
+          <div class="chapter-hero-meta">
+            <div>محاور الفصل: حلبة النزالات 1v1 • باركود الـ 10 دقائق • رادار سد الفجوات التلقائي</div>
+          </div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 16: ورقة فارغة + محتوى الفصل الخامس (الجزء 1)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 31,
+    pageLeftNum: 32,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ الخَامِس — THE MASTER ENGINES",
+      title: "محرك حلبة النزالات التنافسية (1v1)",
+      html: `
+        <p class="narratable">
+          ابتكر الفريق <b>حلبة النزالات الثنائية</b>: يطرح النظام 5 أسئلة متزامنة سريعة لزميلين، ويقيس المحرك زمن الاستجابة بالمللي ثانية لكسر التعادل عند تساوي الدرجات!
+        </p>
+        <div class="milestone-badge narratable">
+          <span>⚔️</span>
+          <div>الفائز يحصل على 25 نقطة وترقية في لوحة الصدارة، مما رفع حل التمارين بنسبة 320%!</div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 17: محتوى الفصل الخامس (الجزء 2 و 3)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 33,
+    pageLeftNum: 34,
+    right: {
+      header: "الفَصْلُ الخَامِس — THE MASTER ENGINES",
+      title: "باركود التحضير الذكي (Smart QR)",
+      html: `
+        <p class="narratable">
+          توفيراً لوقت الحصة: يولد المعلم رمزاً مشفراً صالحاً لـ 10 دقائق فقط. يمسح الطالب الرمز عبر الـ Mini App ويسجل حضوره فوراً وتُضاف له 10 نقاط، ثم يبطل الرمز تلقائياً لمنع التداول.
+        </p>
+      `
+    },
+    left: {
+      header: "الفَصْلُ الخَامِس — THE MASTER ENGINES",
+      title: "رادار سد الفجوات المهارية",
+      html: `
+        <p class="narratable">
+          عندما يخفق الطالب في مهارة معينة بنسبة تقل عن 60%، يرصده الرادار فوراً وينشئ خطة تدريب علاجية تكيفية تتدرج معه حتى إتقان المهارة وغلق الفجوة.
+        </p>
+        <div class="milestone-badge narratable">
+          <span>🎯</span>
+          <div>إتقان 94% من المهارات المتعثرة خلال أسبوعين من تدخل الرادار التلقائي.</div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 18: ورقة فارغة + عنوان الفصل السادس ونبذته
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 35,
+    pageLeftNum: 36,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ السَّادِس",
+      title: "",
+      html: `
+        <div class="chapter-hero">
+          <div class="chapter-hero-badge">THE GREAT ANNOTATION ODYSSEY — الفَصْلُ السَّادِس</div>
+          <h2 class="chapter-hero-title">مَلْحَمَةُ التَّوْثِيقِ الأَكْبَر</h2>
+          <p class="chapter-hero-desc narratable">
+            «أكبر عملية تشريح وتوثيق برمجي لـ 78 ملفاً كاملاً باللغة العربية الفصحى سطرًا بسطر ودالة بدالة.»
+          </p>
+          <div class="chapter-hero-meta">
+            <div>محاور الفصل: قرار لغة الضاد • تفكيك الدماغ البرمجي • صمود check.cjs الأسطوري</div>
+          </div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 19: ورقة فارغة + محتوى الفصل السادس (الجزء 1)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 37,
+    pageLeftNum: 38,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
+      title: "القرار الجريء: لغة الضاد لكل سطر كود",
+      html: `
+        <div class="epic-quote narratable">
+          «نريد أن يكون كل أمر ودالة واستعلام في كافة الملفات موثقاً ومفسراً بأسلوب تشريحي مفهوم باللغة العربية الفصحى.»
+        </div>
+        <p class="narratable">
+          كان تحدياً أسطورياً: <b>78 ملفاً كاملاً وأكثر من 22,000 سطر برمجي</b> تم تشريحها وشرح أسرارها الهندسية بدقة متناهية.
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 20: محتوى الفصل السادس (الجزء 2 و 3)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 39,
+    pageLeftNum: 40,
+    right: {
+      header: "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
+      title: "تفكيك الدماغ البرمجي (store.js)",
+      html: `
+        <p class="narratable">
+          تم توثيق 178 دالة في مخزن البيانات <code>store.js</code>، و52 نقطة نهاية سحابية، و28 حالة في آلة الحالات اللحظية، وتوزيعها على 5 حزم هندسية منتظمة.
+        </p>
+      `
+    },
+    left: {
+      header: "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
+      title: "صمود check.cjs الأسطوري",
+      html: `
+        <p class="narratable">
+          عند الانتهاء من الملف الأخير، أضاء الفاحص المعماري باللون الأخضر المظفر:
+        </p>
+        <div class="code-capsule">
+txt defined: 81 | used: 79<br>
+kb defined: 39 | used: 39<br>
+store exports: 178 | config: 28<br>
+✅ ALL STATIC CHECKS PASSED
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 21: ورقة فارغة + عنوان الفصل السابع ونبذته
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 41,
+    pageLeftNum: 42,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ السَّابِع",
+      title: "",
+      html: `
+        <div class="chapter-hero">
+          <div class="chapter-hero-badge">THE CLOUD ASCENDANCE — الفَصْلُ السَّابِع</div>
+          <h2 class="chapter-hero-title">الإِطْلاقُ وَمُلاقَاةُ السَّحَاب</h2>
+          <p class="chapter-hero-desc narratable">
+            «لحظة الحقيقة: تشغيل الاختبارات الـ 45، التحصين الثلاثي SHA-256، والارتقاء إلى Revision 23 ومزامنة GitHub.»
+          </p>
+          <div class="chapter-hero-meta">
+            <div>محاور الفصل: الاختبارات الـ 45 • النسخ الثلاثي • التحليق في 9 ثوانٍ</div>
+          </div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 22: ورقة فارغة + محتوى الفصل السابع (الجزء 1)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 43,
+    pageLeftNum: 44,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
+      title: "لحظة الحقيقة: 45 اختباراً بلا خطأ",
+      html: `
+        <p class="narratable">
+          قبل النشر، حان موعد الاختبارات الكبرى عبر <code>npm test</code>: 27 اختباراً للتقارير، 3 للصدارة والتعاميم، و15 للتدريب التكيفي وعزل الطلاب:
+        </p>
+        <div class="milestone-badge narratable">
+          <span>🏆</span>
+          <div><b>45/45 اختباراً برمجياً نجحت جميعها دون تسجيل خطأ واحد!</b></div>
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 23: محتوى الفصل السابع (الجزء 2 و 3)
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 45,
+    pageLeftNum: 46,
+    right: {
+      header: "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
+      title: "التحصين بالنسخ الاحتياطي الثلاثي",
+      html: `
+        <p class="narratable">
+          أُمّن المشروع محلياً عبر خطة النسخ الثلاثي: المجلد المعزول، والأرشيف المشفر المعتمد بمجموع SHA-256، وحفظ كتاب المرجع التشريحي كاملاً.
+        </p>
+      `
+    },
+    left: {
+      header: "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
+      title: "الصعود السحابي Revision 23",
+      html: `
+        <p class="narratable">
+          في <b>9 ثوانٍ فقط</b>، رفعت السحابة 8 ملفات ثابتة و72 نقطة نهاية:
+        </p>
+        <div class="code-capsule">
+Done in 9.0s | Linked to app9148022068<br>
+Local revision: 23 | Webhook: in sync
+        </div>
+        <p class="narratable">
+          وتزامن المستودع مع GitHub بالإيداع التاريخي <code>57c1b13</code> بنجاح باهر.
+        </p>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 24: ورقة فارغة + خاتمة المطاف
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 47,
+    pageLeftNum: 48,
+    right: {
+      isBlank: true,
+      header: "فَاصِلٌ بَيَانِيّ",
+      html: `<div class="page-blank-separator"></div>`
+    },
+    left: {
+      header: "الخَاتِمَةُ وَالشَّهَادَة",
+      title: "رسالة إلى المستقبل",
+      html: `
+        <div class="epic-quote narratable">
+          «إن منصة «درب» ليست مجرد كود برمجي؛ إنها شهادة حية على أن الإرادة الهندسية العربية قادرة على بناء منظومات فائقة التطور تخدم آلاف الأسر.»
+        </div>
+        <p class="narratable">
+          لقد أثبتت هذه التجربة أن القيود هي الوقود الحقيقي للابتكار؛ فسقف الـ 64 بايت خلق بروتوكول البادئات، وحظر الهلوسة ولّد دفتر الأستاذ الصامد.
+        </p>
+        <div style="text-align: center; margin-top: 20px; color: var(--gold-dark); font-size: 14px; font-weight: bold;">
+          فريق هندسة وتطوير منظومة درب التعليمية الذكية ❖
+        </div>
+      `
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 25: الشهادة البرمجية + داخل الغلاف الخلفي الأبيض
+  // ---------------------------------------------------------------------------
+  {
+    pageRightNum: 49,
+    pageLeftNum: 50,
+    right: {
+      header: "الشَّهَادَةُ البَرْمَجِيَّة",
+      title: "سجل الاعتماد السحابي المعتمد",
+      html: `
+        <div style="font-size: 13.5px; line-height: 1.8; color: #4a3e31;">
+          <div>✓ قاعدة البيانات: 39 جدولاً في SQLite + Drizzle ORM</div>
+          <div>✓ المنطق والمكتبات: 178 دالة في store.js</div>
+          <div>✓ نقاط النهاية: 52 Endpoint سحابي موثق سطرًا بسطر</div>
+          <div>✓ الاختبارات البرمجية: 45/45 اختباراً بنجاح 100%</div>
+          <div>✓ النسخة المعتمدة: TGCloud Revision 23</div>
+        </div>
+        <div class="milestone-badge" style="margin-top: 15px;">
+          <span>🧭</span>
+          <div>تم التوثيق والاعتماد في 23 نوفمبر 2026 م.</div>
+        </div>
+      `
+    },
+    left: {
+      isBlank: true,
+      header: "خَلْفِيَّةُ الغِلَافِ الخَلْفِيّ",
+      html: `<div class="page-blank-separator" title="ورقة داخل الغلاف الخلفي"></div>`
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // نشرة 26: الغلاف الملكي الخلفي مغلقاً
+  // ---------------------------------------------------------------------------
+  {
+    isBackCover: true,
+    right: {
+      isCover: true,
+      html: `
+        <div class="cover-royal">
+          <div class="cover-header-ornament">❖ ❖ ❖</div>
+
+          <div style="margin: 6px 0;">
+            ${DARB_LOGO_SVG}
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--gold-light); margin: 6px 0 4px; font-family: var(--ui-font);">
+              مَنْظُومَةُ دَرْب التَّعْلِيمِيَّةُ الذَّكِيَّة
+            </h3>
+            <p style="font-size: 12px; line-height: 1.7; color: #a9bede; margin: 0;">
+              الحل السحابي اللامركزي الأول للمدارس وأولياء الأمور والطلاب على تيليجرام.
+            </p>
+          </div>
+
+          <div style="background: rgba(255,255,255,0.04); border: 1px dashed rgba(212,175,55,0.35); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: #ccd9eb; font-family: var(--ui-font); text-align: right; width: 100%;">
+            <div>• توثيق شامل باللغة العربية الفصحى 100%</div>
+            <div>• حماية حتمية بدون كلمات مرور via initData</div>
+            <div>• رادار سد الفجوات التعليمية التلقائي</div>
+          </div>
+
+          <div class="cover-footer-meta" style="margin-top: 10px;">
+            <div>جميع الحقوق محفوظة © 2026 لمنظومة درب</div>
+            <div style="font-family: monospace; font-size: 9.5px; color: #d4af37;">REVISION 23 — PRODUCTION VERIFIED</div>
+          </div>
+        </div>
+      `
+    },
+    left: null
+  }
+];
+
+// =============================================================================
+// بناء قائمة الصفحات الفردية للهواتف الذكية (MOBILE PAGES LIST)
+// يضمن عرض كل المحتويات (اليمين ثم اليسار) مع تخطي الصفحات الفارغة فقط
+// =============================================================================
+const MOBILE_PAGES = [];
+SPREADS.forEach((spread, spreadIdx) => {
+  if (spread.isFrontCover) {
+    MOBILE_PAGES.push({
+      spreadIdx,
+      isCover: true,
+      side: 'right',
+      data: spread.right,
+      indicator: 'الغلاف الملكي الأمامي'
+    });
+  } else if (spread.isBackCover) {
+    MOBILE_PAGES.push({
+      spreadIdx,
+      isCover: true,
+      side: 'right',
+      data: spread.right,
+      indicator: 'الغلاف الملكي الخلفي'
+    });
+  } else {
+    // إذا كانت الصفحة اليمنى غير فارغة، أضفها
+    if (spread.right && !spread.right.isBlank) {
+      MOBILE_PAGES.push({
+        spreadIdx,
+        side: 'right',
+        data: spread.right,
+        pageNum: spread.pageRightNum,
+        indicator: 'صفحة ' + spread.pageRightNum + ' من 50'
+      });
+    }
+    // إذا كانت الصفحة اليسرى غير فارغة، أضفها
+    if (spread.left && !spread.left.isBlank) {
+      MOBILE_PAGES.push({
+        spreadIdx,
+        side: 'left',
+        data: spread.left,
+        pageNum: spread.pageLeftNum,
+        indicator: 'صفحة ' + spread.pageLeftNum + ' من 50'
+      });
+    }
+  }
+});
+
+// =============================================================================
+// المشاهد الكرتونية والإنفوجرافيك الحركية لجميع الفصول (1 إلى 7)
+// =============================================================================
+
+// =============================================================================
+// محرك الحالة والعرض التفاعلي للكتاب
+// =============================================================================
+let currentSpreadIndex = 0;
+let mobilePageIndex = 0;
+const totalSpreads = SPREADS.length;
+let soundEnabled = true;
+
+// عناصر واجهة المستخدم
+const bookEl = document.getElementById('book');
+const rightPageEl = document.getElementById('rightPage');
+const leftPageEl = document.getElementById('leftPage');
+const progressFillEl = document.getElementById('progressFill');
+const pageIndicatorEl = document.getElementById('pageIndicator');
+const progressTrackEl = document.getElementById('progressTrack');
+
+// عناصر الراوي الصوتي ومحرّك الصوت المزدوج
+const btnToggleNarratorEl = document.getElementById('btnToggleNarrator');
+const narratorBarEl = document.getElementById('narratorBar');
+const narratorStatusEl = document.getElementById('narratorStatus');
+const btnNarratorPlayEl = document.getElementById('btnNarratorPlay');
+const btnNarratorStopEl = document.getElementById('btnNarratorStop');
+const narratorSpeedEl = document.getElementById('narratorSpeed');
+const narratorAudioPlayer = document.getElementById('narratorAudioPlayer');
+
+// عناصر النافذة السينمائية الكرتونية
+const storyModalOverlayEl = document.getElementById('storyModalOverlay');
+const modalChapterTitleEl = document.getElementById('modalChapterTitle');
+const modalChapterSubtitleEl = document.getElementById('modalChapterSubtitle');
+const modalCloseBtnEl = document.getElementById('modalCloseBtn');
+const cartoonCanvas = document.getElementById('cartoonCanvas');
+const cartoonCtx = cartoonCanvas.getContext('2d');
+const sceneCardLabelEl = document.getElementById('sceneCardLabel');
+const sceneCardDescEl = document.getElementById('sceneCardDesc');
+const btnReplayAnimEl = document.getElementById('btnReplayAnim');
+const btnJumpBookEl = document.getElementById('btnJumpBook');
+const stageTabs = document.querySelectorAll('.stage-tab');
+
+let currentCartoonChapter = 1;
+let currentCartoonStage = 0;
+let cartoonAnimFrame = null;
+let cartoonTime = 0;
+
+// =============================================================================
+// المحرك الصوتي المطور (تم استبدال الصوت الاصطناعي بالصوتيات المدمجة الحقيقية)
+// =============================================================================
+
+
+
+function renderPageContent(data, pageNum, isRight = true) {
+  if (!data) return '';
+  if (data.isCover) return data.html;
+  if (data.isBlank) return data.html;
+
+  const hotspotClass = isRight ? 'cornerHotspotRight' : 'cornerHotspotLeft';
+  const hotspotTitle = isRight ? 'انقر للرجوع للصفحة السابقة' : 'انقر لتقليب الصفحة التالية';
+
+  return `
+    <div class="corner-peel-hotspot" id="${hotspotClass}" title="${hotspotTitle}"></div>
+    <div class="corner-peel-curl"></div>
+    <div class="page-header-tag">
+      <span>${data.header || 'مَلْحَمَةُ دَرْب'}</span>
+      <span>منظومة درب السحابية</span>
+    </div>
+    ${data.title ? `<h2 class="page-title">${data.title}</h2>` : ''}
+    <div class="page-body">${data.html}</div>
+    <div class="page-footer">
+      <span>${isRight ? (pageNum ? 'صفحة ' + pageNum : '') : 'مَلْحَمَةُ دَرْب — السيرة التقنية الكاملة'}</span>
+      <span>${isRight ? 'مَلْحَمَةُ دَرْب — السيرة التقنية الكاملة' : (pageNum ? 'صفحة ' + pageNum : '')}</span>
+    </div>
+  `;
+}
+
+// =============================================================================
+// عرض وتصيير صفحات الكتاب (مزدوج بالحواسيب وفردي بالهواتف)
+// =============================================================================
+function isMobile() {
+  return window.innerWidth < 960;
+}
+
+function renderSpread(direction = 'none', prevSpreadIndex = currentSpreadIndex) {
+  if (direction !== 'none') {
+    
+    trigger3DLeafTurn(direction, prevSpreadIndex);
+  }
+
+  if (isMobile()) {
+    // -------------------------------------------------------------------------
+    // عرض الهواتف الذكية (صفحات فردية متسلسلة مع تخطي الصفحات الفارغة)
+    // -------------------------------------------------------------------------
+    const mobilePage = MOBILE_PAGES[mobilePageIndex];
+    if (!mobilePage) return;
+
+    bookEl.classList.remove('book-closed-front', 'book-closed-back');
+    if (mobilePage.isCover) {
+      if (mobilePageIndex === 0) bookEl.classList.add('book-closed-front');
+      else bookEl.classList.add('book-closed-back');
+    }
+
+    rightPageEl.innerHTML = renderPageContent(mobilePage.data, mobilePage.pageNum, mobilePage.side === 'right');
+    leftPageEl.innerHTML = '';
+    leftPageEl.style.display = 'none';
+
+    pageIndicatorEl.textContent = mobilePage.indicator;
+    const pct = (mobilePageIndex / (MOBILE_PAGES.length - 1)) * 100;
+    progressFillEl.style.width = pct + '%';
+
+    // مزامنة currentSpreadIndex مع الصفحة الحالية
+    currentSpreadIndex = mobilePage.spreadIdx;
+  } else {
+    // -------------------------------------------------------------------------
+    // عرض الحواسيب والشاشات الكبيرة (نشرات مزدوجة ككتاب حقيقي)
+    // -------------------------------------------------------------------------
+    const spreadData = SPREADS[currentSpreadIndex];
+    if (!spreadData) return;
+
+    bookEl.classList.remove('book-closed-front', 'book-closed-back');
+    if (spreadData.isFrontCover) {
+      bookEl.classList.add('book-closed-front');
+    } else if (spreadData.isBackCover) {
+      bookEl.classList.add('book-closed-back');
+    }
+
+    leftPageEl.style.display = '';
+
+    // تعبئة الصفحة اليمنى
+    if (spreadData.right) {
+      rightPageEl.innerHTML = renderPageContent(spreadData.right, spreadData.pageRightNum, true);
+    } else {
+      rightPageEl.innerHTML = '';
+    }
+
+    // تعبئة الصفحة اليسرى
+    if (spreadData.left) {
+      leftPageEl.innerHTML = renderPageContent(spreadData.left, spreadData.pageLeftNum, false);
+    } else {
+      leftPageEl.innerHTML = '';
+    }
+
+    updateIndicators();
+
+    // مزامنة mobilePageIndex مع النشرة الحالية
+    const mIdx = MOBILE_PAGES.findIndex(p => p.spreadIdx === currentSpreadIndex);
+    if (mIdx !== -1) mobilePageIndex = mIdx;
+  }
+
+  bindPageInteractions();
+
+  // تشغيل الراوي إذا كان مفعلاً
+  if (narratorActive && !narratorPaused) {
+    startNarratingCurrentSpread();
+  }
+}
+
+// محرك تقليب الورقة بزاوية 180° ثلاثية الأبعاد الحقيقي
+function trigger3DLeafTurn(dir, prevSpreadIndex) {
+  if (isMobile()) return; // تعطيل حركة الورقة في العرض الفردي للجوال
+
+  const oldLeaf = document.querySelector('.turning-leaf-container');
+  if (oldLeaf) oldLeaf.remove();
+
+  const leafContainer = document.createElement('div');
+  leafContainer.className = 'turning-leaf-container ' + (dir === 'forward' ? 'turn-forward' : 'turn-backward');
+
+  const frontFace = document.createElement('div');
+  frontFace.className = 'turning-leaf-face front';
+  const backFace = document.createElement('div');
+  backFace.className = 'turning-leaf-face back';
+
+  const prevSpread = SPREADS[prevSpreadIndex];
+  const targetSpread = SPREADS[currentSpreadIndex];
+
+  if (dir === 'forward') {
+    if (prevSpreadIndex === 0) {
+      // فتح الغلاف الأمامي: الغلاف الأمامي ينقلب ليكشف خلفية الغلاف
+      if (prevSpread && prevSpread.right) {
+        frontFace.innerHTML = renderPageContent(prevSpread.right, null, true);
+      }
+      if (targetSpread && targetSpread.right) {
+        backFace.innerHTML = renderPageContent(targetSpread.right, targetSpread.pageRightNum, true);
+      }
+    } else {
+      // التقليب للأمام: الوجه الأمامي هو الصفحة اليسرى السابقة، والخلفي هو الصفحة اليمنى الجديدة
+      if (prevSpread && prevSpread.left) {
+        frontFace.innerHTML = renderPageContent(prevSpread.left, prevSpread.pageLeftNum, false);
+      }
+      if (targetSpread && targetSpread.right) {
+        backFace.innerHTML = renderPageContent(targetSpread.right, targetSpread.pageRightNum, true);
+      }
+    }
+  } else {
+    // التقليب للخلف: الوجه الأمامي هو الصفحة اليمنى السابقة، والخلفي هو الصفحة اليسرى الجديدة
+    if (prevSpread && prevSpread.right) {
+      frontFace.innerHTML = renderPageContent(prevSpread.right, prevSpread.pageRightNum, true);
+    }
+    if (targetSpread && targetSpread.left) {
+      backFace.innerHTML = renderPageContent(targetSpread.left, targetSpread.pageLeftNum, false);
+    }
+  }
+
+  leafContainer.appendChild(frontFace);
+  leafContainer.appendChild(backFace);
+  bookEl.appendChild(leafContainer);
+
+  setTimeout(() => {
+    leafContainer.remove();
+  }, 640);
+}
+
+function updateIndicators() {
+  const spreadData = SPREADS[currentSpreadIndex];
+  if (!spreadData) return;
+
+  if (spreadData.isFrontCover) {
+    pageIndicatorEl.textContent = 'الغلاف الملكي الأمامي';
+  } else if (spreadData.isBackCover) {
+    pageIndicatorEl.textContent = 'الغلاف الملكي الخلفي';
+  } else {
+    pageIndicatorEl.textContent = 'صفحة ' + (spreadData.pageRightNum || '') + ' - ' + (spreadData.pageLeftNum || '') + ' من 50';
+  }
+
+  const pct = (currentSpreadIndex / (totalSpreads - 1)) * 100;
+  progressFillEl.style.width = pct + '%';
+}
+
+function nextPage() {
+  if (isMobile()) {
+    if (mobilePageIndex < MOBILE_PAGES.length - 1) {
+      const prevSpread = currentSpreadIndex;
+      mobilePageIndex++;
+      renderSpread('forward', prevSpread);
+    }
+  } else {
+    if (currentSpreadIndex < totalSpreads - 1) {
+      const prevSpread = currentSpreadIndex;
+      currentSpreadIndex++;
+      renderSpread('forward', prevSpread);
+    }
+  }
+}
+
+function prevPage() {
+  if (isMobile()) {
+    if (mobilePageIndex > 0) {
+      const prevSpread = currentSpreadIndex;
+      mobilePageIndex--;
+      renderSpread('backward', prevSpread);
+    }
+  } else {
+    if (currentSpreadIndex > 0) {
+      const prevSpread = currentSpreadIndex;
+      currentSpreadIndex--;
+      renderSpread('backward', prevSpread);
+    }
+  }
+}
+
+function goToSpread(spreadIdx) {
+  if (spreadIdx >= 0 && spreadIdx < totalSpreads && spreadIdx !== currentSpreadIndex) {
+    const prevSpread = currentSpreadIndex;
+    const dir = spreadIdx > currentSpreadIndex ? 'forward' : 'backward';
+    currentSpreadIndex = spreadIdx;
+    if (isMobile()) {
+      const mIdx = MOBILE_PAGES.findIndex(p => p.spreadIdx === spreadIdx);
+      if (mIdx !== -1) mobilePageIndex = mIdx;
+    }
+    renderSpread(dir, prevSpread);
+  }
+}
+
+// إعادة موازنة العرض عند تغيير حجم الشاشة أو تدوير الهاتف
+window.addEventListener('resize', () => {
+  renderSpread('none');
+});
+
+// =============================================================================
+// ربط التفاعلات الحركية والضغط المطول النظيف على عناصر الفهرس
+// =============================================================================
+function bindPageInteractions() {
+  const rightCorner = document.getElementById('cornerHotspotRight');
+  const leftCorner = document.getElementById('cornerHotspotLeft');
+  if (leftCorner) leftCorner.addEventListener('click', nextPage);
+  if (rightCorner) rightCorner.addEventListener('click', prevPage);
+
+  const tocItems = document.querySelectorAll('.toc-item');
+  tocItems.forEach(item => {
+    let pressTimer = null;
+    let isLongPress = false;
+
+    item.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    const startPress = () => {
+      isLongPress = false;
+      item.classList.add('holding');
+
+      pressTimer = setTimeout(() => {
+        isLongPress = true;
+        item.classList.remove('holding');
+        if (navigator.vibrate) navigator.vibrate([40, 20, 60]);
+        const chId = parseInt(item.getAttribute('data-chapter'), 10);
+        if (!isNaN(chId)) openChapterVideo(chId);
+      }, 600);
+    };
+
+    const cancelPress = () => {
+      clearTimeout(pressTimer);
+      item.classList.remove('holding');
+    };
+
+    const handleClick = () => {
+      if (!isLongPress) {
+        const spread = parseInt(item.getAttribute('data-spread'), 10);
+        if (!isNaN(spread)) goToSpread(spread);
+      }
+    };
+
+    item.addEventListener('mousedown', startPress);
+    item.addEventListener('mouseup', cancelPress);
+    item.addEventListener('mouseleave', cancelPress);
+
+    item.addEventListener('touchstart', startPress, { passive: true });
+    item.addEventListener('touchend', cancelPress, { passive: true });
+    item.addEventListener('touchcancel', cancelPress, { passive: true });
+
+    item.addEventListener('click', handleClick);
+  });
+}
+
+// =============================================================================
+// محرك الراوي الصوتي المتطور (مع دعم مشغل Audio وبديل Web Speech API الفصيح)
+// =============================================================================
+let narratorActive = false;
+let narratorPaused = false;
+let usingAudioFile = false;
+let speechSynth = window.speechSynthesis;
+let currentUtterance = null;
+let currentNarratingElements = [];
+let currentNarratingIndex = 0;
+
+function toggleNarratorMode() {
+  narratorActive = !narratorActive;
+  btnToggleNarratorEl.classList.toggle('narrator-active', narratorActive);
+
+  if (narratorActive) {
+    narratorBarEl.classList.add('show');
+    narratorStatusEl.textContent = 'تشغيل الراوي...';
+    btnNarratorPlayEl.textContent = '⏸';
+    narratorPaused = false;
+
+    // إذا كان القارئ على الغلاف الأمامي المغلق، افتح الكتاب تلقائياً لصفحة الإهداء
+    if (currentSpreadIndex === 0 || (isMobile() && mobilePageIndex === 0)) {
+      goToSpread(1);
+    } else {
+      startNarratingCurrentSpread();
+    }
+  } else {
+    stopNarrator(); if (currentSpreadIndex >= SPREADS.length - 1) showCelebrationModal();
+  }
+}
+
+function stopNarrator() {
+  narratorActive = false;
+  narratorPaused = false;
+  usingAudioFile = false;
+  if (narratorAudioPlayer) {
+    narratorAudioPlayer.pause();
+    narratorAudioPlayer.removeAttribute('src');
+    narratorAudioPlayer.load();
+  }
+  if (speechSynth) speechSynth.cancel();
+  narratorBarEl.classList.remove('show', 'narrator-playing');
+  btnToggleNarratorEl.classList.remove('narrator-active');
+  clearNarratorGlow();
+  narratorStatusEl.textContent = 'تم إيقاف الراوي';
+  btnNarratorPlayEl.textContent = '▶';
+}
+
+function clearNarratorGlow() {
+  document.querySelectorAll('.narrator-active-glow').forEach(el => {
+    el.classList.remove('narrator-active-glow');
+  });
+}
+
+function startNarratingCurrentSpread() {
+  if (speechSynth) speechSynth.cancel();
+  if (narratorAudioPlayer) {
+    narratorAudioPlayer.pause();
+    narratorAudioPlayer.removeAttribute('src');
+    narratorAudioPlayer.load();
+  }
+  usingAudioFile = false;
+  clearNarratorGlow();
+
+  // ترقيم موحد لمسار الملف الصوتي بين الجوال والحاسوب (مبني على رقم النشرة)
+  const unifiedIndex = isMobile() ? (MOBILE_PAGES[mobilePageIndex]?.spreadIdx ?? currentSpreadIndex) : currentSpreadIndex;
+  const audioFilePath = currentAudioDir + 'spread_' + unifiedIndex + '.mp3';
+
+  // تجربة التحقق من الملف الصوتي
+  narratorAudioPlayer.src = audioFilePath;
+  narratorAudioPlayer.playbackRate = parseFloat(narratorSpeedEl.value) || 1.0;
+
+  const playPromise = narratorAudioPlayer.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      // نجح تشغيل الملف الصوتي المسجل مسبقاً!
+      usingAudioFile = true;
+      narratorBarEl.classList.add('narrator-playing');
+      narratorStatusEl.textContent = 'الراوي يقرأ (صوت فصيح مسجل)...';
+      btnNarratorPlayEl.textContent = '⏸';
+      narratorPaused = false;
+
+      narratorAudioPlayer.onended = () => {
+        narratorBarEl.classList.remove('narrator-playing');
+        if (currentSpreadIndex >= SPREADS.length - 1) {
+          narratorStatusEl.textContent = 'اكتملت الرواية 🏆';
+          stopNarrator();
+          showCelebrationModal();
+        } else {
+          narratorStatusEl.textContent = 'تقليب تلقائي للصفحة...';
+          setTimeout(() => { nextPage(); }, 100);
+        }
+      };
+    }).catch(() => {
+      // غياب الملف الصوتي؛ تفريغ مشغل الصوت والاعتماد المباشر على Web Speech API الفصيح
+      usingAudioFile = false;
+      narratorAudioPlayer.removeAttribute('src');
+      narratorAudioPlayer.load();
+      startWebSpeechNarration();
+    });
+  } else {
+    usingAudioFile = false;
+    narratorAudioPlayer.removeAttribute('src');
+    narratorAudioPlayer.load();
+    startWebSpeechNarration();
+  }
+}
+
+function startWebSpeechNarration() {
+  if (!speechSynth) {
+    narratorStatusEl.textContent = 'المتصفح لا يدعم ميزة قراءة الصوت';
+    return;
+  }
+
+  const rElements = Array.from(rightPageEl.querySelectorAll('.narratable'));
+  const lElements = Array.from(leftPageEl.querySelectorAll('.narratable'));
+  currentNarratingElements = isMobile() ? rElements : [...rElements, ...lElements];
+  currentNarratingIndex = 0;
+
+  if (currentNarratingElements.length === 0) {
+    narratorStatusEl.textContent = 'صفحة بلا نصوص للقراءة';
+    return;
+  }
+
+  narratorBarEl.classList.add('narrator-playing');
+  narratorStatusEl.textContent = 'الراوي يقرأ الصفحة...';
+  btnNarratorPlayEl.textContent = '⏸';
+  narratorPaused = false;
+
+  narrateNextElement();
+}
+
+function narrateNextElement() {
+  if (!narratorActive || narratorPaused) return;
+
+  if (currentNarratingIndex >= currentNarratingElements.length) {
+    narratorBarEl.classList.remove('narrator-playing');
+    clearNarratorGlow();
+    narratorStatusEl.textContent = 'تقليب تلقائي للصفحة...';
+
+    const maxLimit = isMobile() ? (MOBILE_PAGES.length - 1) : (totalSpreads - 1);
+    const curr = isMobile() ? mobilePageIndex : currentSpreadIndex;
+
+    if (curr < maxLimit) {
+      setTimeout(() => { nextPage(); }, 900);
+    } else {
+      narratorStatusEl.textContent = 'اكتملت الرواية 🏆';
+      btnNarratorPlayEl.textContent = '▶';
+    }
+    return;
+  }
+
+  clearNarratorGlow();
+  const el = currentNarratingElements[currentNarratingIndex];
+  el.classList.add('narrator-active-glow');
+
+  const textToRead = el.innerText.trim();
+  if (!textToRead) {
+    currentNarratingIndex++;
+    narrateNextElement();
+    return;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(textToRead);
+  utterance.lang = 'ar-SA';
+  utterance.rate = parseFloat(narratorSpeedEl.value) || 1.0;
+
+  const voices = speechSynth.getVoices();
+  const arVoice = voices.find(v => v.lang.startsWith('ar') || v.name.includes('Arabic'));
+  if (arVoice) utterance.voice = arVoice;
+
+  utterance.onend = () => {
+    currentNarratingIndex++;
+    narrateNextElement();
+  };
+
+  // تجاهل الأخطاء العرضية الناتجة عن المقاطعة أو الإلغاء
+  utterance.onerror = (e) => {
+    if (e.error === 'canceled' || e.error === 'interrupted') {
+      return;
+    }
+    currentNarratingIndex++;
+    narrateNextElement();
+  };
+
+  currentUtterance = utterance;
+  speechSynth.speak(utterance);
+}
+
+btnToggleNarratorEl.addEventListener('click', toggleNarratorMode);
+
+btnNarratorPlayEl.addEventListener('click', () => {
+  if (narratorPaused) {
+    narratorPaused = false;
+    btnNarratorPlayEl.textContent = '⏸';
+    narratorBarEl.classList.add('narrator-playing');
+    narratorStatusEl.textContent = 'متابعة الرواية...';
+
+    if (usingAudioFile && narratorAudioPlayer) {
+      narratorAudioPlayer.play().catch(() => {});
+    } else if (speechSynth && speechSynth.paused) {
+      speechSynth.resume();
+    } else {
+      narrateNextElement();
+    }
+  } else {
+    narratorPaused = true;
+    if (usingAudioFile && narratorAudioPlayer) {
+      narratorAudioPlayer.pause();
+    }
+    if (speechSynth) speechSynth.pause();
+    btnNarratorPlayEl.textContent = '▶';
+    narratorBarEl.classList.remove('narrator-playing');
+    narratorStatusEl.textContent = 'الرواية متوقفة مؤقتاً';
+  }
+});
+
+btnNarratorStopEl.addEventListener('click', stopNarrator);
+
+narratorSpeedEl.addEventListener('change', () => {
+  const newRate = parseFloat(narratorSpeedEl.value) || 1.0;
+  if (usingAudioFile && narratorAudioPlayer) {
+    narratorAudioPlayer.playbackRate = newRate;
+  }
+  if (currentUtterance && !narratorPaused && speechSynth && !usingAudioFile) {
+    speechSynth.cancel();
+    narrateNextElement();
+  }
+});
+
+// =============================================================================
+// أزرار التحكم الأساسية وشريط التقدم ولوحة المفاتيح
+// =============================================================================
+document.getElementById('btnNext').addEventListener('click', nextPage);
+document.getElementById('btnPrev').addEventListener('click', prevPage);
+document.getElementById('btnToc').addEventListener('click', () => goToSpread(2));
+
+progressTrackEl.addEventListener('click', (e) => {
+  const rect = progressTrackEl.getBoundingClientRect();
+  const ratio = (e.clientX - rect.left) / rect.width;
+  const maxIdx = isMobile() ? (MOBILE_PAGES.length - 1) : (totalSpreads - 1);
+  const target = Math.round((1 - ratio) * maxIdx);
+  if (isMobile()) {
+    const prevSpread = currentSpreadIndex;
+    mobilePageIndex = Math.max(0, Math.min(maxIdx, target));
+    renderSpread('forward', prevSpread);
+  } else {
+    goToSpread(Math.max(0, Math.min(maxIdx, target)));
+  }
+});
+
+
+const themes = ['theme-sepia', 'theme-dark', 'theme-light'];
+let currentThemeIndex = 0;
+const btnThemeEl = document.getElementById('btnTheme');
+btnThemeEl.addEventListener('click', () => {
+  document.body.classList.remove(themes[currentThemeIndex]);
+  currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+  document.body.classList.add(themes[currentThemeIndex]);
+  const icons = ['📜', '🌙', '☀️'];
+  btnThemeEl.textContent = icons[currentThemeIndex];
+});
+
+document.getElementById('btnFullscreen').addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    
+  } else if (e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === ' ') {
+    nextPage();
+  } else if (e.key === 'ArrowRight' || e.key === 'PageUp') {
+    prevPage();
+  } else if (e.key === 'Home') {
+    goToSpread(0);
+  } else if (e.key === 'End') {
+    goToSpread(totalSpreads - 1);
+  }
+});
+
+let touchStartX = 0;
+window.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+  const touchEndX = e.changedTouches[0].screenX;
+  const diff = touchEndX - touchStartX;
+  // في القراءة العربية: السحب من اليسار لليمين ينقل للصفحة التالية
+  // والسحب من اليمين لليسار يرجع للصفحة السابقة
+  if (diff > 55) {
+    nextPage();
+  } else if (diff < -55) {
+    prevPage();
+  }
+}, { passive: true });
+
+const stageEl = document.getElementById('stage');
+stageEl.addEventListener('mousemove', (e) => {
+  if (isMobile()) return;
+  const rect = stageEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width - 0.5;
+  const y = (e.clientY - rect.top) / rect.height - 0.5;
+  bookEl.style.transform = `rotateY(${x * 6}deg) rotateX(${-y * 4}deg)`;
+});
+
+stageEl.addEventListener('mouseleave', () => {
+  bookEl.style.transform = 'rotateY(0deg) rotateX(0deg)';
+});
+
+// بدء العرض الأولي (الكتاب مغلق على الغلاف الأمامي)
+renderSpread('none');
+</script>
+<script>
+
+// =============================================================================
+// 🏛️ محرك الأجزاء المتعددة والمكتبة التفاعلية (Multi-Edition & Video Engine)
+// =============================================================================
+let currentEditionId = 'epic-v1';
+let currentAudioDir = '../audio/epic-v1/';
+let currentVideoDir = '../videos/epic-v1/';
+let catalogData = null;
+
+// قراءة معرّف الإصدار من رابط الصفحة ?edition=...
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('edition')) {
+  currentEditionId = urlParams.get('edition');
+  currentAudioDir = `../audio/${currentEditionId}/`;
+  currentVideoDir = `../videos/${currentEditionId}/`;
+}
+
+// عناصر واجهة المكتبة والفيديو والاحتفال
+const btnLibraryEl = document.getElementById('btnLibrary');
+const libraryModalEl = document.getElementById('libraryModal');
+const btnLibraryCloseEl = document.getElementById('btnLibraryClose');
+const libraryListEl = document.getElementById('libraryList');
+
+const cartoonModalEl = document.getElementById('cartoonModal');
+const cartoonModalTitleEl = document.getElementById('cartoonModalTitle');
+const btnCartoonCloseEl = document.getElementById('btnCartoonClose');
+const chapterVideoEl = document.getElementById('chapterVideo');
+
+const celebrationModalEl = document.getElementById('celebrationModal');
+const btnRestartBookEl = document.getElementById('btnRestartBook');
+const btnOpenLibraryFromCelebrationEl = document.getElementById('btnOpenLibraryFromCelebration');
+
+// تحميل بيانات كتالوج المكتبة
+async function loadLibraryCatalog() {
+  try {
+    const res = await fetch('editions/catalog.json');
+    if (res.ok) {
+      catalogData = await res.json();
+      renderLibraryUI();
+    }
+  } catch (err) {
+    console.warn('Could not load catalog.json dynamically:', err);
+  }
+}
+
+function renderLibraryUI() {
+  if (!catalogData || !catalogData.editions || !libraryListEl) return;
+  libraryListEl.innerHTML = '';
+  
+  catalogData.editions.forEach(ed => {
+    const isCurrent = (ed.id === currentEditionId);
+    const card = document.createElement('div');
+    card.className = `edition-card ${isCurrent ? 'active' : ''}`;
+    card.innerHTML = `
+      <div class="edition-badge" style="background:${ed.badgeColor || '#f59e0b'}; color:#0b0f19;">${ed.badge}</div>
+      <div class="edition-title">${ed.title}</div>
+      <div class="edition-desc">${ed.description}</div>
+      <div class="edition-meta">
+        <span>📖 ${ed.spreadsCount || 27} نشرة</span>
+        <span>🎧 ${ed.audioTracksCount || 27} تراكاً صوتياً</span>
+        <span>🎬 ${ed.videosCount || 7} فيديوهات كواليس</span>
+        <span>📅 ${ed.releaseDate || '2026'}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      if (ed.id !== currentEditionId) {
+        window.location.search = `?edition=${ed.id}`;
+      } else {
+        libraryModalEl.style.display = 'none';
+      }
+    });
+    libraryListEl.appendChild(card);
+  });
+}
+
+if (btnLibraryEl) {
+  btnLibraryEl.addEventListener('click', () => {
+    libraryModalEl.style.display = 'flex';
+    if (!catalogData) loadLibraryCatalog();
+  });
+}
+if (btnLibraryCloseEl) {
+  btnLibraryCloseEl.addEventListener('click', () => {
+    libraryModalEl.style.display = 'none';
+  });
+}
+
+// مشغل فيديو كواليس الفصول (الضغط المطول)
+function openChapterVideo(chapterNum) {
+  pauseNarrator();
+  const titles = {
+    1: 'كواليس الفصل الأول: نداء الاستغاثة ومخاض الفكرة',
+    2: 'كواليس الفصل الثاني: المخطط الكبير وصدمة الجداول الـ 39',
+    3: 'كواليس الفصل الثالث: معركة القيود المستحيلة وكيف قهرناها',
+    4: 'كواليس الفصل الرابع: عثرات في المعمعة ولحظات الإنقاذ',
+    5: 'كواليس الفصل الخامس: ولادة المحركات الكبرى',
+    6: 'كواليس الفصل السادس: ملحمة التوثيق الأكبر',
+    7: 'كواليس الفصل السابع: الإطلاق وملاقاة السحاب'
+  };
+  if (cartoonModalTitleEl) {
+    cartoonModalTitleEl.textContent = titles[chapterNum] || `كواليس الفصل ${chapterNum}`;
+  }
+  if (chapterVideoEl) {
+    chapterVideoEl.src = `${currentVideoDir}ch${chapterNum}.mp4`;
+    chapterVideoEl.currentTime = 0;
+    chapterVideoEl.play().catch(e => console.log('Autoplay blocked:', e));
+  }
+  cartoonModalEl.style.display = 'flex';
+}
+
+function closeChapterVideo() {
+  if (chapterVideoEl) {
+    chapterVideoEl.pause();
+    chapterVideoEl.removeAttribute('src');
+    chapterVideoEl.load();
+  }
+  cartoonModalEl.style.display = 'none';
+}
+
+if (btnCartoonCloseEl) {
+  btnCartoonCloseEl.addEventListener('click', closeChapterVideo);
+}
+
+// ربط الضغط المطول والنقر على عناصر الفهرس
+function setupChapterCards() {
+  document.querySelectorAll('[data-chapter-id]').forEach(el => {
+    const chId = parseInt(el.getAttribute('data-chapter-id'));
+    let pressTimer = null;
+    
+    el.addEventListener('pointerdown', (e) => {
+      pressTimer = setTimeout(() => {
+        if ('vibrate' in navigator) navigator.vibrate(50);
+        openChapterVideo(chId);
+      }, 550);
+    });
+    
+    el.addEventListener('pointerup', () => clearTimeout(pressTimer));
+    el.addEventListener('pointerleave', () => clearTimeout(pressTimer));
+    el.addEventListener('pointercancel', () => clearTimeout(pressTimer));
+  });
+}
+
+// نافذة الاحتفال بإتمام الرواية
+function showCelebrationModal() {
+  stopNarrator();
+  if (celebrationModalEl) celebrationModalEl.style.display = 'flex';
+}
+
+if (btnRestartBookEl) {
+  btnRestartBookEl.addEventListener('click', () => {
+    celebrationModalEl.style.display = 'none';
+    goToSpread(0);
+  });
+}
+if (btnOpenLibraryFromCelebrationEl) {
+  btnOpenLibraryFromCelebrationEl.addEventListener('click', () => {
+    celebrationModalEl.style.display = 'none';
+    if (btnLibraryEl) btnLibraryEl.click();
+  });
+}
+
+// استدعاء التهيئة
+loadLibraryCatalog();
+setTimeout(setupChapterCards, 600);
+
+</script>
+</body>
+</html>
