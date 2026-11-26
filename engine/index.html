@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <!-- =============================================================================
-اسم الملف: story.html (ملحمة درب — الكتاب والكتيب القصصي والروائي التفاعلي ثلاثي الأبعاد)
-المسار: dist/story.html
-الإصدار: 3.0 المطور — متوافق مع الحواسيب والهواتف الذكية وسحابة تيليجرام
+اسم الملف: engine/index.html (بوابة درب — المحرك التفاعلي ثلاثي الأبعاد للكتب والروايات)
+المسار: engine/index.html
+الإصدار: 3.2 المطور — متوافق مع الحواسيب والهواتف الذكية وسحابة تيليجرام
 الوظيفة والغرض الأساسي:
   1. عرض مجسم لكتاب حقيقي: غلاف أمامي مفرد ملء الورقة، ثم صفحات مزدوجة بالحواسيب،
      وصفحات فردية متسلسلة بالهواتف مع تخطي الصفحات الفارغة فقط وإظهار كافة المحتويات.
   2. منع التمرير العمودي نهائياً وضبط حجم النصوص والهوامش بدقة عالية على كافة الشاشات.
   3. محرك تقليب الورق الحقيقي بزاوية 180° مع محاذاة كعب المنتصف وتعبئة وجهي الورقة (الأمامي والخلفي).
   4. شعار درب الأصلي وبوصلة ذهبية SVG مدمجة كلياً بالرمز داخل الغلافين بدون أي أطراف بيضاء.
-  5. مسرح كرتوني حركي عبر HTML5 Canvas لجميع الفصول (1 إلى 7) مع حركة فيزيائية مستمرة.
-  6. محرك راوي صوتي متطور يدعم مشغل audio مع بديل Web Speech API الفصيح،
-     وتجاهل أخطاء الإلغاء، والانتقال التلقائي من الغلاف لصفحة الإهداء عند بدء القراءة.
+  5. مكتبة إصدارات تفاعلية من catalog.json للتبديل الفوري بين الأجزاء والكتب.
+  6. محرك راوي صوتي يعتمد كلياً على ملفات MP3 المدمجة مع انتقال تلقائي بعد 100ms
+     وإيقاف سلس عند فتح فيديوهات ملخصات الفصول (.mp4) بالضغط المطول في الفهرس.
   7. اتجاهات أسهم وزوايا تقليب مطابقة 100% لمنطق القراءة العربية الفصيحة (RTL).
 ============================================================================= -->
 <html lang="ar" dir="rtl">
@@ -521,111 +521,54 @@
   .toc-item.holding .hold-ring-svg circle.prog { stroke-dashoffset: 0; }
 
   /* -------------------------------------------------------------
-     النافذة السينمائية الكرتونية والإنفوجرافيك المتحركة
+     النوافذ المنبثقة الموحدة (المكتبة، الفيديو، الاحتفال)
      ------------------------------------------------------------- */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 200;
-    background: rgba(4, 7, 14, 0.85); backdrop-filter: blur(12px);
+    background: rgba(4, 7, 14, 0.84); backdrop-filter: blur(12px);
     display: none; justify-content: center; align-items: center; padding: 14px;
-    opacity: 0; transition: opacity 0.3s ease;
   }
-  .modal-overlay.active { display: flex; opacity: 1; }
+  .modal-overlay.active {
+    display: flex;
+    animation: modalOverlayIn 0.22s ease forwards;
+  }
+  @keyframes modalOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 
-  .cinematic-window {
-    width: 720px; max-width: 95vw; max-height: 92vh;
+  .modal-card {
+    width: 100%; max-height: 90vh; overflow-y: auto;
     background: linear-gradient(145deg, #0e1524, #080d16);
-    border: 2px solid var(--gold); border-radius: 16px;
-    box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 40px var(--gold-glow);
+    border: 1.5px solid rgba(212, 175, 55, 0.55); border-radius: 16px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 36px rgba(212, 175, 55, 0.18);
     padding: 20px 24px; color: #e6edf8; position: relative;
-    overflow-y: auto; transform: scale(0.94); transition: transform 0.3s ease;
     display: flex; flex-direction: column; gap: 14px;
+    animation: modalCardIn 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
-  .modal-overlay.active .cinematic-window { transform: scale(1); }
+  @keyframes modalCardIn {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
 
   .modal-header {
-    display: flex; justify-content: space-between; align-items: flex-start;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
     border-bottom: 1px solid rgba(212, 175, 55, 0.25); padding-bottom: 10px;
   }
   .modal-title-wrap h3 {
-    margin: 0; font-size: 18px; font-weight: 800; color: var(--gold-light);
-    font-family: var(--ui-font);
+    margin: 0; font-size: 17.5px; font-weight: 800; color: var(--gold-light);
+    font-family: var(--ui-font); line-height: 1.4;
   }
   .modal-title-wrap p {
-    margin: 3px 0 0; font-size: 12px; color: #94a3b8; font-family: var(--ui-font);
+    margin: 4px 0 0; font-size: 12px; color: #94a3b8; font-family: var(--ui-font);
   }
   .modal-close-btn {
-    background: rgba(255,255,255,0.06); border: 1px solid rgba(212,175,55,0.3);
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(212,175,55,0.35);
     color: var(--gold-light); width: 32px; height: 32px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center; cursor: pointer;
-    font-size: 15px; transition: all 0.2s;
+    font-size: 15px; transition: all 0.2s; flex-shrink: 0;
   }
   .modal-close-btn:hover { background: var(--gold); color: #000; }
-
-  .cartoon-stage-wrapper {
-    width: 100%; height: 240px; background: #050912;
-    border-radius: 10px; border: 1px solid rgba(212, 175, 55, 0.3);
-    position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
-    box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
-  }
-  #cartoonCanvas {
-    width: 100%; height: 100%; display: block;
-  }
-
-  .story-stages-nav {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-  }
-  .stage-tab {
-    background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px; padding: 7px 8px; cursor: pointer; text-align: center;
-    font-family: var(--ui-font); font-size: 11px; font-weight: 700; color: #94a3b8;
-    transition: all 0.2s ease;
-  }
-  .stage-tab:hover { background: rgba(255,255,255,0.08); }
-  .stage-tab.active-tab {
-    background: rgba(212, 175, 55, 0.18); border-color: var(--gold);
-    color: var(--gold-light); box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
-  }
-
-  .active-scene-card {
-    background: rgba(255, 255, 255, 0.035); border-radius: 8px;
-    border-right: 4px solid var(--gold); padding: 10px 14px;
-    min-height: 56px;
-  }
-  .scene-card-label {
-    font-size: 12px; font-weight: 800; color: var(--gold-light); margin-bottom: 4px;
-  }
-  .scene-card-desc {
-    font-size: 13px; line-height: 1.6; color: #cbd5e1; margin: 0;
-  }
-
-  .modal-footer {
-    display: flex; justify-content: space-between; align-items: center;
-    padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);
-  }
-  .btn-jump-book {
-    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-    color: #0b0f19; font-weight: 800; font-size: 12.5px; border: none;
-    padding: 7px 16px; border-radius: 7px; cursor: pointer;
-    display: flex; align-items: center; gap: 6px; font-family: var(--ui-font);
-    transition: transform 0.2s;
-  }
-  .btn-jump-book:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--gold-glow); }
-  .btn-replay-anim {
-    background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.15);
-    padding: 6px 12px; border-radius: 7px; cursor: pointer; font-size: 11.5px;
-    font-family: var(--ui-font); transition: all 0.2s;
-  }
-  .btn-replay-anim:hover { color: #fff; border-color: #fff; }
-
-  /* -------------------------------------------------------------
-     إضاءة الراوي المتزامنة
-     ------------------------------------------------------------- */
-  .narrator-active-glow {
-    background: linear-gradient(90deg, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.12)) !important;
-    border-radius: 4px; padding: 2px 4px;
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.35);
-    color: #1a1202 !important;
-  }
 
   /* -------------------------------------------------------------
      الشريط السفلي (Bottom Bar)
@@ -666,6 +609,30 @@
      الثيمات المتعددة (Sepia / Dark / Light)
      ------------------------------------------------------------- */
   body.theme-dark { --bg-dark: #05070c; }
+  body.theme-dark .stage {
+    background: radial-gradient(circle at center, #0e1628 0%, #04060b 100%);
+  }
+  body.theme-dark .top-bar,
+  body.theme-dark .bottom-bar {
+    background: rgba(7, 11, 20, 0.96);
+    border-color: rgba(88, 166, 255, 0.25);
+  }
+  body.theme-dark .book-brand,
+  body.theme-dark .btn-action,
+  body.theme-dark .icon-btn,
+  body.theme-dark .nav-btn {
+    color: #dbeafe;
+    border-color: rgba(88, 166, 255, 0.35);
+  }
+  body.theme-dark .btn-action:hover,
+  body.theme-dark .icon-btn:hover,
+  body.theme-dark .nav-btn:hover {
+    background: rgba(88, 166, 255, 0.18);
+    box-shadow: 0 4px 12px rgba(88, 166, 255, 0.18);
+  }
+  body.theme-dark .progress-fill {
+    background: linear-gradient(to left, #38bdf8, #93c5fd);
+  }
   body.theme-dark .page-leaf,
   body.theme-dark .turning-leaf-face {
     background: var(--paper-dark); color: var(--paper-dark-txt);
@@ -677,19 +644,167 @@
   body.theme-dark .page-leaf.left-leaf {
     box-shadow: inset 24px 0 28px -12px rgba(0,0,0,0.6);
   }
+  body.theme-dark .right-leaf .corner-peel-curl,
+  body.theme-dark .left-leaf .corner-peel-curl {
+    border-color: transparent transparent var(--paper-dark-line) transparent;
+  }
+  body.theme-dark .page-header-tag {
+    color: #93c5fd; border-bottom-color: rgba(88, 166, 255, 0.3);
+  }
+  body.theme-dark .page-footer {
+    color: #94a3b8; border-top-color: rgba(255, 255, 255, 0.08);
+  }
   body.theme-dark .page-title { color: #58a6ff; }
   body.theme-dark .page-title::after { background: #58a6ff; }
   body.theme-dark .chapter-hero-title { color: #58a6ff; }
   body.theme-dark .chapter-hero-desc { color: #cbd5e1; }
+  body.theme-dark .chapter-hero-meta { color: #94a3b8; border-top-color: rgba(88, 166, 255, 0.3); }
+  body.theme-dark .epic-quote {
+    background: rgba(88, 166, 255, 0.08); border-right-color: #58a6ff; color: #e2e8f0;
+  }
+  body.theme-dark .epic-quote cite { color: #93c5fd; }
   body.theme-dark .toc-item { background: rgba(255,255,255,0.03); border-color: rgba(88,166,255,0.2); }
   body.theme-dark .toc-item-title { color: #93c5fd; }
   body.theme-dark .toc-item-sub { color: #cbd5e1; }
+  body.theme-dark .toc-page-tag { color: #7dd3fc; }
   body.theme-dark .toc-hint-banner { background: rgba(88,166,255,0.08); border-color: #58a6ff; color: #93c5fd; }
   body.theme-dark .milestone-badge { background: rgba(255,255,255,0.03); border-color: #58a6ff; color: #e2e8f0; }
+  body.theme-dark .modal-card {
+    background: linear-gradient(145deg, #0b1322, #050912);
+    border-color: rgba(88, 166, 255, 0.55);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 36px rgba(56, 189, 248, 0.2);
+  }
+  body.theme-dark .modal-header { border-bottom-color: rgba(88, 166, 255, 0.25); }
+  body.theme-dark .modal-title-wrap h3 { color: #93c5fd; }
+  body.theme-dark .modal-close-btn { border-color: rgba(88, 166, 255, 0.35); color: #dbeafe; }
+  body.theme-dark .modal-close-btn:hover { background: #38bdf8; color: #050912; }
+  body.theme-dark .edition-card {
+    background: rgba(15, 23, 42, 0.85); border-color: rgba(88, 166, 255, 0.28);
+  }
+  body.theme-dark .edition-card:hover {
+    border-color: #38bdf8; box-shadow: 0 8px 24px rgba(56, 189, 248, 0.16);
+  }
+  body.theme-dark .edition-card.active {
+    border-color: #38bdf8; background: rgba(12, 36, 62, 0.9);
+    box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
+  }
+  body.theme-dark .edition-title { color: #7dd3fc; }
+  body.theme-dark .celebration-card {
+    background: radial-gradient(circle at center, #13223b 0%, #060b14 100%) !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 50px rgba(56, 189, 248, 0.3) !important;
+  }
+  body.theme-dark .celebration-card h2 { color: #7dd3fc; }
+  body.theme-dark .celebration-btn.primary {
+    background: linear-gradient(135deg, #0284c7, #38bdf8); color: #050912;
+  }
 
+  /* الثيم الفاتح المضيء (Light Paper Theme) */
+  body.theme-light {
+    --bg-dark: #e8edf5;
+    color: #1e293b;
+  }
+  body.theme-light .stage {
+    background: radial-gradient(circle at center, #f4f7fb 0%, #dde5f0 100%);
+  }
+  body.theme-light .stage::before {
+    background-image: radial-gradient(rgba(148, 110, 30, 0.12) 1px, transparent 1px);
+  }
+  body.theme-light .top-bar,
+  body.theme-light .bottom-bar {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(180, 130, 25, 0.25);
+    color: #1e293b;
+  }
+  body.theme-light .book-brand { color: #875c1c; }
+  body.theme-light .btn-action,
+  body.theme-light .icon-btn,
+  body.theme-light .nav-btn {
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(180, 130, 25, 0.35);
+    color: #6b4710;
+  }
+  body.theme-light .btn-action:hover,
+  body.theme-light .icon-btn:hover,
+  body.theme-light .nav-btn:hover {
+    background: rgba(212, 175, 55, 0.22);
+    color: #3d2706;
+  }
+  body.theme-light .btn-action.narrator-active {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.38), rgba(245, 158, 11, 0.25));
+    color: #3d2706;
+  }
+  body.theme-light .narrator-bar {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: #c59b27;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  }
+  body.theme-light .narrator-text-status { color: #6b4710; }
+  body.theme-light .narrator-btn {
+    background: rgba(212, 175, 55, 0.14); color: #6b4710; border-color: rgba(180, 130, 25, 0.35);
+  }
+  body.theme-light .speed-select {
+    background: #f8fafc; color: #6b4710; border-color: rgba(180, 130, 25, 0.35);
+  }
+  body.theme-light .progress-track { background: rgba(15, 23, 42, 0.12); }
+  body.theme-light .page-indicator { color: #475569; }
   body.theme-light .page-leaf,
   body.theme-light .turning-leaf-face {
     background: var(--paper-light); color: var(--paper-light-txt);
+  }
+  body.theme-light .right-leaf .corner-peel-curl,
+  body.theme-light .left-leaf .corner-peel-curl {
+    border-color: transparent transparent #e2e8f0 transparent;
+  }
+  body.theme-light .modal-overlay {
+    background: rgba(15, 23, 42, 0.52);
+  }
+  body.theme-light .modal-card {
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    border-color: rgba(180, 130, 25, 0.45);
+    color: #1e293b;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  }
+  body.theme-light .modal-header { border-bottom-color: rgba(180, 130, 25, 0.22); }
+  body.theme-light .modal-title-wrap h3 { color: #875c1c; }
+  body.theme-light .modal-title-wrap p { color: #64748b; }
+  body.theme-light .modal-close-btn {
+    background: #f1f5f9; border-color: rgba(180, 130, 25, 0.3); color: #6b4710;
+  }
+  body.theme-light .modal-close-btn:hover { background: #d4af37; color: #fff; }
+  body.theme-light .edition-card {
+    background: #f8fafc; border-color: rgba(148, 163, 184, 0.4);
+  }
+  body.theme-light .edition-card:hover {
+    background: #fffbeb; border-color: #d4af37;
+    box-shadow: 0 8px 20px rgba(212, 175, 55, 0.18);
+  }
+  body.theme-light .edition-card.active {
+    background: #fef9e7; border-color: #d97706;
+    box-shadow: 0 0 16px rgba(217, 119, 6, 0.18);
+  }
+  body.theme-light .edition-title { color: #875c1c; }
+  body.theme-light .edition-desc { color: #334155; }
+  body.theme-light .edition-meta {
+    color: #64748b; border-top-color: rgba(148, 163, 184, 0.3);
+  }
+  body.theme-light .video-card {
+    background: #ffffff !important; border-color: rgba(180, 130, 25, 0.45) !important;
+  }
+  body.theme-light .video-notice {
+    background: #f8fafc !important; color: #1e293b !important;
+    border-color: rgba(2, 132, 199, 0.4) !important;
+  }
+  body.theme-light .video-notice h4 { color: #0369a1 !important; }
+  body.theme-light .video-notice p { color: #475569 !important; }
+  body.theme-light .celebration-card {
+    background: radial-gradient(circle at center, #fffdf5 0%, #f8fafc 100%) !important;
+    border-color: #d4af37 !important;
+  }
+  body.theme-light .celebration-card h2 { color: #b45309; }
+  body.theme-light .celebration-card p { color: #334155; }
+  body.theme-light .celebration-btn {
+    background: #f1f5f9; color: #1e293b; border-color: rgba(180, 130, 25, 0.4);
   }
 
   /* -------------------------------------------------------------
@@ -728,8 +843,8 @@
     }
     .stage { padding: 4px; }
     .top-actions .btn-text-label { display: none; }
-    .story-stages-nav { grid-template-columns: repeat(2, 1fr); }
-    .cinematic-window { padding: 14px 16px; }
+    .book-brand { font-size: 12.5px; }
+    .modal-card { padding: 16px; }
     .narrator-bar { right: 8px; left: 8px; }
   }
 
@@ -744,14 +859,13 @@
 .library-grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 15px;
+  gap: 14px;
 }
 .edition-card {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(30, 41, 59, 0.72);
   border: 1px solid rgba(212, 175, 55, 0.3);
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 16px 18px;
   transition: all 0.25s ease;
   cursor: pointer;
   text-align: right;
@@ -777,7 +891,7 @@
   margin-bottom: 8px;
 }
 .edition-title {
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   font-weight: bold;
   color: #ffea9f;
   margin: 0 0 6px;
@@ -785,12 +899,13 @@
 .edition-desc {
   font-size: 0.85rem;
   color: #cbd5e1;
-  line-height: 1.5;
+  line-height: 1.55;
   margin: 0 0 12px;
 }
 .edition-meta {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 14px;
   font-size: 0.78rem;
   color: #94a3b8;
   border-top: 1px dashed rgba(255, 255, 255, 0.1);
@@ -806,9 +921,9 @@
 .video-card {
   max-width: 820px !important;
   width: 95% !important;
-  padding: 16px !important;
+  padding: 18px !important;
   background: #0b0f19 !important;
-  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  border: 1px solid rgba(212, 175, 55, 0.45) !important;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85) !important;
 }
 .video-wrapper {
@@ -826,6 +941,15 @@
   display: block;
   outline: none;
 }
+.video-notice {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px dashed rgba(56, 189, 248, 0.45);
+  border-radius: 12px;
+  padding: 26px 20px;
+  text-align: center;
+  color: #f0f9ff;
+  font-family: var(--ui-font);
+}
 
 /* Celebration Modal */
 .celebration-card {
@@ -835,6 +959,11 @@
   background: radial-gradient(circle at center, #1e293b 0%, #0b0f19 100%) !important;
   border: 2px solid #d4af37 !important;
   box-shadow: 0 0 50px rgba(212, 175, 55, 0.35) !important;
+}
+.celebration-close-btn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
 }
 .celebration-badge {
   font-size: 4rem;
@@ -859,6 +988,7 @@
 .celebration-actions {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
 .celebration-btn {
@@ -871,6 +1001,7 @@
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
   transition: all 0.2s;
+  font-family: var(--ui-font);
 }
 .celebration-btn:hover {
   background: rgba(212, 175, 55, 0.2);
@@ -897,10 +1028,16 @@
 <header class="top-bar">
   <div class="book-brand">
     <span class="brand-icon">📜</span>
-    <span>مَلْحَمَةُ دَرْب: السِّيرَةُ التَّقْنِيَّةُ</span>
+    <span id="bookBrandTitle">مَلْحَمَةُ دَرْب: السِّيرَةُ التَّقْنِيَّةُ</span>
   </div>
 
   <div class="top-actions">
+    <!-- زر مكتبة الأجزاء والإصدارات -->
+    <button class="btn-action" id="btnLibrary" title="مكتبة الأجزاء والإصدارات">
+      <span>📚</span>
+      <span class="btn-text-label">المكتبة</span>
+    </button>
+
     <!-- زر تفعيل وضع الراوي الصوتي -->
     <button class="btn-action" id="btnToggleNarrator" title="تفعيل وضع الراوي الصوتي التلقائي">
       <span>🎙️</span>
@@ -914,7 +1051,7 @@
     </button>
 
     <!-- تبديل الثيم -->
-    <button class="icon-btn" id="btnTheme" title="تبديل الثيم">📜</button>
+    <button class="icon-btn" id="btnTheme" title="تبديل الثيم (مخطوطة / ليلي / فاتح)">📜</button>
 
     <!-- ملء الشاشة -->
     <button class="icon-btn" id="btnFullscreen" title="ملء الشاشة">⛶</button>
@@ -978,42 +1115,47 @@
   </div>
 </footer>
 
-<!-- النافذة السينمائية الكرتونية والإنفوجرافيك المتحركة -->
-<div class="modal-overlay" id="storyModalOverlay">
-  <div class="cinematic-window" id="cinematicWindow">
+<!-- 🎬 نافذة عرض ملخص كواليس الفصل الموحدة (MP4 H.264 + AAC + faststart) -->
+<div class="modal-overlay" id="cartoonModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cartoonModalTitle">
+  <div class="modal-card video-card">
     <div class="modal-header">
       <div class="modal-title-wrap">
-        <h3 id="modalChapterTitle">🎯 كواليس الفصل: الرسوم الكرتونية والإنفوجرافيك</h3>
-        <p id="modalChapterSubtitle">شاهد بصرياً خطوات البناء، التحديات، الحلول، والانتصار</p>
+        <h3 id="cartoonModalTitle">كواليس الفصل</h3>
+        <p id="cartoonModalSubtitle">عرض فيديو ملخص كواليس الفصل وتحدياته الهندسية</p>
       </div>
-      <button class="modal-close-btn" id="modalCloseBtn" title="إغلاق">✕</button>
+      <button class="modal-close-btn" id="btnCartoonClose" title="إغلاق">✕</button>
     </div>
-
-    <!-- مسرح العرض الكرتوني الحركي عبر Canvas -->
-    <div class="cartoon-stage-wrapper">
-      <canvas id="cartoonCanvas" width="670" height="240"></canvas>
+    <div class="video-wrapper" id="videoWrapper">
+      <video id="chapterVideo" controls playsinline preload="metadata"></video>
     </div>
+    <div id="anatomicalVideoNotice" class="video-notice" style="display:none;"></div>
+  </div>
+</div>
 
-    <!-- أزرار مراحل المشهد الأربعة -->
-    <div class="story-stages-nav" id="storyStagesNav">
-      <div class="stage-tab active-tab" data-stage="0">🎯 1. التحدي والاحتياج</div>
-      <div class="stage-tab" data-stage="1">⚠️ 2. العثرة والخطأ</div>
-      <div class="stage-tab" data-stage="2">💡 3. الحل العبقري</div>
-      <div class="stage-tab" data-stage="3">🏆 4. النتيجة والأثر</div>
+<!-- 📚 نافذة مكتبة الأجزاء والإصدارات -->
+<div class="modal-overlay" id="libraryModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="libraryModalTitle">
+  <div class="modal-card library-card">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <h3 id="libraryModalTitle">📚 مكتبة أجزاء وإصدارات منظومة درب</h3>
+        <p>اختر الكتاب أو الإصدار للتبديل الفوري والقراءة مع الراوي الصوتي</p>
+      </div>
+      <button class="modal-close-btn" id="btnLibraryClose" title="إغلاق">✕</button>
     </div>
+    <div id="libraryList" class="library-grid"></div>
+  </div>
+</div>
 
-    <!-- بطاقة شرح المرحلة النشطة -->
-    <div class="active-scene-card">
-      <div class="scene-card-label" id="sceneCardLabel">🎯 التحدي والاحتياج الواقعي</div>
-      <p class="scene-card-desc" id="sceneCardDesc">جارٍ تحميل تفاصيل المشهد...</p>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn-replay-anim" id="btnReplayAnim">↺ إعادة تشغيل المشهد</button>
-      <button class="btn-jump-book" id="btnJumpBook">
-        <span>📖</span>
-        <span>اقرأ الفصل كاملاً في الكتاب</span>
-      </button>
+<!-- 🏆 نافذة إتمام الكتاب الاحتفالية -->
+<div class="modal-overlay" id="celebrationModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="celebrationTitle">
+  <div class="modal-card celebration-card">
+    <button class="modal-close-btn celebration-close-btn" id="btnCelebrationClose" title="إغلاق">✕</button>
+    <div class="celebration-badge">🏆</div>
+    <h2 id="celebrationTitle">«اكتملت الرواية بحمد الله»</h2>
+    <p id="celebrationDesc">لقد أتممت قراءة واستماع ملحمة درب التقنية الكاملة.. من شرارة الفكرة الأولى وحتى معانقة السحاب.</p>
+    <div class="celebration-actions">
+      <button class="celebration-btn" id="btnRestartBook">🔄 العودة للبداية</button>
+      <button class="celebration-btn primary" id="btnOpenLibraryFromCelebration">📚 تصفح الأجزاء</button>
     </div>
   </div>
 </div>
@@ -1110,928 +1252,434 @@ const GOLDEN_COMPASS_SVG = `
 `;
 
 // =============================================================================
-// قراءة معرّف الإصدار من رابط الصفحة ?edition=... وضبط مسارات الوسائط
+// قراءة معرّف الإصدار من رابط الصفحة ?edition=... وضبط كتالوج ومسارات الوسائط
 // =============================================================================
 const urlParams = new URLSearchParams(window.location.search);
 let currentEditionId = urlParams.get('edition') || 'epic-v1';
-let currentAudioDir = (currentEditionId === 'anatomical-book') ? '../audio/anatomical-v1/' : '../audio/epic-v1/';
-let currentVideoDir = (currentEditionId === 'anatomical-book') ? '../videos/anatomical-book/' : '../videos/epic-v1/';
+let currentAudioDir = '../audio/epic-v1/';
+let currentVideoDir = '../videos/epic-v1/';
+let currentBookTitle = 'مَلْحَمَةُ دَرْب: السِّيرَةُ التَّقْنِيَّةُ';
+let currentBookFooter = 'مَلْحَمَةُ دَرْب — السيرة التقنية الكاملة';
 let catalogData = null;
 
+// === BEGIN_EMBEDDED_CATALOG ===
+const DEFAULT_CATALOG = {
+  "defaultEdition": "epic-v1",
+  "editions": [
+    {
+      "id": "epic-v1",
+      "title": "مَلْحَمَةُ دَرْب: السِّيرَةُ التِّقْنِيَّةُ الكَامِلَة",
+      "subtitle": "من شرارة الفكرة.. إلى معانقة السحاب (Revision 23)",
+      "badge": "الجزء الأول (معتمد)",
+      "badgeColor": "#f59e0b",
+      "theme": "royal-gold",
+      "description": "السيرة التوثيقية الكاملة لبناء منصة درب التعليمية الذكية، معارك القيود المستحيلة، معمارية الجداول الـ 39، والأخطاء البرمجية ولحظات الإنقاذ التاريخية.",
+      "dataFile": "editions/epic-v1.json",
+      "audioDir": "../audio/epic-v1/",
+      "videoDir": "../videos/epic-v1/",
+      "chaptersCount": 7,
+      "spreadsCount": 27,
+      "audioTracksCount": 27,
+      "videosCount": 7,
+      "releaseDate": "نوفمبر 2026",
+      "status": "مكتمل ومتاح بالكامل"
+    },
+    {
+      "id": "anatomical-book",
+      "title": "كِتَابُ دَرْب التَّشْرِيحِي لـ 78 مَلَفّاً",
+      "subtitle": "التشريح المعماري للشيفرة البرمجية سطراً بسطر (Revision 31)",
+      "badge": "الجزء الثاني (مكتمل ومتاح)",
+      "badgeColor": "#38bdf8",
+      "theme": "cyan-emerald",
+      "description": "تشريح معماري عميق لكافة ملفات المنظومة الـ 78، هندسة الـ FSM، محركات التمارين التكيفية، ونقاط النهاية السحابية الـ 52.",
+      "dataFile": "editions/anatomical-v1.json",
+      "audioDir": "../audio/anatomical-v1/",
+      "videoDir": "../videos/anatomical-book/",
+      "chaptersCount": 7,
+      "spreadsCount": 27,
+      "audioTracksCount": 27,
+      "videosCount": 0,
+      "releaseDate": "نوفمبر 2026",
+      "status": "مكتمل ومتاح بالكامل"
+    }
+  ]
+};
+// === END_EMBEDDED_CATALOG ===
+
 // =============================================================================
-// مصفوفة النشرات الكاملة (SPREADS DATA ARCHITECTURE)
+// مصفوفة النشرات الكاملة الافتراضية للإصدار الأول (SPREADS DATA ARCHITECTURE)
 // =============================================================================
-let SPREADS = [
-  // ---------------------------------------------------------------------------
-  // نشرة 0: الغلاف الملكي الأمامي مغلقاً
-  // ---------------------------------------------------------------------------
+// === BEGIN_EMBEDDED_EPIC_SPREADS ===
+const DEFAULT_EPIC_SPREADS = [
   {
-    isFrontCover: true,
-    right: {
-      isCover: true,
-      html: `
-        <div class="cover-royal">
-          <div class="cover-header-ornament">❖ ❖ ❖</div>
-          <div class="cover-title-group">
-            <div style="font-size: 12px; color: #d4af37; font-weight: 700; margin-bottom: 2px;">الوثيقة التاريخية الكبرى</div>
-            <h1>مَلْحَمَةُ دَرْب</h1>
-            <h2>السِّيرَةُ التَّقْنِيَّةُ وَالقِصَّةُ الكَامِلَةُ لِبِنَاءِ المَنْظُومَة</h2>
-            <div style="font-size: 12px; color: #9bb7e0; margin-top: 5px;">مِنْ شَرَارَةِ الفِكْرَةِ.. إِلَى مَعَانَقَةِ السَّحَاب</div>
-          </div>
-
-          <div class="cover-emblem-wrap">
-            ${DARB_LOGO_SVG}
-            ${GOLDEN_COMPASS_SVG}
-          </div>
-
-          <div class="cover-footer-meta">
-            <div>منشورات الفريق الهندسي المؤسس لمنظومة درب</div>
-            <div>الإصدار السحابي التوثيقي الشامل — Revision 23</div>
-            <div style="font-family: monospace; font-size: 9.5px; color: #d4af37; margin-top: 3px;">SHA256: 57c1b13e9a72d...</div>
-          </div>
-        </div>
-      `
+    "isFrontCover": true,
+    "right": {
+      "isCover": true,
+      "html": "\n        <div class=\"cover-royal\">\n          <div class=\"cover-header-ornament\">❖ ❖ ❖</div>\n          <div class=\"cover-title-group\">\n            <div style=\"font-size: 12px; color: #d4af37; font-weight: 700; margin-bottom: 2px;\">الوثيقة التاريخية الكبرى</div>\n            <h1>مَلْحَمَةُ دَرْب</h1>\n            <h2>السِّيرَةُ التَّقْنِيَّةُ وَالقِصَّةُ الكَامِلَةُ لِبِنَاءِ المَنْظُومَة</h2>\n            <div style=\"font-size: 12px; color: #9bb7e0; margin-top: 5px;\">مِنْ شَرَارَةِ الفِكْرَةِ.. إِلَى مَعَانَقَةِ السَّحَاب</div>\n          </div>\n\n          <div class=\"cover-emblem-wrap\">\n            \n  <svg class=\"cover-logo-svg\" viewBox=\"0 0 512 512\" width=\"66\" height=\"66\">\n    <defs>\n      <linearGradient id=\"pathGrad\" x1=\"50%\" y1=\"100%\" x2=\"50%\" y2=\"0%\">\n        <stop offset=\"0%\" stop-color=\"#3b82f6\" stop-opacity=\"0.2\"/>\n        <stop offset=\"40%\" stop-color=\"#60a5fa\"/>\n        <stop offset=\"85%\" stop-color=\"#38bdf8\"/>\n        <stop offset=\"100%\" stop-color=\"#fef08a\"/>\n      </linearGradient>\n      <linearGradient id=\"bookLeft\" x1=\"0%\" y1=\"50%\" x2=\"100%\" y2=\"50%\">\n        <stop offset=\"0%\" stop-color=\"#1d4ed8\"/>\n        <stop offset=\"100%\" stop-color=\"#3b82f6\"/>\n      </linearGradient>\n      <linearGradient id=\"bookRight\" x1=\"0%\" y1=\"50%\" x2=\"100%\" y2=\"50%\">\n        <stop offset=\"0%\" stop-color=\"#3b82f6\"/>\n        <stop offset=\"100%\" stop-color=\"#2563eb\"/>\n      </linearGradient>\n      <linearGradient id=\"goldGrad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n        <stop offset=\"0%\" stop-color=\"#fef08a\"/>\n        <stop offset=\"40%\" stop-color=\"#eab308\"/>\n        <stop offset=\"100%\" stop-color=\"#ca8a04\"/>\n      </linearGradient>\n      <filter id=\"starGlow\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\">\n        <feGaussianBlur stdDeviation=\"16\" result=\"blur1\"/>\n        <feGaussianBlur stdDeviation=\"6\" result=\"blur2\"/>\n        <feMerge>\n          <feMergeNode in=\"blur1\"/>\n          <feMergeNode in=\"blur2\"/>\n          <feMergeNode in=\"SourceGraphic\"/>\n        </feMerge>\n      </filter>\n    </defs>\n    <!-- إطار الشعار المدمج -->\n    <rect width=\"512\" height=\"512\" rx=\"110\" fill=\"#0d182b\" stroke=\"#d4af37\" stroke-width=\"6\"/>\n    <!-- أجنحة الكتاب -->\n    <path d=\"M 256 370 C 210 335 150 330 96 345 C 96 265 106 200 256 220 Z\" fill=\"url(#bookLeft)\" opacity=\"0.95\"/>\n    <path d=\"M 256 370 C 210 338 150 334 100 345\" stroke=\"#60a5fa\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/>\n    <path d=\"M 256 370 C 302 335 362 330 416 345 C 416 265 406 200 256 220 Z\" fill=\"url(#bookRight)\" opacity=\"0.95\"/>\n    <path d=\"M 256 370 C 302 338 362 334 412 345\" stroke=\"#93c5fd\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/>\n    <!-- مسار درب الصاعد -->\n    <path d=\"M 256 425 C 235 375 220 310 240 230 C 248 195 256 160 256 140 C 256 160 264 195 272 230 C 292 310 277 375 256 425 Z\" fill=\"url(#pathGrad)\"/>\n    <path d=\"M 256 420 L 256 145\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" opacity=\"0.85\"/>\n    <!-- قبعة التخرج -->\n    <polygon points=\"256,128 326,148 256,168 186,148\" fill=\"#1e293b\" stroke=\"#60a5fa\" stroke-width=\"2.5\"/>\n    <path d=\"M 220 160 C 220 180 292 180 292 160 Z\" fill=\"#0f172a\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n    <path d=\"M 256 148 C 285 152 300 170 302 188\" fill=\"none\" stroke=\"url(#goldGrad)\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n    <circle cx=\"302\" cy=\"190\" r=\"3.5\" fill=\"#fef08a\"/>\n    <!-- نجمة التميز المضيئة -->\n    <g transform=\"translate(256, 108)\" filter=\"url(#starGlow)\">\n      <path d=\"M 0 -36 Q 0 0 36 0 Q 0 0 0 36 Q 0 0 -36 0 Q 0 0 0 -36 Z\" fill=\"url(#goldGrad)\"/>\n      <circle cx=\"0\" cy=\"0\" r=\"7\" fill=\"#ffffff\"/>\n    </g>\n  </svg>\n\n            \n  <svg class=\"golden-compass-svg\" viewBox=\"0 0 100 100\" width=\"76\" height=\"76\">\n    <defs>\n      <radialGradient id=\"compassBg\" cx=\"50%\" cy=\"50%\" r=\"50%\">\n        <stop offset=\"0%\" stop-color=\"#142138\"/>\n        <stop offset=\"100%\" stop-color=\"#090f1a\"/>\n      </radialGradient>\n      <linearGradient id=\"needleGold\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n        <stop offset=\"0%\" stop-color=\"#fff0a8\"/>\n        <stop offset=\"50%\" stop-color=\"#d4af37\"/>\n        <stop offset=\"100%\" stop-color=\"#8c6f16\"/>\n      </linearGradient>\n    </defs>\n    <circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"url(#compassBg)\" stroke=\"#d4af37\" stroke-width=\"2\"/>\n    <circle cx=\"50\" cy=\"50\" r=\"43\" fill=\"none\" stroke=\"rgba(212,175,55,0.4)\" stroke-width=\"1\" stroke-dasharray=\"2 3\"/>\n    <polygon points=\"50,11 54,44 50,50 46,44\" fill=\"url(#needleGold)\"/>\n    <polygon points=\"50,89 54,56 50,50 46,56\" fill=\"#8c6f16\"/>\n    <polygon points=\"11,50 44,46 50,50 44,54\" fill=\"#d4af37\"/>\n    <polygon points=\"89,50 56,46 50,50 56,54\" fill=\"url(#needleGold)\"/>\n    <polygon points=\"22,22 47,44 50,50 44,47\" fill=\"#b38f24\"/>\n    <polygon points=\"78,22 53,44 50,50 56,47\" fill=\"#b38f24\"/>\n    <polygon points=\"22,78 47,56 50,50 44,53\" fill=\"#b38f24\"/>\n    <polygon points=\"78,78 53,56 50,50 56,53\" fill=\"#b38f24\"/>\n    <text x=\"50\" y=\"24\" fill=\"#ffea9f\" font-size=\"7.5\" font-weight=\"bold\" text-anchor=\"middle\" font-family=\"sans-serif\">ش</text>\n    <text x=\"50\" y=\"83\" fill=\"#ffea9f\" font-size=\"7.5\" font-weight=\"bold\" text-anchor=\"middle\" font-family=\"sans-serif\">ج</text>\n    <text x=\"21\" y=\"52.5\" fill=\"#ffea9f\" font-size=\"7.5\" font-weight=\"bold\" text-anchor=\"middle\" font-family=\"sans-serif\">غ</text>\n    <text x=\"79\" y=\"52.5\" fill=\"#ffea9f\" font-size=\"7.5\" font-weight=\"bold\" text-anchor=\"middle\" font-family=\"sans-serif\">ق</text>\n    <circle cx=\"50\" cy=\"50\" r=\"4.5\" fill=\"#d4af37\"/>\n    <circle cx=\"50\" cy=\"50\" r=\"2\" fill=\"#ffffff\"/>\n  </svg>\n\n          </div>\n\n          <div class=\"cover-footer-meta\">\n            <div>منشورات الفريق الهندسي المؤسس لمنظومة درب</div>\n            <div>الإصدار السحابي التوثيقي الشامل — Revision 23</div>\n            <div style=\"font-family: monospace; font-size: 9.5px; color: #d4af37; margin-top: 3px;\">SHA256: 57c1b13e9a72d...</div>\n          </div>\n        </div>\n      "
     },
-    left: null
+    "left": null
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 1: داخل الغلاف + بيان الإهداء
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 1,
-    pageLeftNum: 2,
-    right: {
-      isBlank: true,
-      header: "خَلْفِيَّةُ الغِلَاف",
-      html: `<div class="page-blank-separator" title="ورقة داخل الغلاف"></div>`
+    "pageRightNum": 1,
+    "pageLeftNum": 2,
+    "right": {
+      "isBlank": true,
+      "header": "خَلْفِيَّةُ الغِلَاف",
+      "html": "<div class=\"page-blank-separator\" title=\"ورقة داخل الغلاف\"></div>"
     },
-    left: {
-      header: "مُقَدِّمَةُ المَلْحَمَة",
-      title: "بَيَانُ الإِهْدَاءِ وَعَهْدُ البِنَاء",
-      html: `
-        <div class="epic-quote narratable">
-          «ليس الإنجاز أن تكتب آلاف الأسطر من الشيفرة البرمجية؛ بل أن تحول كل سطر إلى نبض حي، يصنع فارقاً حقيقياً في يوم طالب، ويمنح طمأنينة لقلب ولي أمر، ويوفر للمعلم أداة تمكنه من قيادة فصله بعدالة وإتقان.»
-          <cite>— من مقدمة الفريق المؤسس لمنظومة درب</cite>
-        </div>
-        <p class="narratable">
-          نضع بين يديك هذا السِّفْر ليس بوصفه دليلاً هندسياً مجرداً، بل سيرة ملحمية تدون رحلة صراع تقني خاضه مهندسون واجهوا أعتى القيود الرقمية.
-        </p>
-        <div class="milestone-badge narratable">
-          <span>🏛️</span>
-          <div>منظومة تعليمية ذكية متكاملة تعمل كلياً على سحابة تيليجرام اللامركزية.</div>
-        </div>
-        <p class="narratable">
-          ستقرأ تفاصيل الليالي التي توقفت فيها الخوادم بسبب 64 بايت، وكيف أنقذت الشفرة من خطأ التعبيرات النمطية، والسر الحسابي لمحيط دائرة الحضور بدقة الميكرون، وصولاً لاجتياز الاختبارات الـ 45 بلا خطأ.
-        </p>
-      `
+    "left": {
+      "header": "مُقَدِّمَةُ المَلْحَمَة",
+      "title": "بَيَانُ الإِهْدَاءِ وَعَهْدُ البِنَاء",
+      "html": "\n        <div class=\"epic-quote narratable\">\n          «ليس الإنجاز أن تكتب آلاف الأسطر من الشيفرة البرمجية؛ بل أن تحول كل سطر إلى نبض حي، يصنع فارقاً حقيقياً في يوم طالب، ويمنح طمأنينة لقلب ولي أمر، ويوفر للمعلم أداة تمكنه من قيادة فصله بعدالة وإتقان.»\n          <cite>— من مقدمة الفريق المؤسس لمنظومة درب</cite>\n        </div>\n        <p class=\"narratable\">\n          نضع بين يديك هذا السِّفْر ليس بوصفه دليلاً هندسياً مجرداً، بل سيرة ملحمية تدون رحلة صراع تقني خاضه مهندسون واجهوا أعتى القيود الرقمية.\n        </p>\n        <div class=\"milestone-badge narratable\">\n          <span>🏛️</span>\n          <div>منظومة تعليمية ذكية متكاملة تعمل كلياً على سحابة تيليجرام اللامركزية.</div>\n        </div>\n        <p class=\"narratable\">\n          ستقرأ تفاصيل الليالي التي توقفت فيها الخوادم بسبب 64 بايت، وكيف أنقذت الشفرة من خطأ التعبيرات النمطية، والسر الحسابي لمحيط دائرة الحضور بدقة الميكرون، وصولاً لاجتياز الاختبارات الـ 45 بلا خطأ.\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 2: الفهرس المنقح الأنيق (بدون شارات صفراء)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 3,
-    pageLeftNum: 4,
-    right: {
-      header: "خَرِيطَةُ الطَّرِيق (1)",
-      title: "فِهْرِسُ مَحَطَّاتِ المَلْحَمَة",
-      html: `
-        <div class="toc-hint-banner">
-          💡 تلميح: انقر للانتقال للصفحة، أو <b>اضغط مطولاً (600ms)</b> لمشاهدة العرض الكرتوني الحركي لكواليس وتحديات الفصل!
-        </div>
-        <div class="toc-clean-list">
-          <div class="toc-item" data-chapter="1" data-spread="3">
-            <div>
-              <div class="toc-item-title">1. الفصل الأول: نداء الاستغاثة ومخاض الفكرة</div>
-              <div class="toc-item-sub">أزمة التطبيقات المدرسية ولماذا اخترنا تيليجرام</div>
-            </div>
-            <div class="toc-leader-dots"></div>
-            <div class="toc-page-tag">ص 6</div>
-            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
-          </div>
-
-          <div class="toc-item" data-chapter="2" data-spread="6">
-            <div>
-              <div class="toc-item-title">2. الفصل الثاني: المخطط الكبير والجداول الـ 39</div>
-              <div class="toc-item-sub">SQLite + Drizzle ORM ودفتر الأستاذ المحاسبي</div>
-            </div>
-            <div class="toc-leader-dots"></div>
-            <div class="toc-page-tag">ص 12</div>
-            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
-          </div>
-
-          <div class="toc-item" data-chapter="3" data-spread="9">
-            <div>
-              <div class="toc-item-title">3. الفصل الثالث: معركة القيود المستحيلة</div>
-              <div class="toc-item-sub">قهر سقف الـ 64 بايت والبادئات فائقة الكثافة</div>
-            </div>
-            <div class="toc-leader-dots"></div>
-            <div class="toc-page-tag">ص 18</div>
-            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
-          </div>
-
-          <div class="toc-item" data-chapter="4" data-spread="12">
-            <div>
-              <div class="toc-item-title">4. الفصل الرابع: عثرات في المعمعة والإنقاذ</div>
-              <div class="toc-item-sub">أزمة Regex في ui.js، وتوقيت مكة، ولغز الـ 251px</div>
-            </div>
-            <div class="toc-leader-dots"></div>
-            <div class="toc-page-tag">ص 24</div>
-            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
-          </div>
-        </div>
-      `
+    "pageRightNum": 3,
+    "pageLeftNum": 4,
+    "right": {
+      "header": "خَرِيطَةُ الطَّرِيق (1)",
+      "title": "فِهْرِسُ مَحَطَّاتِ المَلْحَمَة",
+      "html": "\n        <div class=\"toc-hint-banner\">\n          💡 تلميح: انقر للانتقال للصفحة، أو <b>اضغط مطولاً (600ms)</b> لمشاهدة العرض الكرتوني الحركي لكواليس وتحديات الفصل!\n        </div>\n        <div class=\"toc-clean-list\">\n          <div class=\"toc-item\" data-chapter=\"1\" data-spread=\"3\">\n            <div>\n              <div class=\"toc-item-title\">1. الفصل الأول: نداء الاستغاثة ومخاض الفكرة</div>\n              <div class=\"toc-item-sub\">أزمة التطبيقات المدرسية ولماذا اخترنا تيليجرام</div>\n            </div>\n            <div class=\"toc-leader-dots\"></div>\n            <div class=\"toc-page-tag\">ص 6</div>\n            <svg class=\"hold-ring-svg\" viewBox=\"0 0 24 24\"><circle class=\"bg\" cx=\"12\" cy=\"12\" r=\"10\"/><circle class=\"prog\" cx=\"12\" cy=\"12\" r=\"10\"/></svg>\n          </div>\n\n          <div class=\"toc-item\" data-chapter=\"2\" data-spread=\"6\">\n            <div>\n              <div class=\"toc-item-title\">2. الفصل الثاني: المخطط الكبير والجداول الـ 39</div>\n              <div class=\"toc-item-sub\">SQLite + Drizzle ORM ودفتر الأستاذ المحاسبي</div>\n            </div>\n            <div class=\"toc-leader-dots\"></div>\n            <div class=\"toc-page-tag\">ص 12</div>\n            <svg class=\"hold-ring-svg\" viewBox=\"0 0 24 24\"><circle class=\"bg\" cx=\"12\" cy=\"12\" r=\"10\"/><circle class=\"prog\" cx=\"12\" cy=\"12\" r=\"10\"/></svg>\n          </div>\n\n          <div class=\"toc-item\" data-chapter=\"3\" data-spread=\"9\">\n            <div>\n              <div class=\"toc-item-title\">3. الفصل الثالث: معركة القيود المستحيلة</div>\n              <div class=\"toc-item-sub\">قهر سقف الـ 64 بايت والبادئات فائقة الكثافة</div>\n            </div>\n            <div class=\"toc-leader-dots\"></div>\n            <div class=\"toc-page-tag\">ص 18</div>\n            <svg class=\"hold-ring-svg\" viewBox=\"0 0 24 24\"><circle class=\"bg\" cx=\"12\" cy=\"12\" r=\"10\"/><circle class=\"prog\" cx=\"12\" cy=\"12\" r=\"10\"/></svg>\n          </div>\n\n          <div class=\"toc-item\" data-chapter=\"4\" data-spread=\"12\">\n            <div>\n              <div class=\"toc-item-title\">4. الفصل الرابع: عثرات في المعمعة والإنقاذ</div>\n              <div class=\"toc-item-sub\">أزمة Regex في ui.js، وتوقيت مكة، ولغز الـ 251px</div>\n            </div>\n            <div class=\"toc-leader-dots\"></div>\n            <div class=\"toc-page-tag\">ص 24</div>\n            <svg class=\"hold-ring-svg\" viewBox=\"0 0 24 24\"><circle class=\"bg\" cx=\"12\" cy=\"12\" r=\"10\"/><circle class=\"prog\" cx=\"12\" cy=\"12\" r=\"10\"/></svg>\n          </div>\n        </div>\n      "
     },
-    left: {
-      header: "خَرِيطَةُ الطَّرِيق (2)",
-      title: "فِهْرِسُ مَحَطَّاتِ المَلْحَمَة",
-      html: `
-        <div class="toc-clean-list" style="margin-top: 14px;">
-          <div class="toc-item" data-chapter="5" data-spread="15">
-            <div>
-              <div class="toc-item-title">5. الفصل الخامس: ولادة المحركات الكبرى</div>
-              <div class="toc-item-sub">حلبة النزالات 1v1، باركود التحضير، ورادار الفجوات</div>
-            </div>
-            <div class="toc-leader-dots"></div>
-            <div class="toc-page-tag">ص 30</div>
-            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
-          </div>
-
-          <div class="toc-item" data-chapter="6" data-spread="18">
-            <div>
-              <div class="toc-item-title">6. الفصل السادس: ملحمة التوثيق الأكبر</div>
-              <div class="toc-item-sub">شرح 78 ملفاً بالعربية الفصحى وصمود check.cjs</div>
-            </div>
-            <div class="toc-leader-dots"></div>
-            <div class="toc-page-tag">ص 36</div>
-            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
-          </div>
-
-          <div class="toc-item" data-chapter="7" data-spread="21">
-            <div>
-              <div class="toc-item-title">7. الفصل السابع: الإطلاق وملاقاة السحاب</div>
-              <div class="toc-item-sub">الاختبارات الـ 45، التحصين الثلاثي، وRevision 23</div>
-            </div>
-            <div class="toc-leader-dots"></div>
-            <div class="toc-page-tag">ص 42</div>
-            <svg class="hold-ring-svg" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="10"/><circle class="prog" cx="12" cy="12" r="10"/></svg>
-          </div>
-
-          <div class="toc-item" data-chapter="8" data-spread="24">
-            <div>
-              <div class="toc-item-title">خاتمة المطاف: رسالة إلى المستقبل</div>
-              <div class="toc-item-sub">الشهادة التأسيسية وأثر المنظومة التربوي</div>
-            </div>
-            <div class="toc-leader-dots"></div>
-            <div class="toc-page-tag">ص 48</div>
-          </div>
-        </div>
-
-        <div class="milestone-badge narratable" style="margin-top: 18px;">
-          <span>⚡</span>
-          <div>78 ملفاً مشروحاً، 22,000 سطر برمجي، 45 اختباراً سحابياً ناجحاً.</div>
-        </div>
-      `
+    "left": {
+      "header": "خَرِيطَةُ الطَّرِيق (2)",
+      "title": "فِهْرِسُ مَحَطَّاتِ المَلْحَمَة",
+      "html": "\n        <div class=\"toc-clean-list\" style=\"margin-top: 14px;\">\n          <div class=\"toc-item\" data-chapter=\"5\" data-spread=\"15\">\n            <div>\n              <div class=\"toc-item-title\">5. الفصل الخامس: ولادة المحركات الكبرى</div>\n              <div class=\"toc-item-sub\">حلبة النزالات 1v1، باركود التحضير، ورادار الفجوات</div>\n            </div>\n            <div class=\"toc-leader-dots\"></div>\n            <div class=\"toc-page-tag\">ص 30</div>\n            <svg class=\"hold-ring-svg\" viewBox=\"0 0 24 24\"><circle class=\"bg\" cx=\"12\" cy=\"12\" r=\"10\"/><circle class=\"prog\" cx=\"12\" cy=\"12\" r=\"10\"/></svg>\n          </div>\n\n          <div class=\"toc-item\" data-chapter=\"6\" data-spread=\"18\">\n            <div>\n              <div class=\"toc-item-title\">6. الفصل السادس: ملحمة التوثيق الأكبر</div>\n              <div class=\"toc-item-sub\">شرح 78 ملفاً بالعربية الفصحى وصمود check.cjs</div>\n            </div>\n            <div class=\"toc-leader-dots\"></div>\n            <div class=\"toc-page-tag\">ص 36</div>\n            <svg class=\"hold-ring-svg\" viewBox=\"0 0 24 24\"><circle class=\"bg\" cx=\"12\" cy=\"12\" r=\"10\"/><circle class=\"prog\" cx=\"12\" cy=\"12\" r=\"10\"/></svg>\n          </div>\n\n          <div class=\"toc-item\" data-chapter=\"7\" data-spread=\"21\">\n            <div>\n              <div class=\"toc-item-title\">7. الفصل السابع: الإطلاق وملاقاة السحاب</div>\n              <div class=\"toc-item-sub\">الاختبارات الـ 45، التحصين الثلاثي، وRevision 23</div>\n            </div>\n            <div class=\"toc-leader-dots\"></div>\n            <div class=\"toc-page-tag\">ص 42</div>\n            <svg class=\"hold-ring-svg\" viewBox=\"0 0 24 24\"><circle class=\"bg\" cx=\"12\" cy=\"12\" r=\"10\"/><circle class=\"prog\" cx=\"12\" cy=\"12\" r=\"10\"/></svg>\n          </div>\n\n          <div class=\"toc-item\" data-chapter=\"8\" data-spread=\"24\">\n            <div>\n              <div class=\"toc-item-title\">خاتمة المطاف: رسالة إلى المستقبل</div>\n              <div class=\"toc-item-sub\">الشهادة التأسيسية وأثر المنظومة التربوي</div>\n            </div>\n            <div class=\"toc-leader-dots\"></div>\n            <div class=\"toc-page-tag\">ص 48</div>\n          </div>\n        </div>\n\n        <div class=\"milestone-badge narratable\" style=\"margin-top: 18px;\">\n          <span>⚡</span>\n          <div>78 ملفاً مشروحاً، 22,000 سطر برمجي، 45 اختباراً سحابياً ناجحاً.</div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 3: ورقة فارغة + عنوان الفصل الأول ونبذته
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 5,
-    pageLeftNum: 6,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 5,
+    "pageLeftNum": 6,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الأَوَّل",
-      title: "",
-      html: `
-        <div class="chapter-hero">
-          <div class="chapter-hero-badge">THE CATALYST — الفَصْلُ الأَوَّل</div>
-          <h2 class="chapter-hero-title">نِدَاءُ الاسْتِغَاثَةِ وَمَخَاضُ الفِكْرَة</h2>
-          <p class="chapter-hero-desc narratable">
-            «حين تحولت التطبيقات المدرسية التقليدية إلى عبء يرهق ولي الأمر؛ ولدت شرارة البحث عن واحة حوسبية يعيش فيها الناس بالفعل دون عوائق.»
-          </p>
-          <div class="chapter-hero-meta">
-            <div>محاور الفصل: كابوس التسرب الرقمي • لماذا تيليجرام؟ • المبادئ الثلاثة الحاكمة</div>
-          </div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الأَوَّل",
+      "title": "",
+      "html": "\n        <div class=\"chapter-hero\">\n          <div class=\"chapter-hero-badge\">THE CATALYST — الفَصْلُ الأَوَّل</div>\n          <h2 class=\"chapter-hero-title\">نِدَاءُ الاسْتِغَاثَةِ وَمَخَاضُ الفِكْرَة</h2>\n          <p class=\"chapter-hero-desc narratable\">\n            «حين تحولت التطبيقات المدرسية التقليدية إلى عبء يرهق ولي الأمر؛ ولدت شرارة البحث عن واحة حوسبية يعيش فيها الناس بالفعل دون عوائق.»\n          </p>\n          <div class=\"chapter-hero-meta\">\n            <div>محاور الفصل: كابوس التسرب الرقمي • لماذا تيليجرام؟ • المبادئ الثلاثة الحاكمة</div>\n          </div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 4: ورقة فارغة + محتوى الفصل الأول (الجزء 1)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 7,
-    pageLeftNum: 8,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 7,
+    "pageLeftNum": 8,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الأَوَّل — THE CATALYST",
-      title: "أزمة التطبيقات المدرسية التقليدية",
-      html: `
-        <p class="narratable">
-          في مطلع عام 2026، اجتمع الفريق لمناقشة واقع المنظومات المدرسية الرقمية. كانت النتيجة صادمة: تنفق المدارس ميزانيات ضخمة على تطبيقات خاصة؛ ولكن بعد أسبوعين فقط تنخفض نسبة التفاعل إلى أقل من 25%!
-        </p>
-        <p class="narratable">
-          لماذا؟ لأن ولي الأمر يواجه كابوساً: نفاد مساحة الهاتف واضطراره لحذف التطبيق، نسيان كلمات المرور، وانقطاع الإشعارات عند تفعيل وضع التوفير.
-        </p>
-        <div class="epic-quote narratable">
-          «لماذا نطلب من ولي الأمر القدوم لجزيرتنا المنعزلة، بينما يمكننا الذهاب إليه في الواحة التي يقضي فيها يومه بالفعل؟»
-          <cite>— تساؤل غير مسار المشروع</cite>
-        </div>
-        <p class="narratable">
-          كان الجواب جلياً: <b>تيليجرام (Telegram)</b>؛ تطبيق مثبت لدى 900 مليون مستخدم بخوادم إشعار لا تنقطع أبداً.
-        </p>
-      `
+    "left": {
+      "header": "الفَصْلُ الأَوَّل — THE CATALYST",
+      "title": "أزمة التطبيقات المدرسية التقليدية",
+      "html": "\n        <p class=\"narratable\">\n          في مطلع عام 2026، اجتمع الفريق لمناقشة واقع المنظومات المدرسية الرقمية. كانت النتيجة صادمة: تنفق المدارس ميزانيات ضخمة على تطبيقات خاصة؛ ولكن بعد أسبوعين فقط تنخفض نسبة التفاعل إلى أقل من 25%!\n        </p>\n        <p class=\"narratable\">\n          لماذا؟ لأن ولي الأمر يواجه كابوساً: نفاد مساحة الهاتف واضطراره لحذف التطبيق، نسيان كلمات المرور، وانقطاع الإشعارات عند تفعيل وضع التوفير.\n        </p>\n        <div class=\"epic-quote narratable\">\n          «لماذا نطلب من ولي الأمر القدوم لجزيرتنا المنعزلة، بينما يمكننا الذهاب إليه في الواحة التي يقضي فيها يومه بالفعل؟»\n          <cite>— تساؤل غير مسار المشروع</cite>\n        </div>\n        <p class=\"narratable\">\n          كان الجواب جلياً: <b>تيليجرام (Telegram)</b>؛ تطبيق مثبت لدى 900 مليون مستخدم بخوادم إشعار لا تنقطع أبداً.\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 5: محتوى الفصل الأول (الجزء 2 و 3)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 9,
-    pageLeftNum: 10,
-    right: {
-      header: "الفَصْلُ الأَوَّل — THE CATALYST",
-      title: "المبادئ الثلاثة الحاكمة للتأسيس",
-      html: `
-        <p class="narratable">
-          قبل كتابة سطر كود واحد، وضعت القيادة الهندسية ثلاثة مبادئ حديدية لا مساومة فيها:
-        </p>
-        <div class="milestone-badge narratable">
-          <span>1️⃣</span>
-          <div><b>السرعة المطلقة والخفة:</b> فتح أي واجهة في أقل من ثلث ثانية (0.3s) على شبكة 3G.</div>
-        </div>
-        <div class="milestone-badge narratable">
-          <span>2️⃣</span>
-          <div><b>وحدة مصدر الحقيقة:</b> أرقام ولي الأمر تطابق كشف المعلم بدقة رياضية موحدة.</div>
-        </div>
-        <div class="milestone-badge narratable">
-          <span>3️⃣</span>
-          <div><b>الحتمية الصارمة:</b> حظر تام للذكاء التوليدي والهلوسة في التقييم ورصد الدرجات.</div>
-        </div>
-      `
+    "pageRightNum": 9,
+    "pageLeftNum": 10,
+    "right": {
+      "header": "الفَصْلُ الأَوَّل — THE CATALYST",
+      "title": "المبادئ الثلاثة الحاكمة للتأسيس",
+      "html": "\n        <p class=\"narratable\">\n          قبل كتابة سطر كود واحد، وضعت القيادة الهندسية ثلاثة مبادئ حديدية لا مساومة فيها:\n        </p>\n        <div class=\"milestone-badge narratable\">\n          <span>1️⃣</span>\n          <div><b>السرعة المطلقة والخفة:</b> فتح أي واجهة في أقل من ثلث ثانية (0.3s) على شبكة 3G.</div>\n        </div>\n        <div class=\"milestone-badge narratable\">\n          <span>2️⃣</span>\n          <div><b>وحدة مصدر الحقيقة:</b> أرقام ولي الأمر تطابق كشف المعلم بدقة رياضية موحدة.</div>\n        </div>\n        <div class=\"milestone-badge narratable\">\n          <span>3️⃣</span>\n          <div><b>الحتمية الصارمة:</b> حظر تام للذكاء التوليدي والهلوسة في التقييم ورصد الدرجات.</div>\n        </div>\n      "
     },
-    left: {
-      header: "الفَصْلُ الأَوَّل — THE CATALYST",
-      title: "قوة Telegram Mini Apps",
-      html: `
-        <p class="narratable">
-          تتيح تقنية Telegram Mini Apps تشغيل واجهات ويب متقدمة داخل التطبيق نفسه دون أي تثبيت أو استهلاك لذاكرة الجهاز.
-        </p>
-        <p class="narratable">
-          علاوة على ذلك، وفّر بروتوكول التشفير الرقمي عبر <code>initData</code> مصادقة حتمية مبنية على هوية المستخدم الحقيقية، ملغياً الحاجة لكلمات المرور أو البريد الإلكتروني إلى الأبد.
-        </p>
-        <div class="milestone-badge narratable">
-          <span>✨</span>
-          <div><b>خلاصة المرحلة:</b> تأسيس بيئة سحابية فائقة السرعة تجمع المعلم والطالب في منصة واحدة موثوقة.</div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الأَوَّل — THE CATALYST",
+      "title": "قوة Telegram Mini Apps",
+      "html": "\n        <p class=\"narratable\">\n          تتيح تقنية Telegram Mini Apps تشغيل واجهات ويب متقدمة داخل التطبيق نفسه دون أي تثبيت أو استهلاك لذاكرة الجهاز.\n        </p>\n        <p class=\"narratable\">\n          علاوة على ذلك، وفّر بروتوكول التشفير الرقمي عبر <code>initData</code> مصادقة حتمية مبنية على هوية المستخدم الحقيقية، ملغياً الحاجة لكلمات المرور أو البريد الإلكتروني إلى الأبد.\n        </p>\n        <div class=\"milestone-badge narratable\">\n          <span>✨</span>\n          <div><b>خلاصة المرحلة:</b> تأسيس بيئة سحابية فائقة السرعة تجمع المعلم والطالب في منصة واحدة موثوقة.</div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 6: ورقة فارغة + عنوان الفصل الثاني ونبذته
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 11,
-    pageLeftNum: 12,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 11,
+    "pageLeftNum": 12,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الثَّانِي",
-      title: "",
-      html: `
-        <div class="chapter-hero">
-          <div class="chapter-hero-badge">THE GRAND BLUEPRINT — الفَصْلُ الثَّانِي</div>
-          <h2 class="chapter-hero-title">المُخَطَّطُ الكَبِيرُ وَصَدْمَةُ الجَدَاوِلِ الـ 39</h2>
-          <p class="chapter-hero-desc narratable">
-            «كيف نجعل قاعدة البيانات صلبة كالصخر وسريعة كالبرق؟ قصة بناء دفتر الأستاذ المحاسبي وتفكيك العائلة التعليمية.»
-          </p>
-          <div class="chapter-hero-meta">
-            <div>محاور الفصل: هندسة SQLite + Drizzle ORM • الجداول الـ 39 • دفتر الأستاذ للنقاط</div>
-          </div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الثَّانِي",
+      "title": "",
+      "html": "\n        <div class=\"chapter-hero\">\n          <div class=\"chapter-hero-badge\">THE GRAND BLUEPRINT — الفَصْلُ الثَّانِي</div>\n          <h2 class=\"chapter-hero-title\">المُخَطَّطُ الكَبِيرُ وَصَدْمَةُ الجَدَاوِلِ الـ 39</h2>\n          <p class=\"chapter-hero-desc narratable\">\n            «كيف نجعل قاعدة البيانات صلبة كالصخر وسريعة كالبرق؟ قصة بناء دفتر الأستاذ المحاسبي وتفكيك العائلة التعليمية.»\n          </p>\n          <div class=\"chapter-hero-meta\">\n            <div>محاور الفصل: هندسة SQLite + Drizzle ORM • الجداول الـ 39 • دفتر الأستاذ للنقاط</div>\n          </div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 7: ورقة فارغة + محتوى الفصل الثاني (الجزء 1)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 13,
-    pageLeftNum: 14,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 13,
+    "pageLeftNum": 14,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
-      title: "بين SQLite وصلابة Drizzle ORM",
-      html: `
-        <p class="narratable">
-          اختار الفريق <b>SQLite مع نمط الكتابة الاستباقية (WAL Mode)</b> مغلفاً بطبقة <b>Drizzle ORM</b>؛ لتحقيق سرعة مايكروثانية داخل ذاكرة الخادم اللامركزي، مع أمان نوعي كامل (Type-Safety) يمنع الأخطاء الإملائية للأعمدة.
-        </p>
-        <p class="narratable">
-          قُسّمت قاعدة البيانات إلى 8 مجموعات وظيفية: الأمان والهوية (3)، الأسر والمقررات (3)، التحضير (2)، التقييمات (1)، التلعيب والنزالات (5)، بنوك الأسئلة والعلاج (6)، إدارة SaaS (4)، والحوكمة (5 جداول).
-        </p>
-      `
+    "left": {
+      "header": "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
+      "title": "بين SQLite وصلابة Drizzle ORM",
+      "html": "\n        <p class=\"narratable\">\n          اختار الفريق <b>SQLite مع نمط الكتابة الاستباقية (WAL Mode)</b> مغلفاً بطبقة <b>Drizzle ORM</b>؛ لتحقيق سرعة مايكروثانية داخل ذاكرة الخادم اللامركزي، مع أمان نوعي كامل (Type-Safety) يمنع الأخطاء الإملائية للأعمدة.\n        </p>\n        <p class=\"narratable\">\n          قُسّمت قاعدة البيانات إلى 8 مجموعات وظيفية: الأمان والهوية (3)، الأسر والمقررات (3)، التحضير (2)، التقييمات (1)، التلعيب والنزالات (5)، بنوك الأسئلة والعلاج (6)، إدارة SaaS (4)، والحوكمة (5 جداول).\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 8: محتوى الفصل الثاني (الجزء 2 و 3)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 15,
-    pageLeftNum: 16,
-    right: {
-      header: "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
-      title: "فلسفة دفتر أستاذ النقاط المحاسبي",
-      html: `
-        <div class="epic-quote narratable">
-          «مستحيل أن نضيف عمود points في جدول الطلاب! لو انقطع الاتصال، كيف سنعرف من أين جاءت النقاط؟»
-          <cite>— حوار اليوم الثالث الحاسم</cite>
-        </div>
-        <p class="narratable">
-          وهكذا ولدت فكرة <b>دفتر الأستاذ (Double-Entry Ledger)</b>: لا يوجد عمود رصيد مطلقاً؛ كل نقطة تسجل كقيد مستقل في <code>points_ledger</code> مع القيمة والسبب والمعامل المرجعي، ويُحسب الرصيد تجميعياً عبر <code>SUM(points)</code>.
-        </p>
-      `
+    "pageRightNum": 15,
+    "pageLeftNum": 16,
+    "right": {
+      "header": "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
+      "title": "فلسفة دفتر أستاذ النقاط المحاسبي",
+      "html": "\n        <div class=\"epic-quote narratable\">\n          «مستحيل أن نضيف عمود points في جدول الطلاب! لو انقطع الاتصال، كيف سنعرف من أين جاءت النقاط؟»\n          <cite>— حوار اليوم الثالث الحاسم</cite>\n        </div>\n        <p class=\"narratable\">\n          وهكذا ولدت فكرة <b>دفتر الأستاذ (Double-Entry Ledger)</b>: لا يوجد عمود رصيد مطلقاً؛ كل نقطة تسجل كقيد مستقل في <code>points_ledger</code> مع القيمة والسبب والمعامل المرجعي، ويُحسب الرصيد تجميعياً عبر <code>SUM(points)</code>.\n        </p>\n      "
     },
-    left: {
-      header: "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
-      title: "العدالة الصارمة وحظر الهلوسة",
-      html: `
-        <p class="narratable">
-          حُظر الذكاء الاصطناعي التوليدي تماماً في رصد الدرجات أو تصحيح الاختبارات؛ فالتقييم يجب أن يكون حتمياً ورياضياً وشفافاً 100%.
-        </p>
-        <div class="milestone-badge narratable">
-          <span>🛡️</span>
-          <div><b>الأثر الهندسي:</b> حصانة تامة ضد التلاعب بالنقاط وسجل تدقيق مالي شفاف لكل طالب.</div>
-        </div>
-        <p class="narratable">
-          أتاح هذا القرار للآباء استعراض سجل كل نقطة وتاريخها بدقة لا تقبل الشك.
-        </p>
-      `
+    "left": {
+      "header": "الفَصْلُ الثَّانِي — THE GRAND BLUEPRINT",
+      "title": "العدالة الصارمة وحظر الهلوسة",
+      "html": "\n        <p class=\"narratable\">\n          حُظر الذكاء الاصطناعي التوليدي تماماً في رصد الدرجات أو تصحيح الاختبارات؛ فالتقييم يجب أن يكون حتمياً ورياضياً وشفافاً 100%.\n        </p>\n        <div class=\"milestone-badge narratable\">\n          <span>🛡️</span>\n          <div><b>الأثر الهندسي:</b> حصانة تامة ضد التلاعب بالنقاط وسجل تدقيق مالي شفاف لكل طالب.</div>\n        </div>\n        <p class=\"narratable\">\n          أتاح هذا القرار للآباء استعراض سجل كل نقطة وتاريخها بدقة لا تقبل الشك.\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 9: ورقة فارغة + عنوان الفصل الثالث ونبذته
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 17,
-    pageLeftNum: 18,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 17,
+    "pageLeftNum": 18,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الثَّالِث",
-      title: "",
-      html: `
-        <div class="chapter-hero">
-          <div class="chapter-hero-badge">THE CLASH OF CONSTRAINTS — الفَصْلُ الثَّالِث</div>
-          <h2 class="chapter-hero-title">مَعْرَكَةُ القُيُودِ المُسْتَحِيلَةِ وَكَيْفَ قَهَرْنَاهَا</h2>
-          <p class="chapter-hero-desc narratable">
-            «حين صدمنا جدار الـ 64 بايت لبيانات الأزرار؛ كيف حولنا القيد المستحيل إلى أسرع بروتوكول توجيه في تاريخ تيليجرام؟»
-          </p>
-          <div class="chapter-hero-meta">
-            <div>محاور الفصل: سقف الـ 64 بايت • البادئات فائقة الكثافة • معضلة النقر المكرر</div>
-          </div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الثَّالِث",
+      "title": "",
+      "html": "\n        <div class=\"chapter-hero\">\n          <div class=\"chapter-hero-badge\">THE CLASH OF CONSTRAINTS — الفَصْلُ الثَّالِث</div>\n          <h2 class=\"chapter-hero-title\">مَعْرَكَةُ القُيُودِ المُسْتَحِيلَةِ وَكَيْفَ قَهَرْنَاهَا</h2>\n          <p class=\"chapter-hero-desc narratable\">\n            «حين صدمنا جدار الـ 64 بايت لبيانات الأزرار؛ كيف حولنا القيد المستحيل إلى أسرع بروتوكول توجيه في تاريخ تيليجرام؟»\n          </p>\n          <div class=\"chapter-hero-meta\">\n            <div>محاور الفصل: سقف الـ 64 بايت • البادئات فائقة الكثافة • معضلة النقر المكرر</div>\n          </div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 10: ورقة فارغة + محتوى الفصل الثالث (الجزء 1)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 19,
-    pageLeftNum: 20,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 19,
+    "pageLeftNum": 20,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
-      title: "صدمة سقف الـ 64 بايت للأزرار",
-      html: `
-        <p class="narratable">
-          أثناء اختبار أزرار بنك الأسئلة، توقف البوت فجأة وصرخ تيليجرام بخطأ قاطع:
-        </p>
-        <div class="code-capsule">BUTTON_DATA_INVALID: text too long</div>
-        <p class="narratable">
-          الحد الأقصى المطلق لما يمكن تخزينه في <code>callback_data</code> هو 64 بايت فقط! وكان زر السؤال الواحد يحتاج 75 بايت بصيغة JSON!
-        </p>
-        <p class="narratable">
-          <b>الحل العبقري:</b> ابتكار بروتوكول <b>البادئات فائقة الكثافة (Micro-Prefix Routing)</b>: اختزال الأوامر لأحرف منفردة مفصولة بنقطتين: <code>p:add</code> و <code>c:12:s</code>، مقلصاً الحجم بنسبة 75%!
-        </p>
-      `
+    "left": {
+      "header": "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
+      "title": "صدمة سقف الـ 64 بايت للأزرار",
+      "html": "\n        <p class=\"narratable\">\n          أثناء اختبار أزرار بنك الأسئلة، توقف البوت فجأة وصرخ تيليجرام بخطأ قاطع:\n        </p>\n        <div class=\"code-capsule\">BUTTON_DATA_INVALID: text too long</div>\n        <p class=\"narratable\">\n          الحد الأقصى المطلق لما يمكن تخزينه في <code>callback_data</code> هو 64 بايت فقط! وكان زر السؤال الواحد يحتاج 75 بايت بصيغة JSON!\n        </p>\n        <p class=\"narratable\">\n          <b>الحل العبقري:</b> ابتكار بروتوكول <b>البادئات فائقة الكثافة (Micro-Prefix Routing)</b>: اختزال الأوامر لأحرف منفردة مفصولة بنقطتين: <code>p:add</code> و <code>c:12:s</code>، مقلصاً الحجم بنسبة 75%!\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 11: محتوى الفصل الثالث (الجزء 2 و 3)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 21,
-    pageLeftNum: 22,
-    right: {
-      header: "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
-      title: "سقف الـ 4096 حرفاً للرسائل",
-      html: `
-        <p class="narratable">
-          تقارير الطلاب الأسبوعية المفصلة كانت تتجاوز حد 4096 حرفاً، فيرفض تيليجرام تسليمها لولي الأمر.
-        </p>
-        <p class="narratable">
-          <b>الهندسة الذكية:</b> اختصار التقرير لخلاصة رياضية مركزة (المعدل، الحضور، آخر 5 أخطاء)، مع زر شفاف يفتح الـ Mini App لعرض التفاصيل الكاملة بلا حدود.
-        </p>
-      `
+    "pageRightNum": 21,
+    "pageLeftNum": 22,
+    "right": {
+      "header": "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
+      "title": "سقف الـ 4096 حرفاً للرسائل",
+      "html": "\n        <p class=\"narratable\">\n          تقارير الطلاب الأسبوعية المفصلة كانت تتجاوز حد 4096 حرفاً، فيرفض تيليجرام تسليمها لولي الأمر.\n        </p>\n        <p class=\"narratable\">\n          <b>الهندسة الذكية:</b> اختصار التقرير لخلاصة رياضية مركزة (المعدل، الحضور، آخر 5 أخطاء)، مع زر شفاف يفتح الـ Mini App لعرض التفاصيل الكاملة بلا حدود.\n        </p>\n      "
     },
-    left: {
-      header: "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
-      title: "ترويض النقر المكرر (Debouncing)",
-      html: `
-        <p class="narratable">
-          على الشبكات البطيئة، قد ينقر ولي الأمر زر التحضير مراراً؛ فابتكرنا حلاً ثلاثياً صارماً:
-        </p>
-        <div class="milestone-badge narratable">
-          <span>1️⃣</span>
-          <div>إرسال نبضة فورية <code>answerCallbackQuery</code> لإيقاف التحميل.</div>
-        </div>
-        <div class="milestone-badge narratable">
-          <span>2️⃣</span>
-          <div>تعديل موضعي سريع للرسالة بنص "جارٍ المعالجة...".</div>
-        </div>
-        <div class="milestone-badge narratable">
-          <span>3️⃣</span>
-          <div>قيد فريد في قاعدة البيانات يمنع التكرار نهائياً.</div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الثَّالِث — THE CLASH OF CONSTRAINTS",
+      "title": "ترويض النقر المكرر (Debouncing)",
+      "html": "\n        <p class=\"narratable\">\n          على الشبكات البطيئة، قد ينقر ولي الأمر زر التحضير مراراً؛ فابتكرنا حلاً ثلاثياً صارماً:\n        </p>\n        <div class=\"milestone-badge narratable\">\n          <span>1️⃣</span>\n          <div>إرسال نبضة فورية <code>answerCallbackQuery</code> لإيقاف التحميل.</div>\n        </div>\n        <div class=\"milestone-badge narratable\">\n          <span>2️⃣</span>\n          <div>تعديل موضعي سريع للرسالة بنص \"جارٍ المعالجة...\".</div>\n        </div>\n        <div class=\"milestone-badge narratable\">\n          <span>3️⃣</span>\n          <div>قيد فريد في قاعدة البيانات يمنع التكرار نهائياً.</div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 12: ورقة فارغة + عنوان الفصل الرابع ونبذته
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 23,
-    pageLeftNum: 24,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 23,
+    "pageLeftNum": 24,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الرَّابِع",
-      title: "",
-      html: `
-        <div class="chapter-hero">
-          <div class="chapter-hero-badge">THE REAL BLUNDERS & SAVES — الفَصْلُ الرَّابِع</div>
-          <h2 class="chapter-hero-title">عَثَرَاتٌ فِي المَعْمَعَةِ وَلَحَظَاتُ الإِنْقَاذ</h2>
-          <p class="chapter-hero-desc narratable">
-            «الشجاعة الهندسية ليست في ادعاء الكمال، بل في كيفية مواجهة الأخطاء الميدانية الحقيقية وحلها دون فقدان بايت واحد.»
-          </p>
-          <div class="chapter-hero-meta">
-            <div>محاور الفصل: عثرة ui.js والإنقاذ بـ git checkout • معركة توقيت مكة • محيط الدائرة 251px</div>
-          </div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الرَّابِع",
+      "title": "",
+      "html": "\n        <div class=\"chapter-hero\">\n          <div class=\"chapter-hero-badge\">THE REAL BLUNDERS & SAVES — الفَصْلُ الرَّابِع</div>\n          <h2 class=\"chapter-hero-title\">عَثَرَاتٌ فِي المَعْمَعَةِ وَلَحَظَاتُ الإِنْقَاذ</h2>\n          <p class=\"chapter-hero-desc narratable\">\n            «الشجاعة الهندسية ليست في ادعاء الكمال، بل في كيفية مواجهة الأخطاء الميدانية الحقيقية وحلها دون فقدان بايت واحد.»\n          </p>\n          <div class=\"chapter-hero-meta\">\n            <div>محاور الفصل: عثرة ui.js والإنقاذ بـ git checkout • معركة توقيت مكة • محيط الدائرة 251px</div>\n          </div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 13: ورقة فارغة + محتوى الفصل الرابع (الجزء 1)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 25,
-    pageLeftNum: 26,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 25,
+    "pageLeftNum": 26,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
-      title: "عثرة التعبيرات النمطية في ui.js",
-      html: `
-        <p class="narratable">
-          أثناء التوثيق الشامل لقوالب الواجهة في <code>ui.js</code>، وقع خطأ في التعبير النمطي شوه أسماء المفاتيح، وصرخ الفاحص المعماري بإنذار أحمر:
-        </p>
-        <div class="code-capsule">FAIL: 32 keys missing in ui.js</div>
-        <p class="narratable">
-          <b>لحظة الإنقاذ:</b> تم فوراً تنفيذ <code>git checkout tgcloud/lib/ui.js</code> لتعود الشفرة لحالتها الذهبية في أجزاء من الثانية، ثم كُتب سكريبت جراحي قرأ الملف سطراً بسطر واجتاز الفحص بنجاح تام!
-        </p>
-      `
+    "left": {
+      "header": "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
+      "title": "عثرة التعبيرات النمطية في ui.js",
+      "html": "\n        <p class=\"narratable\">\n          أثناء التوثيق الشامل لقوالب الواجهة في <code>ui.js</code>، وقع خطأ في التعبير النمطي شوه أسماء المفاتيح، وصرخ الفاحص المعماري بإنذار أحمر:\n        </p>\n        <div class=\"code-capsule\">FAIL: 32 keys missing in ui.js</div>\n        <p class=\"narratable\">\n          <b>لحظة الإنقاذ:</b> تم فوراً تنفيذ <code>git checkout tgcloud/lib/ui.js</code> لتعود الشفرة لحالتها الذهبية في أجزاء من الثانية، ثم كُتب سكريبت جراحي قرأ الملف سطراً بسطر واجتاز الفحص بنجاح تام!\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 14: محتوى الفصل الرابع (الجزء 2 و 3)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 27,
-    pageLeftNum: 28,
-    right: {
-      header: "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
-      title: "معركة توقيت مكة المكرمة (UTC+3)",
-      html: `
-        <p class="narratable">
-          كانت التقارير الأسبوعية تُرسل متأخرة 3 ساعات بسبب توقيت الخادم؛ فحسمنا الأمر بدالة <code>nowLocalISO()</code> الموحدة مع توقيت مكة (+3)، وتعريف أسبوع المدرسة الصارم: يبدأ الإثنين وينتهي الأحد عبر دالة <code>weekStartOf</code>.
-        </p>
-      `
+    "pageRightNum": 27,
+    "pageLeftNum": 28,
+    "right": {
+      "header": "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
+      "title": "معركة توقيت مكة المكرمة (UTC+3)",
+      "html": "\n        <p class=\"narratable\">\n          كانت التقارير الأسبوعية تُرسل متأخرة 3 ساعات بسبب توقيت الخادم؛ فحسمنا الأمر بدالة <code>nowLocalISO()</code> الموحدة مع توقيت مكة (+3)، وتعريف أسبوع المدرسة الصارم: يبدأ الإثنين وينتهي الأحد عبر دالة <code>weekStartOf</code>.\n        </p>\n      "
     },
-    left: {
-      header: "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
-      title: "لغز محيط دائرة الحضور (251px)",
-      html: `
-        <p class="narratable">
-          رفض الفريق استيراد مكتبات رسوم بيانية ثقيلة توفيراً للسرعة؛ واستخدموا معادلة محيط الدائرة الرياضية الصرفة:
-        </p>
-        <div class="code-capsule">C = 2 * π * 40 ≈ 251.327 px</div>
-        <p class="narratable">
-          وعبر <code>stroke-dasharray</code>، قُسّمت الدائرة لنسب الحضور بوزن صفر كيلوبايت إضافي!
-        </p>
-      `
+    "left": {
+      "header": "الفَصْلُ الرَّابِع — THE REAL BLUNDERS & SAVES",
+      "title": "لغز محيط دائرة الحضور (251px)",
+      "html": "\n        <p class=\"narratable\">\n          رفض الفريق استيراد مكتبات رسوم بيانية ثقيلة توفيراً للسرعة؛ واستخدموا معادلة محيط الدائرة الرياضية الصرفة:\n        </p>\n        <div class=\"code-capsule\">C = 2 * π * 40 ≈ 251.327 px</div>\n        <p class=\"narratable\">\n          وعبر <code>stroke-dasharray</code>، قُسّمت الدائرة لنسب الحضور بوزن صفر كيلوبايت إضافي!\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 15: ورقة فارغة + عنوان الفصل الخامس ونبذته
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 29,
-    pageLeftNum: 30,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 29,
+    "pageLeftNum": 30,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الخَامِس",
-      title: "",
-      html: `
-        <div class="chapter-hero">
-          <div class="chapter-hero-badge">THE MASTER ENGINES — الفَصْلُ الخَامِس</div>
-          <h2 class="chapter-hero-title">وِلادَةُ المُحَرِّكَاتِ الكُبْرَى</h2>
-          <p class="chapter-hero-desc narratable">
-            «حين تحولت المذاكرة من واجب مدرسي ثقيل إلى حلبة تحديات حماسية، وحين أصبح كشف الفجوة المهارية لحظياً قبل فوات الأوان.»
-          </p>
-          <div class="chapter-hero-meta">
-            <div>محاور الفصل: حلبة النزالات 1v1 • باركود الـ 10 دقائق • رادار سد الفجوات التلقائي</div>
-          </div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الخَامِس",
+      "title": "",
+      "html": "\n        <div class=\"chapter-hero\">\n          <div class=\"chapter-hero-badge\">THE MASTER ENGINES — الفَصْلُ الخَامِس</div>\n          <h2 class=\"chapter-hero-title\">وِلادَةُ المُحَرِّكَاتِ الكُبْرَى</h2>\n          <p class=\"chapter-hero-desc narratable\">\n            «حين تحولت المذاكرة من واجب مدرسي ثقيل إلى حلبة تحديات حماسية، وحين أصبح كشف الفجوة المهارية لحظياً قبل فوات الأوان.»\n          </p>\n          <div class=\"chapter-hero-meta\">\n            <div>محاور الفصل: حلبة النزالات 1v1 • باركود الـ 10 دقائق • رادار سد الفجوات التلقائي</div>\n          </div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 16: ورقة فارغة + محتوى الفصل الخامس (الجزء 1)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 31,
-    pageLeftNum: 32,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 31,
+    "pageLeftNum": 32,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ الخَامِس — THE MASTER ENGINES",
-      title: "محرك حلبة النزالات التنافسية (1v1)",
-      html: `
-        <p class="narratable">
-          ابتكر الفريق <b>حلبة النزالات الثنائية</b>: يطرح النظام 5 أسئلة متزامنة سريعة لزميلين، ويقيس المحرك زمن الاستجابة بالمللي ثانية لكسر التعادل عند تساوي الدرجات!
-        </p>
-        <div class="milestone-badge narratable">
-          <span>⚔️</span>
-          <div>الفائز يحصل على 25 نقطة وترقية في لوحة الصدارة، مما رفع حل التمارين بنسبة 320%!</div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الخَامِس — THE MASTER ENGINES",
+      "title": "محرك حلبة النزالات التنافسية (1v1)",
+      "html": "\n        <p class=\"narratable\">\n          ابتكر الفريق <b>حلبة النزالات الثنائية</b>: يطرح النظام 5 أسئلة متزامنة سريعة لزميلين، ويقيس المحرك زمن الاستجابة بالمللي ثانية لكسر التعادل عند تساوي الدرجات!\n        </p>\n        <div class=\"milestone-badge narratable\">\n          <span>⚔️</span>\n          <div>الفائز يحصل على 25 نقطة وترقية في لوحة الصدارة، مما رفع حل التمارين بنسبة 320%!</div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 17: محتوى الفصل الخامس (الجزء 2 و 3)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 33,
-    pageLeftNum: 34,
-    right: {
-      header: "الفَصْلُ الخَامِس — THE MASTER ENGINES",
-      title: "باركود التحضير الذكي (Smart QR)",
-      html: `
-        <p class="narratable">
-          توفيراً لوقت الحصة: يولد المعلم رمزاً مشفراً صالحاً لـ 10 دقائق فقط. يمسح الطالب الرمز عبر الـ Mini App ويسجل حضوره فوراً وتُضاف له 10 نقاط، ثم يبطل الرمز تلقائياً لمنع التداول.
-        </p>
-      `
+    "pageRightNum": 33,
+    "pageLeftNum": 34,
+    "right": {
+      "header": "الفَصْلُ الخَامِس — THE MASTER ENGINES",
+      "title": "باركود التحضير الذكي (Smart QR)",
+      "html": "\n        <p class=\"narratable\">\n          توفيراً لوقت الحصة: يولد المعلم رمزاً مشفراً صالحاً لـ 10 دقائق فقط. يمسح الطالب الرمز عبر الـ Mini App ويسجل حضوره فوراً وتُضاف له 10 نقاط، ثم يبطل الرمز تلقائياً لمنع التداول.\n        </p>\n      "
     },
-    left: {
-      header: "الفَصْلُ الخَامِس — THE MASTER ENGINES",
-      title: "رادار سد الفجوات المهارية",
-      html: `
-        <p class="narratable">
-          عندما يخفق الطالب في مهارة معينة بنسبة تقل عن 60%، يرصده الرادار فوراً وينشئ خطة تدريب علاجية تكيفية تتدرج معه حتى إتقان المهارة وغلق الفجوة.
-        </p>
-        <div class="milestone-badge narratable">
-          <span>🎯</span>
-          <div>إتقان 94% من المهارات المتعثرة خلال أسبوعين من تدخل الرادار التلقائي.</div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ الخَامِس — THE MASTER ENGINES",
+      "title": "رادار سد الفجوات المهارية",
+      "html": "\n        <p class=\"narratable\">\n          عندما يخفق الطالب في مهارة معينة بنسبة تقل عن 60%، يرصده الرادار فوراً وينشئ خطة تدريب علاجية تكيفية تتدرج معه حتى إتقان المهارة وغلق الفجوة.\n        </p>\n        <div class=\"milestone-badge narratable\">\n          <span>🎯</span>\n          <div>إتقان 94% من المهارات المتعثرة خلال أسبوعين من تدخل الرادار التلقائي.</div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 18: ورقة فارغة + عنوان الفصل السادس ونبذته
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 35,
-    pageLeftNum: 36,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 35,
+    "pageLeftNum": 36,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ السَّادِس",
-      title: "",
-      html: `
-        <div class="chapter-hero">
-          <div class="chapter-hero-badge">THE GREAT ANNOTATION ODYSSEY — الفَصْلُ السَّادِس</div>
-          <h2 class="chapter-hero-title">مَلْحَمَةُ التَّوْثِيقِ الأَكْبَر</h2>
-          <p class="chapter-hero-desc narratable">
-            «أكبر عملية تشريح وتوثيق برمجي لـ 78 ملفاً كاملاً باللغة العربية الفصحى سطرًا بسطر ودالة بدالة.»
-          </p>
-          <div class="chapter-hero-meta">
-            <div>محاور الفصل: قرار لغة الضاد • تفكيك الدماغ البرمجي • صمود check.cjs الأسطوري</div>
-          </div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ السَّادِس",
+      "title": "",
+      "html": "\n        <div class=\"chapter-hero\">\n          <div class=\"chapter-hero-badge\">THE GREAT ANNOTATION ODYSSEY — الفَصْلُ السَّادِس</div>\n          <h2 class=\"chapter-hero-title\">مَلْحَمَةُ التَّوْثِيقِ الأَكْبَر</h2>\n          <p class=\"chapter-hero-desc narratable\">\n            «أكبر عملية تشريح وتوثيق برمجي لـ 78 ملفاً كاملاً باللغة العربية الفصحى سطرًا بسطر ودالة بدالة.»\n          </p>\n          <div class=\"chapter-hero-meta\">\n            <div>محاور الفصل: قرار لغة الضاد • تفكيك الدماغ البرمجي • صمود check.cjs الأسطوري</div>\n          </div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 19: ورقة فارغة + محتوى الفصل السادس (الجزء 1)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 37,
-    pageLeftNum: 38,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 37,
+    "pageLeftNum": 38,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
-      title: "القرار الجريء: لغة الضاد لكل سطر كود",
-      html: `
-        <div class="epic-quote narratable">
-          «نريد أن يكون كل أمر ودالة واستعلام في كافة الملفات موثقاً ومفسراً بأسلوب تشريحي مفهوم باللغة العربية الفصحى.»
-        </div>
-        <p class="narratable">
-          كان تحدياً أسطورياً: <b>78 ملفاً كاملاً وأكثر من 22,000 سطر برمجي</b> تم تشريحها وشرح أسرارها الهندسية بدقة متناهية.
-        </p>
-      `
+    "left": {
+      "header": "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
+      "title": "القرار الجريء: لغة الضاد لكل سطر كود",
+      "html": "\n        <div class=\"epic-quote narratable\">\n          «نريد أن يكون كل أمر ودالة واستعلام في كافة الملفات موثقاً ومفسراً بأسلوب تشريحي مفهوم باللغة العربية الفصحى.»\n        </div>\n        <p class=\"narratable\">\n          كان تحدياً أسطورياً: <b>78 ملفاً كاملاً وأكثر من 22,000 سطر برمجي</b> تم تشريحها وشرح أسرارها الهندسية بدقة متناهية.\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 20: محتوى الفصل السادس (الجزء 2 و 3)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 39,
-    pageLeftNum: 40,
-    right: {
-      header: "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
-      title: "تفكيك الدماغ البرمجي (store.js)",
-      html: `
-        <p class="narratable">
-          تم توثيق 178 دالة في مخزن البيانات <code>store.js</code>، و52 نقطة نهاية سحابية، و28 حالة في آلة الحالات اللحظية، وتوزيعها على 5 حزم هندسية منتظمة.
-        </p>
-      `
+    "pageRightNum": 39,
+    "pageLeftNum": 40,
+    "right": {
+      "header": "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
+      "title": "تفكيك الدماغ البرمجي (store.js)",
+      "html": "\n        <p class=\"narratable\">\n          تم توثيق 178 دالة في مخزن البيانات <code>store.js</code>، و52 نقطة نهاية سحابية، و28 حالة في آلة الحالات اللحظية، وتوزيعها على 5 حزم هندسية منتظمة.\n        </p>\n      "
     },
-    left: {
-      header: "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
-      title: "صمود check.cjs الأسطوري",
-      html: `
-        <p class="narratable">
-          عند الانتهاء من الملف الأخير، أضاء الفاحص المعماري باللون الأخضر المظفر:
-        </p>
-        <div class="code-capsule">
-txt defined: 81 | used: 79<br>
-kb defined: 39 | used: 39<br>
-store exports: 178 | config: 28<br>
-✅ ALL STATIC CHECKS PASSED
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ السَّادِس — THE GREAT ANNOTATION ODYSSEY",
+      "title": "صمود check.cjs الأسطوري",
+      "html": "\n        <p class=\"narratable\">\n          عند الانتهاء من الملف الأخير، أضاء الفاحص المعماري باللون الأخضر المظفر:\n        </p>\n        <div class=\"code-capsule\">\ntxt defined: 81 | used: 79<br>\nkb defined: 39 | used: 39<br>\nstore exports: 178 | config: 28<br>\n✅ ALL STATIC CHECKS PASSED\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 21: ورقة فارغة + عنوان الفصل السابع ونبذته
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 41,
-    pageLeftNum: 42,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 41,
+    "pageLeftNum": 42,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ السَّابِع",
-      title: "",
-      html: `
-        <div class="chapter-hero">
-          <div class="chapter-hero-badge">THE CLOUD ASCENDANCE — الفَصْلُ السَّابِع</div>
-          <h2 class="chapter-hero-title">الإِطْلاقُ وَمُلاقَاةُ السَّحَاب</h2>
-          <p class="chapter-hero-desc narratable">
-            «لحظة الحقيقة: تشغيل الاختبارات الـ 45، التحصين الثلاثي SHA-256، والارتقاء إلى Revision 23 ومزامنة GitHub.»
-          </p>
-          <div class="chapter-hero-meta">
-            <div>محاور الفصل: الاختبارات الـ 45 • النسخ الثلاثي • التحليق في 9 ثوانٍ</div>
-          </div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ السَّابِع",
+      "title": "",
+      "html": "\n        <div class=\"chapter-hero\">\n          <div class=\"chapter-hero-badge\">THE CLOUD ASCENDANCE — الفَصْلُ السَّابِع</div>\n          <h2 class=\"chapter-hero-title\">الإِطْلاقُ وَمُلاقَاةُ السَّحَاب</h2>\n          <p class=\"chapter-hero-desc narratable\">\n            «لحظة الحقيقة: تشغيل الاختبارات الـ 45، التحصين الثلاثي SHA-256، والارتقاء إلى Revision 23 ومزامنة GitHub.»\n          </p>\n          <div class=\"chapter-hero-meta\">\n            <div>محاور الفصل: الاختبارات الـ 45 • النسخ الثلاثي • التحليق في 9 ثوانٍ</div>\n          </div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 22: ورقة فارغة + محتوى الفصل السابع (الجزء 1)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 43,
-    pageLeftNum: 44,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 43,
+    "pageLeftNum": 44,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
-      title: "لحظة الحقيقة: 45 اختباراً بلا خطأ",
-      html: `
-        <p class="narratable">
-          قبل النشر، حان موعد الاختبارات الكبرى عبر <code>npm test</code>: 27 اختباراً للتقارير، 3 للصدارة والتعاميم، و15 للتدريب التكيفي وعزل الطلاب:
-        </p>
-        <div class="milestone-badge narratable">
-          <span>🏆</span>
-          <div><b>45/45 اختباراً برمجياً نجحت جميعها دون تسجيل خطأ واحد!</b></div>
-        </div>
-      `
+    "left": {
+      "header": "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
+      "title": "لحظة الحقيقة: 45 اختباراً بلا خطأ",
+      "html": "\n        <p class=\"narratable\">\n          قبل النشر، حان موعد الاختبارات الكبرى عبر <code>npm test</code>: 27 اختباراً للتقارير، 3 للصدارة والتعاميم، و15 للتدريب التكيفي وعزل الطلاب:\n        </p>\n        <div class=\"milestone-badge narratable\">\n          <span>🏆</span>\n          <div><b>45/45 اختباراً برمجياً نجحت جميعها دون تسجيل خطأ واحد!</b></div>\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 23: محتوى الفصل السابع (الجزء 2 و 3)
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 45,
-    pageLeftNum: 46,
-    right: {
-      header: "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
-      title: "التحصين بالنسخ الاحتياطي الثلاثي",
-      html: `
-        <p class="narratable">
-          أُمّن المشروع محلياً عبر خطة النسخ الثلاثي: المجلد المعزول، والأرشيف المشفر المعتمد بمجموع SHA-256، وحفظ كتاب المرجع التشريحي كاملاً.
-        </p>
-      `
+    "pageRightNum": 45,
+    "pageLeftNum": 46,
+    "right": {
+      "header": "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
+      "title": "التحصين بالنسخ الاحتياطي الثلاثي",
+      "html": "\n        <p class=\"narratable\">\n          أُمّن المشروع محلياً عبر خطة النسخ الثلاثي: المجلد المعزول، والأرشيف المشفر المعتمد بمجموع SHA-256، وحفظ كتاب المرجع التشريحي كاملاً.\n        </p>\n      "
     },
-    left: {
-      header: "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
-      title: "الصعود السحابي Revision 23",
-      html: `
-        <p class="narratable">
-          في <b>9 ثوانٍ فقط</b>، رفعت السحابة 8 ملفات ثابتة و72 نقطة نهاية:
-        </p>
-        <div class="code-capsule">
-Done in 9.0s | Linked to app9148022068<br>
-Local revision: 23 | Webhook: in sync
-        </div>
-        <p class="narratable">
-          وتزامن المستودع مع GitHub بالإيداع التاريخي <code>57c1b13</code> بنجاح باهر.
-        </p>
-      `
+    "left": {
+      "header": "الفَصْلُ السَّابِع — THE CLOUD ASCENDANCE",
+      "title": "الصعود السحابي Revision 23",
+      "html": "\n        <p class=\"narratable\">\n          في <b>9 ثوانٍ فقط</b>، رفعت السحابة 8 ملفات ثابتة و72 نقطة نهاية:\n        </p>\n        <div class=\"code-capsule\">\nDone in 9.0s | Linked to app9148022068<br>\nLocal revision: 23 | Webhook: in sync\n        </div>\n        <p class=\"narratable\">\n          وتزامن المستودع مع GitHub بالإيداع التاريخي <code>57c1b13</code> بنجاح باهر.\n        </p>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 24: ورقة فارغة + خاتمة المطاف
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 47,
-    pageLeftNum: 48,
-    right: {
-      isBlank: true,
-      header: "فَاصِلٌ بَيَانِيّ",
-      html: `<div class="page-blank-separator"></div>`
+    "pageRightNum": 47,
+    "pageLeftNum": 48,
+    "right": {
+      "isBlank": true,
+      "header": "فَاصِلٌ بَيَانِيّ",
+      "html": "<div class=\"page-blank-separator\"></div>"
     },
-    left: {
-      header: "الخَاتِمَةُ وَالشَّهَادَة",
-      title: "رسالة إلى المستقبل",
-      html: `
-        <div class="epic-quote narratable">
-          «إن منصة «درب» ليست مجرد كود برمجي؛ إنها شهادة حية على أن الإرادة الهندسية العربية قادرة على بناء منظومات فائقة التطور تخدم آلاف الأسر.»
-        </div>
-        <p class="narratable">
-          لقد أثبتت هذه التجربة أن القيود هي الوقود الحقيقي للابتكار؛ فسقف الـ 64 بايت خلق بروتوكول البادئات، وحظر الهلوسة ولّد دفتر الأستاذ الصامد.
-        </p>
-        <div style="text-align: center; margin-top: 20px; color: var(--gold-dark); font-size: 14px; font-weight: bold;">
-          فريق هندسة وتطوير منظومة درب التعليمية الذكية ❖
-        </div>
-      `
+    "left": {
+      "header": "الخَاتِمَةُ وَالشَّهَادَة",
+      "title": "رسالة إلى المستقبل",
+      "html": "\n        <div class=\"epic-quote narratable\">\n          «إن منصة «درب» ليست مجرد كود برمجي؛ إنها شهادة حية على أن الإرادة الهندسية العربية قادرة على بناء منظومات فائقة التطور تخدم آلاف الأسر.»\n        </div>\n        <p class=\"narratable\">\n          لقد أثبتت هذه التجربة أن القيود هي الوقود الحقيقي للابتكار؛ فسقف الـ 64 بايت خلق بروتوكول البادئات، وحظر الهلوسة ولّد دفتر الأستاذ الصامد.\n        </p>\n        <div style=\"text-align: center; margin-top: 20px; color: var(--gold-dark); font-size: 14px; font-weight: bold;\">\n          فريق هندسة وتطوير منظومة درب التعليمية الذكية ❖\n        </div>\n      "
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 25: الشهادة البرمجية + داخل الغلاف الخلفي الأبيض
-  // ---------------------------------------------------------------------------
   {
-    pageRightNum: 49,
-    pageLeftNum: 50,
-    right: {
-      header: "الشَّهَادَةُ البَرْمَجِيَّة",
-      title: "سجل الاعتماد السحابي المعتمد",
-      html: `
-        <div style="font-size: 13.5px; line-height: 1.8; color: #4a3e31;">
-          <div>✓ قاعدة البيانات: 39 جدولاً في SQLite + Drizzle ORM</div>
-          <div>✓ المنطق والمكتبات: 178 دالة في store.js</div>
-          <div>✓ نقاط النهاية: 52 Endpoint سحابي موثق سطرًا بسطر</div>
-          <div>✓ الاختبارات البرمجية: 45/45 اختباراً بنجاح 100%</div>
-          <div>✓ النسخة المعتمدة: TGCloud Revision 23</div>
-        </div>
-        <div class="milestone-badge" style="margin-top: 15px;">
-          <span>🧭</span>
-          <div>تم التوثيق والاعتماد في 23 نوفمبر 2026 م.</div>
-        </div>
-      `
+    "pageRightNum": 49,
+    "pageLeftNum": 50,
+    "right": {
+      "header": "الشَّهَادَةُ البَرْمَجِيَّة",
+      "title": "سجل الاعتماد السحابي المعتمد",
+      "html": "\n        <div style=\"font-size: 13.5px; line-height: 1.8; color: #4a3e31;\">\n          <div>✓ قاعدة البيانات: 39 جدولاً في SQLite + Drizzle ORM</div>\n          <div>✓ المنطق والمكتبات: 178 دالة في store.js</div>\n          <div>✓ نقاط النهاية: 52 Endpoint سحابي موثق سطرًا بسطر</div>\n          <div>✓ الاختبارات البرمجية: 45/45 اختباراً بنجاح 100%</div>\n          <div>✓ النسخة المعتمدة: TGCloud Revision 23</div>\n        </div>\n        <div class=\"milestone-badge\" style=\"margin-top: 15px;\">\n          <span>🧭</span>\n          <div>تم التوثيق والاعتماد في 23 نوفمبر 2026 م.</div>\n        </div>\n      "
     },
-    left: {
-      isBlank: true,
-      header: "خَلْفِيَّةُ الغِلَافِ الخَلْفِيّ",
-      html: `<div class="page-blank-separator" title="ورقة داخل الغلاف الخلفي"></div>`
+    "left": {
+      "isBlank": true,
+      "header": "خَلْفِيَّةُ الغِلَافِ الخَلْفِيّ",
+      "html": "<div class=\"page-blank-separator\" title=\"ورقة داخل الغلاف الخلفي\"></div>"
     }
   },
-
-  // ---------------------------------------------------------------------------
-  // نشرة 26: الغلاف الملكي الخلفي مغلقاً
-  // ---------------------------------------------------------------------------
   {
-    isBackCover: true,
-    right: {
-      isCover: true,
-      html: `
-        <div class="cover-royal">
-          <div class="cover-header-ornament">❖ ❖ ❖</div>
-
-          <div style="margin: 6px 0;">
-            ${DARB_LOGO_SVG}
-            <h3 style="font-size: 18px; font-weight: 800; color: var(--gold-light); margin: 6px 0 4px; font-family: var(--ui-font);">
-              مَنْظُومَةُ دَرْب التَّعْلِيمِيَّةُ الذَّكِيَّة
-            </h3>
-            <p style="font-size: 12px; line-height: 1.7; color: #a9bede; margin: 0;">
-              الحل السحابي اللامركزي الأول للمدارس وأولياء الأمور والطلاب على تيليجرام.
-            </p>
-          </div>
-
-          <div style="background: rgba(255,255,255,0.04); border: 1px dashed rgba(212,175,55,0.35); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: #ccd9eb; font-family: var(--ui-font); text-align: right; width: 100%;">
-            <div>• توثيق شامل باللغة العربية الفصحى 100%</div>
-            <div>• حماية حتمية بدون كلمات مرور via initData</div>
-            <div>• رادار سد الفجوات التعليمية التلقائي</div>
-          </div>
-
-          <div class="cover-footer-meta" style="margin-top: 10px;">
-            <div>جميع الحقوق محفوظة © 2026 لمنظومة درب</div>
-            <div style="font-family: monospace; font-size: 9.5px; color: #d4af37;">REVISION 23 — PRODUCTION VERIFIED</div>
-          </div>
-        </div>
-      `
+    "isBackCover": true,
+    "right": {
+      "isCover": true,
+      "html": "\n        <div class=\"cover-royal\">\n          <div class=\"cover-header-ornament\">❖ ❖ ❖</div>\n\n          <div style=\"margin: 6px 0;\">\n            \n  <svg class=\"cover-logo-svg\" viewBox=\"0 0 512 512\" width=\"66\" height=\"66\">\n    <defs>\n      <linearGradient id=\"pathGrad\" x1=\"50%\" y1=\"100%\" x2=\"50%\" y2=\"0%\">\n        <stop offset=\"0%\" stop-color=\"#3b82f6\" stop-opacity=\"0.2\"/>\n        <stop offset=\"40%\" stop-color=\"#60a5fa\"/>\n        <stop offset=\"85%\" stop-color=\"#38bdf8\"/>\n        <stop offset=\"100%\" stop-color=\"#fef08a\"/>\n      </linearGradient>\n      <linearGradient id=\"bookLeft\" x1=\"0%\" y1=\"50%\" x2=\"100%\" y2=\"50%\">\n        <stop offset=\"0%\" stop-color=\"#1d4ed8\"/>\n        <stop offset=\"100%\" stop-color=\"#3b82f6\"/>\n      </linearGradient>\n      <linearGradient id=\"bookRight\" x1=\"0%\" y1=\"50%\" x2=\"100%\" y2=\"50%\">\n        <stop offset=\"0%\" stop-color=\"#3b82f6\"/>\n        <stop offset=\"100%\" stop-color=\"#2563eb\"/>\n      </linearGradient>\n      <linearGradient id=\"goldGrad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n        <stop offset=\"0%\" stop-color=\"#fef08a\"/>\n        <stop offset=\"40%\" stop-color=\"#eab308\"/>\n        <stop offset=\"100%\" stop-color=\"#ca8a04\"/>\n      </linearGradient>\n      <filter id=\"starGlow\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\">\n        <feGaussianBlur stdDeviation=\"16\" result=\"blur1\"/>\n        <feGaussianBlur stdDeviation=\"6\" result=\"blur2\"/>\n        <feMerge>\n          <feMergeNode in=\"blur1\"/>\n          <feMergeNode in=\"blur2\"/>\n          <feMergeNode in=\"SourceGraphic\"/>\n        </feMerge>\n      </filter>\n    </defs>\n    <!-- إطار الشعار المدمج -->\n    <rect width=\"512\" height=\"512\" rx=\"110\" fill=\"#0d182b\" stroke=\"#d4af37\" stroke-width=\"6\"/>\n    <!-- أجنحة الكتاب -->\n    <path d=\"M 256 370 C 210 335 150 330 96 345 C 96 265 106 200 256 220 Z\" fill=\"url(#bookLeft)\" opacity=\"0.95\"/>\n    <path d=\"M 256 370 C 210 338 150 334 100 345\" stroke=\"#60a5fa\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/>\n    <path d=\"M 256 370 C 302 335 362 330 416 345 C 416 265 406 200 256 220 Z\" fill=\"url(#bookRight)\" opacity=\"0.95\"/>\n    <path d=\"M 256 370 C 302 338 362 334 412 345\" stroke=\"#93c5fd\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/>\n    <!-- مسار درب الصاعد -->\n    <path d=\"M 256 425 C 235 375 220 310 240 230 C 248 195 256 160 256 140 C 256 160 264 195 272 230 C 292 310 277 375 256 425 Z\" fill=\"url(#pathGrad)\"/>\n    <path d=\"M 256 420 L 256 145\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" opacity=\"0.85\"/>\n    <!-- قبعة التخرج -->\n    <polygon points=\"256,128 326,148 256,168 186,148\" fill=\"#1e293b\" stroke=\"#60a5fa\" stroke-width=\"2.5\"/>\n    <path d=\"M 220 160 C 220 180 292 180 292 160 Z\" fill=\"#0f172a\" stroke=\"#3b82f6\" stroke-width=\"1.5\"/>\n    <path d=\"M 256 148 C 285 152 300 170 302 188\" fill=\"none\" stroke=\"url(#goldGrad)\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n    <circle cx=\"302\" cy=\"190\" r=\"3.5\" fill=\"#fef08a\"/>\n    <!-- نجمة التميز المضيئة -->\n    <g transform=\"translate(256, 108)\" filter=\"url(#starGlow)\">\n      <path d=\"M 0 -36 Q 0 0 36 0 Q 0 0 0 36 Q 0 0 -36 0 Q 0 0 0 -36 Z\" fill=\"url(#goldGrad)\"/>\n      <circle cx=\"0\" cy=\"0\" r=\"7\" fill=\"#ffffff\"/>\n    </g>\n  </svg>\n\n            <h3 style=\"font-size: 18px; font-weight: 800; color: var(--gold-light); margin: 6px 0 4px; font-family: var(--ui-font);\">\n              مَنْظُومَةُ دَرْب التَّعْلِيمِيَّةُ الذَّكِيَّة\n            </h3>\n            <p style=\"font-size: 12px; line-height: 1.7; color: #a9bede; margin: 0;\">\n              الحل السحابي اللامركزي الأول للمدارس وأولياء الأمور والطلاب على تيليجرام.\n            </p>\n          </div>\n\n          <div style=\"background: rgba(255,255,255,0.04); border: 1px dashed rgba(212,175,55,0.35); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: #ccd9eb; font-family: var(--ui-font); text-align: right; width: 100%;\">\n            <div>• توثيق شامل باللغة العربية الفصحى 100%</div>\n            <div>• حماية حتمية بدون كلمات مرور via initData</div>\n            <div>• رادار سد الفجوات التعليمية التلقائي</div>\n          </div>\n\n          <div class=\"cover-footer-meta\" style=\"margin-top: 10px;\">\n            <div>جميع الحقوق محفوظة © 2026 لمنظومة درب</div>\n            <div style=\"font-family: monospace; font-size: 9.5px; color: #d4af37;\">REVISION 23 — PRODUCTION VERIFIED</div>\n          </div>\n        </div>\n      "
     },
-    left: null
+    "left": null
   }
 ];
+let SPREADS = DEFAULT_EPIC_SPREADS.slice();
+// === END_EMBEDDED_EPIC_SPREADS ===
 
 // =============================================================================
 // بناء قائمة الصفحات الفردية للهواتف الذكية (MOBILE PAGES LIST)
@@ -2092,26 +1740,23 @@ function rebuildMobilePages() {
 rebuildMobilePages();
 
 // =============================================================================
-// المشاهد الكرتونية والإنفوجرافيك الحركية لجميع الفصول (1 إلى 7)
-// =============================================================================
-
-// =============================================================================
 // محرك الحالة والعرض التفاعلي للكتاب
 // =============================================================================
 let currentSpreadIndex = 0;
 let mobilePageIndex = 0;
 let totalSpreads = SPREADS.length;
-let soundEnabled = true;
+const EDITION_CACHE = {};
 
-// عناصر واجهة المستخدم
+// عناصر واجهة المستخدم الأساسية
 const bookEl = document.getElementById('book');
 const rightPageEl = document.getElementById('rightPage');
 const leftPageEl = document.getElementById('leftPage');
 const progressFillEl = document.getElementById('progressFill');
 const pageIndicatorEl = document.getElementById('pageIndicator');
 const progressTrackEl = document.getElementById('progressTrack');
+const bookBrandTitleEl = document.getElementById('bookBrandTitle');
 
-// عناصر الراوي الصوتي ومحرّك الصوت المزدوج
+// عناصر الراوي الصوتي (نظام MP3 المدمج)
 const btnToggleNarratorEl = document.getElementById('btnToggleNarrator');
 const narratorBarEl = document.getElementById('narratorBar');
 const narratorStatusEl = document.getElementById('narratorStatus');
@@ -2120,71 +1765,85 @@ const btnNarratorStopEl = document.getElementById('btnNarratorStop');
 const narratorSpeedEl = document.getElementById('narratorSpeed');
 const narratorAudioPlayer = document.getElementById('narratorAudioPlayer');
 
-// عناصر النافذة السينمائية الكرتونية
-const storyModalOverlayEl = document.getElementById('storyModalOverlay');
-const modalChapterTitleEl = document.getElementById('modalChapterTitle');
-const modalChapterSubtitleEl = document.getElementById('modalChapterSubtitle');
-const modalCloseBtnEl = document.getElementById('modalCloseBtn');
-const cartoonCanvas = document.getElementById('cartoonCanvas');
-const cartoonCtx = cartoonCanvas.getContext('2d');
-const sceneCardLabelEl = document.getElementById('sceneCardLabel');
-const sceneCardDescEl = document.getElementById('sceneCardDesc');
-const btnReplayAnimEl = document.getElementById('btnReplayAnim');
-const btnJumpBookEl = document.getElementById('btnJumpBook');
-const stageTabs = document.querySelectorAll('.stage-tab');
+// عناصر نافذة المكتبة والفيديو والاحتفال
+const btnLibraryEl = document.getElementById('btnLibrary');
+const libraryModalEl = document.getElementById('libraryModal');
+const btnLibraryCloseEl = document.getElementById('btnLibraryClose');
+const libraryListEl = document.getElementById('libraryList');
 
-let currentCartoonChapter = 1;
-let currentCartoonStage = 0;
-let cartoonAnimFrame = null;
-let cartoonTime = 0;
+const cartoonModalEl = document.getElementById('cartoonModal');
+const cartoonModalTitleEl = document.getElementById('cartoonModalTitle');
+const cartoonModalSubtitleEl = document.getElementById('cartoonModalSubtitle');
+const btnCartoonCloseEl = document.getElementById('btnCartoonClose');
+const videoWrapperEl = document.getElementById('videoWrapper');
+const chapterVideoEl = document.getElementById('chapterVideo');
+const anatomicalVideoNoticeEl = document.getElementById('anatomicalVideoNotice');
+
+const celebrationModalEl = document.getElementById('celebrationModal');
+const btnCelebrationCloseEl = document.getElementById('btnCelebrationClose');
+const celebrationTitleEl = document.getElementById('celebrationTitle');
+const celebrationDescEl = document.getElementById('celebrationDesc');
+const btnRestartBookEl = document.getElementById('btnRestartBook');
+const btnOpenLibraryFromCelebrationEl = document.getElementById('btnOpenLibraryFromCelebration');
 
 // =============================================================================
-// المحرك الصوتي المطور (تم استبدال الصوت الاصطناعي بالصوتيات المدمجة الحقيقية)
+// إدارة النوافذ المنبثقة الموحدة
 // =============================================================================
+function openModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.style.display = 'flex';
+  modalEl.classList.add('active');
+}
 
+function closeModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.remove('active');
+  modalEl.style.display = 'none';
+}
 
+function isAnyModalOpen() {
+  return [libraryModalEl, cartoonModalEl, celebrationModalEl].some(
+    el => el && el.classList.contains('active')
+  );
+}
 
+// =============================================================================
+// تصيير الصفحات ثلاثي الأبعاد والهواتف
+// =============================================================================
 function renderPageContent(data, pageNum, isRight = true) {
   if (!data) return '';
   if (data.isCover) return data.html;
   if (data.isBlank) return data.html;
 
-  const hotspotClass = isRight ? 'cornerHotspotRight' : 'cornerHotspotLeft';
+  const hotspotId = isRight ? 'cornerHotspotRight' : 'cornerHotspotLeft';
   const hotspotTitle = isRight ? 'انقر للرجوع للصفحة السابقة' : 'انقر لتقليب الصفحة التالية';
 
   return `
-    <div class="corner-peel-hotspot" id="${hotspotClass}" title="${hotspotTitle}"></div>
+    <div class="corner-peel-hotspot" id="${hotspotId}" title="${hotspotTitle}"></div>
     <div class="corner-peel-curl"></div>
     <div class="page-header-tag">
-      <span>${data.header || 'مَلْحَمَةُ دَرْب'}</span>
+      <span>${data.header || currentBookTitle}</span>
       <span>منظومة درب السحابية</span>
     </div>
     ${data.title ? `<h2 class="page-title">${data.title}</h2>` : ''}
     <div class="page-body">${data.html}</div>
     <div class="page-footer">
-      <span>${isRight ? (pageNum ? 'صفحة ' + pageNum : '') : 'مَلْحَمَةُ دَرْب — السيرة التقنية الكاملة'}</span>
-      <span>${isRight ? 'مَلْحَمَةُ دَرْب — السيرة التقنية الكاملة' : (pageNum ? 'صفحة ' + pageNum : '')}</span>
+      <span>${isRight ? (pageNum ? 'صفحة ' + pageNum : '') : currentBookFooter}</span>
+      <span>${isRight ? currentBookFooter : (pageNum ? 'صفحة ' + pageNum : '')}</span>
     </div>
   `;
 }
 
-// =============================================================================
-// عرض وتصيير صفحات الكتاب (مزدوج بالحواسيب وفردي بالهواتف)
-// =============================================================================
 function isMobile() {
   return window.innerWidth < 960;
 }
 
 function renderSpread(direction = 'none', prevSpreadIndex = currentSpreadIndex) {
   if (direction !== 'none') {
-    
     trigger3DLeafTurn(direction, prevSpreadIndex);
   }
 
   if (isMobile()) {
-    // -------------------------------------------------------------------------
-    // عرض الهواتف الذكية (صفحات فردية متسلسلة مع تخطي الصفحات الفارغة)
-    // -------------------------------------------------------------------------
     const mobilePage = MOBILE_PAGES[mobilePageIndex];
     if (!mobilePage) return;
 
@@ -2199,15 +1858,12 @@ function renderSpread(direction = 'none', prevSpreadIndex = currentSpreadIndex) 
     leftPageEl.style.display = 'none';
 
     pageIndicatorEl.textContent = mobilePage.indicator;
-    const pct = (mobilePageIndex / (MOBILE_PAGES.length - 1)) * 100;
+    const maxIdx = Math.max(1, MOBILE_PAGES.length - 1);
+    const pct = (mobilePageIndex / maxIdx) * 100;
     progressFillEl.style.width = pct + '%';
 
-    // مزامنة currentSpreadIndex مع الصفحة الحالية
     currentSpreadIndex = mobilePage.spreadIdx;
   } else {
-    // -------------------------------------------------------------------------
-    // عرض الحواسيب والشاشات الكبيرة (نشرات مزدوجة ككتاب حقيقي)
-    // -------------------------------------------------------------------------
     const spreadData = SPREADS[currentSpreadIndex];
     if (!spreadData) return;
 
@@ -2219,39 +1875,28 @@ function renderSpread(direction = 'none', prevSpreadIndex = currentSpreadIndex) 
     }
 
     leftPageEl.style.display = '';
-
-    // تعبئة الصفحة اليمنى
-    if (spreadData.right) {
-      rightPageEl.innerHTML = renderPageContent(spreadData.right, spreadData.pageRightNum, true);
-    } else {
-      rightPageEl.innerHTML = '';
-    }
-
-    // تعبئة الصفحة اليسرى
-    if (spreadData.left) {
-      leftPageEl.innerHTML = renderPageContent(spreadData.left, spreadData.pageLeftNum, false);
-    } else {
-      leftPageEl.innerHTML = '';
-    }
+    rightPageEl.innerHTML = spreadData.right
+      ? renderPageContent(spreadData.right, spreadData.pageRightNum, true)
+      : '';
+    leftPageEl.innerHTML = spreadData.left
+      ? renderPageContent(spreadData.left, spreadData.pageLeftNum, false)
+      : '';
 
     updateIndicators();
 
-    // مزامنة mobilePageIndex مع النشرة الحالية
     const mIdx = MOBILE_PAGES.findIndex(p => p.spreadIdx === currentSpreadIndex);
     if (mIdx !== -1) mobilePageIndex = mIdx;
   }
 
   bindPageInteractions();
 
-  // تشغيل الراوي إذا كان مفعلاً
-  if (narratorActive && !narratorPaused) {
+  if (narratorActive && !narratorPaused && activeNarratedSpread !== currentSpreadIndex) {
     startNarratingCurrentSpread();
   }
 }
 
-// محرك تقليب الورقة بزاوية 180° ثلاثية الأبعاد الحقيقي
 function trigger3DLeafTurn(dir, prevSpreadIndex) {
-  if (isMobile()) return; // تعطيل حركة الورقة في العرض الفردي للجوال
+  if (isMobile()) return;
 
   const oldLeaf = document.querySelector('.turning-leaf-container');
   if (oldLeaf) oldLeaf.remove();
@@ -2269,7 +1914,6 @@ function trigger3DLeafTurn(dir, prevSpreadIndex) {
 
   if (dir === 'forward') {
     if (prevSpreadIndex === 0) {
-      // فتح الغلاف الأمامي: الغلاف الأمامي ينقلب ليكشف خلفية الغلاف
       if (prevSpread && prevSpread.right) {
         frontFace.innerHTML = renderPageContent(prevSpread.right, null, true);
       }
@@ -2277,7 +1921,6 @@ function trigger3DLeafTurn(dir, prevSpreadIndex) {
         backFace.innerHTML = renderPageContent(targetSpread.right, targetSpread.pageRightNum, true);
       }
     } else {
-      // التقليب للأمام: الوجه الأمامي هو الصفحة اليسرى السابقة، والخلفي هو الصفحة اليمنى الجديدة
       if (prevSpread && prevSpread.left) {
         frontFace.innerHTML = renderPageContent(prevSpread.left, prevSpread.pageLeftNum, false);
       }
@@ -2286,7 +1929,6 @@ function trigger3DLeafTurn(dir, prevSpreadIndex) {
       }
     }
   } else {
-    // التقليب للخلف: الوجه الأمامي هو الصفحة اليمنى السابقة، والخلفي هو الصفحة اليسرى الجديدة
     if (prevSpread && prevSpread.right) {
       frontFace.innerHTML = renderPageContent(prevSpread.right, prevSpread.pageRightNum, true);
     }
@@ -2329,12 +1971,10 @@ function nextPage() {
       mobilePageIndex++;
       renderSpread('forward', prevSpread);
     }
-  } else {
-    if (currentSpreadIndex < totalSpreads - 1) {
-      const prevSpread = currentSpreadIndex;
-      currentSpreadIndex++;
-      renderSpread('forward', prevSpread);
-    }
+  } else if (currentSpreadIndex < totalSpreads - 1) {
+    const prevSpread = currentSpreadIndex;
+    currentSpreadIndex++;
+    renderSpread('forward', prevSpread);
   }
 }
 
@@ -2345,12 +1985,10 @@ function prevPage() {
       mobilePageIndex--;
       renderSpread('backward', prevSpread);
     }
-  } else {
-    if (currentSpreadIndex > 0) {
-      const prevSpread = currentSpreadIndex;
-      currentSpreadIndex--;
-      renderSpread('backward', prevSpread);
-    }
+  } else if (currentSpreadIndex > 0) {
+    const prevSpread = currentSpreadIndex;
+    currentSpreadIndex--;
+    renderSpread('backward', prevSpread);
   }
 }
 
@@ -2367,7 +2005,14 @@ function goToSpread(spreadIdx) {
   }
 }
 
-// إعادة موازنة العرض عند تغيير حجم الشاشة أو تدوير الهاتف
+function findTocSpreadIndex() {
+  const idx = SPREADS.findIndex(
+    s => (s.right && s.right.html && s.right.html.includes('toc-item')) ||
+         (s.left && s.left.html && s.left.html.includes('toc-item'))
+  );
+  return idx !== -1 ? idx : Math.min(2, totalSpreads - 1);
+}
+
 window.addEventListener('resize', () => {
   renderSpread('none');
 });
@@ -2385,24 +2030,30 @@ function bindPageInteractions() {
   tocItems.forEach(item => {
     let pressTimer = null;
     let isLongPress = false;
+    const chId = parseInt(item.getAttribute('data-chapter'), 10);
+    const hasHoldPreview = Boolean(item.querySelector('.hold-ring-svg')) && !isNaN(chId) && chId >= 1 && chId <= 7;
 
     item.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    const startPress = () => {
+    const startPress = (e) => {
+      if (e.button && e.button !== 0) return;
       isLongPress = false;
-      item.classList.add('holding');
+      if (!hasHoldPreview) return;
 
+      item.classList.add('holding');
       pressTimer = setTimeout(() => {
         isLongPress = true;
         item.classList.remove('holding');
         if (navigator.vibrate) navigator.vibrate([40, 20, 60]);
-        const chId = parseInt(item.getAttribute('data-chapter'), 10);
-        if (!isNaN(chId)) openChapterVideo(chId);
+        openChapterVideo(chId);
       }, 600);
     };
 
     const cancelPress = () => {
-      clearTimeout(pressTimer);
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
       item.classList.remove('holding');
     };
 
@@ -2411,235 +2062,172 @@ function bindPageInteractions() {
         const spread = parseInt(item.getAttribute('data-spread'), 10);
         if (!isNaN(spread)) goToSpread(spread);
       }
+      isLongPress = false;
     };
 
-    item.addEventListener('mousedown', startPress);
-    item.addEventListener('mouseup', cancelPress);
-    item.addEventListener('mouseleave', cancelPress);
-
-    item.addEventListener('touchstart', startPress, { passive: true });
-    item.addEventListener('touchend', cancelPress, { passive: true });
-    item.addEventListener('touchcancel', cancelPress, { passive: true });
-
+    item.addEventListener('pointerdown', startPress);
+    item.addEventListener('pointerup', cancelPress);
+    item.addEventListener('pointerleave', cancelPress);
+    item.addEventListener('pointercancel', cancelPress);
     item.addEventListener('click', handleClick);
   });
 }
 
 // =============================================================================
-// محرك الراوي الصوتي المتطور (مع دعم مشغل Audio وبديل Web Speech API الفصيح)
+// محرك الراوي الصوتي المدمج (MP3 مع تقليب تلقائي بعد 100ms)
 // =============================================================================
 let narratorActive = false;
 let narratorPaused = false;
-let usingAudioFile = false;
-let speechSynth = window.speechSynthesis;
-let currentUtterance = null;
-let currentNarratingElements = [];
-let currentNarratingIndex = 0;
+let activeNarratedSpread = null;
+let narratorAutoFlipTimer = null;
+
+function clearNarratorAutoFlip() {
+  if (narratorAutoFlipTimer) {
+    clearTimeout(narratorAutoFlipTimer);
+    narratorAutoFlipTimer = null;
+  }
+}
 
 function toggleNarratorMode() {
-  narratorActive = !narratorActive;
-  btnToggleNarratorEl.classList.toggle('narrator-active', narratorActive);
-
   if (narratorActive) {
-    narratorBarEl.classList.add('show');
-    narratorStatusEl.textContent = 'تشغيل الراوي...';
-    btnNarratorPlayEl.textContent = '⏸';
-    narratorPaused = false;
+    stopNarrator();
+    return;
+  }
+  narratorActive = true;
+  narratorPaused = false;
+  activeNarratedSpread = null;
+  btnToggleNarratorEl.classList.add('narrator-active');
+  narratorBarEl.classList.add('show');
+  narratorStatusEl.textContent = 'تشغيل الراوي...';
+  btnNarratorPlayEl.textContent = '⏸';
 
-    // إذا كان القارئ على الغلاف الأمامي المغلق، افتح الكتاب تلقائياً لصفحة الإهداء
-    if (currentSpreadIndex === 0 || (isMobile() && mobilePageIndex === 0)) {
-      goToSpread(1);
-    } else {
-      startNarratingCurrentSpread();
-    }
+  if (currentSpreadIndex === 0 || (isMobile() && mobilePageIndex === 0)) {
+    goToSpread(1);
   } else {
-    stopNarrator(); if (currentSpreadIndex >= SPREADS.length - 1) showCelebrationModal();
+    startNarratingCurrentSpread();
+  }
+}
+
+function pauseNarrator() {
+  clearNarratorAutoFlip();
+  if (!narratorActive) return;
+  narratorPaused = true;
+  if (narratorAudioPlayer && !narratorAudioPlayer.paused) {
+    narratorAudioPlayer.pause();
+  }
+  narratorBarEl.classList.remove('narrator-playing');
+  narratorStatusEl.textContent = 'الراوي متوقف مؤقتاً';
+  btnNarratorPlayEl.textContent = '▶';
+}
+
+function resumeNarrator() {
+  if (!narratorActive) return;
+  narratorPaused = false;
+  btnNarratorPlayEl.textContent = '⏸';
+  if (narratorAudioPlayer && narratorAudioPlayer.getAttribute('src')) {
+    narratorBarEl.classList.add('narrator-playing');
+    narratorStatusEl.textContent = 'الراوي يقرأ (صوت فصيح مسجل)...';
+    narratorAudioPlayer.play().catch(() => {
+      narratorPaused = true;
+      narratorBarEl.classList.remove('narrator-playing');
+      btnNarratorPlayEl.textContent = '▶';
+      narratorStatusEl.textContent = 'اضغط ▶ لمتابعة التشغيل';
+    });
+  } else {
+    startNarratingCurrentSpread();
   }
 }
 
 function stopNarrator() {
+  clearNarratorAutoFlip();
   narratorActive = false;
   narratorPaused = false;
-  usingAudioFile = false;
+  activeNarratedSpread = null;
   if (narratorAudioPlayer) {
+    narratorAudioPlayer.onended = null;
+    narratorAudioPlayer.onerror = null;
     narratorAudioPlayer.pause();
     narratorAudioPlayer.removeAttribute('src');
     narratorAudioPlayer.load();
   }
-  if (speechSynth) speechSynth.cancel();
   narratorBarEl.classList.remove('show', 'narrator-playing');
   btnToggleNarratorEl.classList.remove('narrator-active');
-  clearNarratorGlow();
   narratorStatusEl.textContent = 'تم إيقاف الراوي';
   btnNarratorPlayEl.textContent = '▶';
 }
 
-function clearNarratorGlow() {
-  document.querySelectorAll('.narrator-active-glow').forEach(el => {
-    el.classList.remove('narrator-active-glow');
-  });
-}
-
 function startNarratingCurrentSpread() {
-  if (speechSynth) speechSynth.cancel();
-  if (narratorAudioPlayer) {
-    narratorAudioPlayer.pause();
-    narratorAudioPlayer.removeAttribute('src');
-    narratorAudioPlayer.load();
-  }
-  usingAudioFile = false;
-  clearNarratorGlow();
+  clearNarratorAutoFlip();
+  if (!narratorAudioPlayer) return;
 
-  // ترقيم موحد لمسار الملف الصوتي بين الجوال والحاسوب (مبني على رقم النشرة)
-  const unifiedIndex = isMobile() ? (MOBILE_PAGES[mobilePageIndex]?.spreadIdx ?? currentSpreadIndex) : currentSpreadIndex;
+  narratorAudioPlayer.onended = null;
+  narratorAudioPlayer.onerror = null;
+  narratorAudioPlayer.pause();
+
+  const unifiedIndex = isMobile()
+    ? (MOBILE_PAGES[mobilePageIndex]?.spreadIdx ?? currentSpreadIndex)
+    : currentSpreadIndex;
+  activeNarratedSpread = unifiedIndex;
+
   const audioFilePath = currentAudioDir + 'spread_' + unifiedIndex + '.mp3';
-
-  // تجربة التحقق من الملف الصوتي
   narratorAudioPlayer.src = audioFilePath;
   narratorAudioPlayer.playbackRate = parseFloat(narratorSpeedEl.value) || 1.0;
+
+  narratorAudioPlayer.onended = () => {
+    if (!narratorActive || narratorPaused) return;
+    narratorBarEl.classList.remove('narrator-playing');
+    if (unifiedIndex >= SPREADS.length - 1) {
+      narratorStatusEl.textContent = 'اكتمل الكتاب 🏆';
+      stopNarrator();
+      showCelebrationModal();
+    } else {
+      narratorStatusEl.textContent = 'تقليب تلقائي للصفحة...';
+      narratorAutoFlipTimer = setTimeout(() => {
+        if (!narratorActive || narratorPaused) return;
+        if (isMobile()) {
+          goToSpread(unifiedIndex + 1);
+        } else {
+          nextPage();
+        }
+      }, 100);
+    }
+  };
+
+  narratorAudioPlayer.onerror = () => {
+    if (!narratorActive) return;
+    narratorPaused = true;
+    narratorBarEl.classList.remove('narrator-playing');
+    btnNarratorPlayEl.textContent = '▶';
+    narratorStatusEl.textContent = 'تعذر تحميل المقطع الصوتي';
+  };
 
   const playPromise = narratorAudioPlayer.play();
   if (playPromise !== undefined) {
     playPromise.then(() => {
-      // نجح تشغيل الملف الصوتي المسجل مسبقاً!
-      usingAudioFile = true;
+      if (!narratorActive || narratorPaused) {
+        narratorAudioPlayer.pause();
+        return;
+      }
       narratorBarEl.classList.add('narrator-playing');
       narratorStatusEl.textContent = 'الراوي يقرأ (صوت فصيح مسجل)...';
       btnNarratorPlayEl.textContent = '⏸';
-      narratorPaused = false;
-
-      narratorAudioPlayer.onended = () => {
-        narratorBarEl.classList.remove('narrator-playing');
-        if (currentSpreadIndex >= SPREADS.length - 1) {
-          narratorStatusEl.textContent = 'اكتملت الرواية 🏆';
-          stopNarrator();
-          showCelebrationModal();
-        } else {
-          narratorStatusEl.textContent = 'تقليب تلقائي للصفحة...';
-          setTimeout(() => { nextPage(); }, 100);
-        }
-      };
     }).catch(() => {
-      // غياب الملف الصوتي؛ تفريغ مشغل الصوت والاعتماد المباشر على Web Speech API الفصيح
-      usingAudioFile = false;
-      narratorAudioPlayer.removeAttribute('src');
-      narratorAudioPlayer.load();
-      startWebSpeechNarration();
-    });
-  } else {
-    usingAudioFile = false;
-    narratorAudioPlayer.removeAttribute('src');
-    narratorAudioPlayer.load();
-    startWebSpeechNarration();
-  }
-}
-
-function startWebSpeechNarration() {
-  if (!speechSynth) {
-    narratorStatusEl.textContent = 'المتصفح لا يدعم ميزة قراءة الصوت';
-    return;
-  }
-
-  const rElements = Array.from(rightPageEl.querySelectorAll('.narratable'));
-  const lElements = Array.from(leftPageEl.querySelectorAll('.narratable'));
-  currentNarratingElements = isMobile() ? rElements : [...rElements, ...lElements];
-  currentNarratingIndex = 0;
-
-  if (currentNarratingElements.length === 0) {
-    narratorStatusEl.textContent = 'صفحة بلا نصوص للقراءة';
-    return;
-  }
-
-  narratorBarEl.classList.add('narrator-playing');
-  narratorStatusEl.textContent = 'الراوي يقرأ الصفحة...';
-  btnNarratorPlayEl.textContent = '⏸';
-  narratorPaused = false;
-
-  narrateNextElement();
-}
-
-function narrateNextElement() {
-  if (!narratorActive || narratorPaused) return;
-
-  if (currentNarratingIndex >= currentNarratingElements.length) {
-    narratorBarEl.classList.remove('narrator-playing');
-    clearNarratorGlow();
-    narratorStatusEl.textContent = 'تقليب تلقائي للصفحة...';
-
-    const maxLimit = isMobile() ? (MOBILE_PAGES.length - 1) : (totalSpreads - 1);
-    const curr = isMobile() ? mobilePageIndex : currentSpreadIndex;
-
-    if (curr < maxLimit) {
-      setTimeout(() => { nextPage(); }, 900);
-    } else {
-      narratorStatusEl.textContent = 'اكتملت الرواية 🏆';
+      if (!narratorActive) return;
+      narratorPaused = true;
+      narratorBarEl.classList.remove('narrator-playing');
       btnNarratorPlayEl.textContent = '▶';
-    }
-    return;
+      narratorStatusEl.textContent = 'اضغط ▶ لبدء الصوت';
+    });
   }
-
-  clearNarratorGlow();
-  const el = currentNarratingElements[currentNarratingIndex];
-  el.classList.add('narrator-active-glow');
-
-  const textToRead = el.innerText.trim();
-  if (!textToRead) {
-    currentNarratingIndex++;
-    narrateNextElement();
-    return;
-  }
-
-  const utterance = new SpeechSynthesisUtterance(textToRead);
-  utterance.lang = 'ar-SA';
-  utterance.rate = parseFloat(narratorSpeedEl.value) || 1.0;
-
-  const voices = speechSynth.getVoices();
-  const arVoice = voices.find(v => v.lang.startsWith('ar') || v.name.includes('Arabic'));
-  if (arVoice) utterance.voice = arVoice;
-
-  utterance.onend = () => {
-    currentNarratingIndex++;
-    narrateNextElement();
-  };
-
-  // تجاهل الأخطاء العرضية الناتجة عن المقاطعة أو الإلغاء
-  utterance.onerror = (e) => {
-    if (e.error === 'canceled' || e.error === 'interrupted') {
-      return;
-    }
-    currentNarratingIndex++;
-    narrateNextElement();
-  };
-
-  currentUtterance = utterance;
-  speechSynth.speak(utterance);
 }
 
 btnToggleNarratorEl.addEventListener('click', toggleNarratorMode);
 
 btnNarratorPlayEl.addEventListener('click', () => {
   if (narratorPaused) {
-    narratorPaused = false;
-    btnNarratorPlayEl.textContent = '⏸';
-    narratorBarEl.classList.add('narrator-playing');
-    narratorStatusEl.textContent = 'متابعة الرواية...';
-
-    if (usingAudioFile && narratorAudioPlayer) {
-      narratorAudioPlayer.play().catch(() => {});
-    } else if (speechSynth && speechSynth.paused) {
-      speechSynth.resume();
-    } else {
-      narrateNextElement();
-    }
+    resumeNarrator();
   } else {
-    narratorPaused = true;
-    if (usingAudioFile && narratorAudioPlayer) {
-      narratorAudioPlayer.pause();
-    }
-    if (speechSynth) speechSynth.pause();
-    btnNarratorPlayEl.textContent = '▶';
-    narratorBarEl.classList.remove('narrator-playing');
-    narratorStatusEl.textContent = 'الرواية متوقفة مؤقتاً';
+    pauseNarrator();
   }
 });
 
@@ -2647,36 +2235,31 @@ btnNarratorStopEl.addEventListener('click', stopNarrator);
 
 narratorSpeedEl.addEventListener('change', () => {
   const newRate = parseFloat(narratorSpeedEl.value) || 1.0;
-  if (usingAudioFile && narratorAudioPlayer) {
+  if (narratorAudioPlayer) {
     narratorAudioPlayer.playbackRate = newRate;
-  }
-  if (currentUtterance && !narratorPaused && speechSynth && !usingAudioFile) {
-    speechSynth.cancel();
-    narrateNextElement();
   }
 });
 
 // =============================================================================
-// أزرار التحكم الأساسية وشريط التقدم ولوحة المفاتيح
+// أزرار التحكم الأساسية وشريط التقدم ولوحة المفاتيح واللمس
 // =============================================================================
 document.getElementById('btnNext').addEventListener('click', nextPage);
 document.getElementById('btnPrev').addEventListener('click', prevPage);
-document.getElementById('btnToc').addEventListener('click', () => goToSpread(2));
+document.getElementById('btnToc').addEventListener('click', () => goToSpread(findTocSpreadIndex()));
 
 progressTrackEl.addEventListener('click', (e) => {
   const rect = progressTrackEl.getBoundingClientRect();
   const ratio = (e.clientX - rect.left) / rect.width;
   const maxIdx = isMobile() ? (MOBILE_PAGES.length - 1) : (totalSpreads - 1);
-  const target = Math.round((1 - ratio) * maxIdx);
+  const target = Math.max(0, Math.min(maxIdx, Math.round((1 - ratio) * maxIdx)));
   if (isMobile()) {
     const prevSpread = currentSpreadIndex;
-    mobilePageIndex = Math.max(0, Math.min(maxIdx, target));
+    mobilePageIndex = target;
     renderSpread('forward', prevSpread);
   } else {
-    goToSpread(Math.max(0, Math.min(maxIdx, target)));
+    goToSpread(target);
   }
 });
-
 
 const themes = ['theme-sepia', 'theme-dark', 'theme-light'];
 let currentThemeIndex = 0;
@@ -2699,8 +2282,15 @@ document.getElementById('btnFullscreen').addEventListener('click', () => {
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    
-  } else if (e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === ' ') {
+    if (cartoonModalEl && cartoonModalEl.classList.contains('active')) closeChapterVideo();
+    if (libraryModalEl && libraryModalEl.classList.contains('active')) closeModal(libraryModalEl);
+    if (celebrationModalEl && celebrationModalEl.classList.contains('active')) closeModal(celebrationModalEl);
+    return;
+  }
+  if (isAnyModalOpen()) return;
+
+  if (e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === ' ') {
+    if (e.key === ' ') e.preventDefault();
     nextPage();
   } else if (e.key === 'ArrowRight' || e.key === 'PageUp') {
     prevPage();
@@ -2712,15 +2302,16 @@ window.addEventListener('keydown', (e) => {
 });
 
 let touchStartX = 0;
+let touchStartedInModal = false;
 window.addEventListener('touchstart', (e) => {
+  touchStartedInModal = isAnyModalOpen() || Boolean(e.target.closest('.modal-overlay'));
   touchStartX = e.changedTouches[0].screenX;
 }, { passive: true });
 
 window.addEventListener('touchend', (e) => {
+  if (touchStartedInModal || isAnyModalOpen()) return;
   const touchEndX = e.changedTouches[0].screenX;
   const diff = touchEndX - touchStartX;
-  // في القراءة العربية: السحب من اليسار لليمين ينقل للصفحة التالية
-  // والسحب من اليمين لليسار يرجع للصفحة السابقة
   if (diff > 55) {
     nextPage();
   } else if (diff < -55) {
@@ -2730,7 +2321,7 @@ window.addEventListener('touchend', (e) => {
 
 const stageEl = document.getElementById('stage');
 stageEl.addEventListener('mousemove', (e) => {
-  if (isMobile()) return;
+  if (isMobile() || isAnyModalOpen()) return;
   const rect = stageEl.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width - 0.5;
   const y = (e.clientY - rect.top) / rect.height - 0.5;
@@ -2741,69 +2332,48 @@ stageEl.addEventListener('mouseleave', () => {
   bookEl.style.transform = 'rotateY(0deg) rotateX(0deg)';
 });
 
-// بدء العرض الأولي ودعم التحميل الديناميكي للإصدار المختار
-async function initEdition() {
-  if (currentEditionId === 'anatomical-book') {
-    try {
-      const res = await fetch('editions/anatomical-v1.json');
-      if (res.ok) {
-        const d = await res.json();
-        if (d && d.spreads && d.spreads.length > 0) {
-          SPREADS = d.spreads;
-          totalSpreads = SPREADS.length;
-          rebuildMobilePages();
-        }
-      }
-    } catch (e) {
-      console.warn('Could not load anatomical-v1.json dynamically:', e);
-    }
-  }
-  renderSpread('none');
-}
-initEdition();
-</script>
-<script>
-
 // =============================================================================
 // 🏛️ محرك الأجزاء المتعددة والمكتبة التفاعلية (Multi-Edition & Video Engine)
 // =============================================================================
+function getEditionMeta(editionId) {
+  const list = (catalogData && catalogData.editions) ? catalogData.editions : DEFAULT_CATALOG.editions;
+  return list.find(ed => ed.id === editionId) || list[0];
+}
 
-// عناصر واجهة المكتبة والفيديو والاحتفال
-const btnLibraryEl = document.getElementById('btnLibrary');
-const libraryModalEl = document.getElementById('libraryModal');
-const btnLibraryCloseEl = document.getElementById('btnLibraryClose');
-const libraryListEl = document.getElementById('libraryList');
+function updateBookMetadataUI(ed, loadedTitle) {
+  const titleText = loadedTitle || ed?.title || 'مَلْحَمَةُ دَرْب: السِّيرَةُ التَّقْنِيَّةُ';
+  currentBookTitle = titleText;
+  currentBookFooter = ed?.subtitle ? `${titleText} — ${ed.subtitle}` : titleText;
+  if (bookBrandTitleEl) bookBrandTitleEl.textContent = titleText;
+  document.title = `${titleText} — بوابة درب`;
+}
 
-const cartoonModalEl = document.getElementById('cartoonModal');
-const cartoonModalTitleEl = document.getElementById('cartoonModalTitle');
-const btnCartoonCloseEl = document.getElementById('btnCartoonClose');
-const chapterVideoEl = document.getElementById('chapterVideo');
-
-const celebrationModalEl = document.getElementById('celebrationModal');
-const btnRestartBookEl = document.getElementById('btnRestartBook');
-const btnOpenLibraryFromCelebrationEl = document.getElementById('btnOpenLibraryFromCelebration');
-
-// تحميل بيانات كتالوج المكتبة
 async function loadLibraryCatalog() {
   try {
     const res = await fetch('editions/catalog.json');
     if (res.ok) {
       catalogData = await res.json();
-      renderLibraryUI();
+    } else {
+      catalogData = DEFAULT_CATALOG;
     }
   } catch (err) {
-    console.warn('Could not load catalog.json dynamically:', err);
+    catalogData = DEFAULT_CATALOG;
+    console.warn('Using embedded catalog fallback:', err);
   }
+  renderLibraryUI();
+  return catalogData;
 }
 
 function renderLibraryUI() {
-  if (!catalogData || !catalogData.editions || !libraryListEl) return;
+  const catalog = catalogData || DEFAULT_CATALOG;
+  if (!catalog || !catalog.editions || !libraryListEl) return;
   libraryListEl.innerHTML = '';
-  
-  catalogData.editions.forEach(ed => {
+
+  catalog.editions.forEach(ed => {
     const isCurrent = (ed.id === currentEditionId);
     const card = document.createElement('div');
     card.className = `edition-card ${isCurrent ? 'active' : ''}`;
+    card.setAttribute('data-edition-id', ed.id);
     card.innerHTML = `
       <div class="edition-badge" style="background:${ed.badgeColor || '#f59e0b'}; color:#0b0f19;">${ed.badge}</div>
       <div class="edition-title">${ed.title}</div>
@@ -2811,38 +2381,102 @@ function renderLibraryUI() {
       <div class="edition-meta">
         <span>📖 ${ed.spreadsCount || 27} نشرة</span>
         <span>🎧 ${ed.audioTracksCount || 27} تراكاً صوتياً</span>
-        <span>🎬 ${ed.videosCount !== undefined ? ed.videosCount : 7} فيديوهات كواليس</span>
+        <span>🎬 ${ed.videosCount !== undefined ? ed.videosCount : 0} فيديوهات كواليس</span>
         <span>📅 ${ed.releaseDate || '2026'}</span>
       </div>
     `;
     card.addEventListener('click', () => {
       if (ed.id !== currentEditionId) {
-        window.location.search = `?edition=${ed.id}`;
+        switchEdition(ed.id);
       } else {
-        libraryModalEl.style.display = 'none';
+        closeModal(libraryModalEl);
       }
     });
     libraryListEl.appendChild(card);
   });
 }
 
+async function applyEdition(editionId, options = { updateUrl: false }) {
+  const ed = getEditionMeta(editionId);
+  if (!ed) return;
+
+  stopNarrator();
+  currentEditionId = ed.id;
+  currentAudioDir = ed.audioDir || `../audio/${ed.id}/`;
+  currentVideoDir = ed.videoDir || `../videos/${ed.id}/`;
+
+  let editionPayload = EDITION_CACHE[ed.id];
+  if (!editionPayload && ed.dataFile) {
+    try {
+      const res = await fetch(ed.dataFile);
+      if (res.ok) {
+        const parsed = await res.json();
+        if (parsed && Array.isArray(parsed.spreads) && parsed.spreads.length > 0) {
+          editionPayload = parsed;
+          EDITION_CACHE[ed.id] = parsed;
+        }
+      }
+    } catch (err) {
+      console.warn(`Could not load ${ed.dataFile} dynamically:`, err);
+    }
+  }
+
+  if (!editionPayload && ed.id === 'epic-v1') {
+    editionPayload = { title: ed.title, spreads: DEFAULT_EPIC_SPREADS };
+    EDITION_CACHE[ed.id] = editionPayload;
+  }
+
+  if (editionPayload && Array.isArray(editionPayload.spreads) && editionPayload.spreads.length > 0) {
+    SPREADS = editionPayload.spreads;
+    totalSpreads = SPREADS.length;
+    currentSpreadIndex = 0;
+    mobilePageIndex = 0;
+    rebuildMobilePages();
+  }
+
+  updateBookMetadataUI(ed, editionPayload?.title);
+
+  if (options.updateUrl && window.history && window.history.replaceState) {
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('edition', ed.id);
+    window.history.replaceState({ edition: ed.id }, '', nextUrl.toString());
+  }
+
+  renderSpread('none');
+  renderLibraryUI();
+}
+
+async function switchEdition(editionId) {
+  await applyEdition(editionId, { updateUrl: true });
+  closeModal(libraryModalEl);
+}
+
 if (btnLibraryEl) {
   btnLibraryEl.addEventListener('click', () => {
-    libraryModalEl.style.display = 'flex';
+    renderLibraryUI();
+    openModal(libraryModalEl);
     if (!catalogData) loadLibraryCatalog();
   });
 }
 if (btnLibraryCloseEl) {
-  btnLibraryCloseEl.addEventListener('click', () => {
-    libraryModalEl.style.display = 'none';
+  btnLibraryCloseEl.addEventListener('click', () => closeModal(libraryModalEl));
+}
+if (libraryModalEl) {
+  libraryModalEl.addEventListener('click', (e) => {
+    if (e.target === libraryModalEl) closeModal(libraryModalEl);
   });
 }
 
 // مشغل فيديو كواليس الفصول (الضغط المطول)
 function openChapterVideo(chapterNum) {
   pauseNarrator();
-  
-  if (currentEditionId === 'anatomical-book') {
+
+  const ed = getEditionMeta(currentEditionId);
+  const hasVideos = ed && typeof ed.videosCount === 'number'
+    ? ed.videosCount >= chapterNum && chapterNum >= 1
+    : (currentEditionId !== 'anatomical-book' && chapterNum >= 1 && chapterNum <= 7);
+
+  if (!hasVideos || currentEditionId === 'anatomical-book') {
     const anatomicalChapterTitles = {
       1: 'كواليس الباب الأول: الأسس المعمارية والهندسية وتطويع الـ 64 بايت',
       2: 'كواليس الباب الثاني: التشريح الهيكلي لقاعدة البيانات (39 جدولاً)',
@@ -2852,49 +2486,36 @@ function openChapterVideo(chapterNum) {
       6: 'كواليس الباب السادس: تطبيقات الويب المصغرة وتجربة المستخدم Pure SVG',
       7: 'كواليس الباب السابع: هندسة الإطلاق والنشر السحابي والحوكمة'
     };
+    const noticeTitle = anatomicalChapterTitles[chapterNum] || `كواليس الباب ${chapterNum}`;
 
-    if (cartoonModalTitleEl) {
-      cartoonModalTitleEl.textContent = anatomicalChapterTitles[chapterNum] || `كواليس الباب ${chapterNum}`;
-    }
-    
+    if (cartoonModalTitleEl) cartoonModalTitleEl.textContent = noticeTitle;
+    if (cartoonModalSubtitleEl) cartoonModalSubtitleEl.textContent = 'بطاقة كواليس الباب التشريحي';
+
     if (chapterVideoEl) {
       chapterVideoEl.pause();
       chapterVideoEl.removeAttribute('src');
       chapterVideoEl.load();
-      chapterVideoEl.style.display = 'none';
     }
-    
-    let notice = document.getElementById('anatomicalVideoNotice');
-    if (!notice) {
-      notice = document.createElement('div');
-      notice.id = 'anatomicalVideoNotice';
-      notice.style.cssText = 'background: rgba(15, 23, 42, 0.95); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 24px 20px; text-align: center; color: #f0f9ff; font-family: var(--ui-font); margin: 10px 0;';
-      if (chapterVideoEl && chapterVideoEl.parentNode) {
-        chapterVideoEl.parentNode.appendChild(notice);
-      }
+    if (videoWrapperEl) videoWrapperEl.style.display = 'none';
+    if (anatomicalVideoNoticeEl) {
+      anatomicalVideoNoticeEl.style.display = 'block';
+      anatomicalVideoNoticeEl.innerHTML = `
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">🎬</div>
+        <h4 style="margin: 0 0 8px; color: #38bdf8; font-size: 1.1rem; font-weight: bold;">${noticeTitle}</h4>
+        <p style="margin: 0 0 12px; color: #94a3b8; font-size: 0.88rem; line-height: 1.6;">
+          عروض الفيديو المتحركة لهذا الإصدار قيد الإعداد والمونتاج، وستُتاح في التحديث القادم لمكتبة البوابة.
+        </p>
+        <div style="display: inline-block; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 20px; padding: 4px 14px; font-size: 0.78rem; color: #7dd3fc;">
+          ✨ يمكنك الآن متابعة القراءة وتفعيل الراوي الصوتي المدمج للنشرات
+        </div>
+      `;
     }
-    notice.style.display = 'block';
-    notice.innerHTML = `
-      <div style="font-size: 2.2rem; margin-bottom: 8px;">🎬</div>
-      <h4 style="margin: 0 0 8px; color: #38bdf8; font-size: 1.1rem; font-weight: bold;">
-        ${anatomicalChapterTitles[chapterNum] || 'كواليس الباب ' + chapterNum}
-      </h4>
-      <p style="margin: 0 0 12px; color: #94a3b8; font-size: 0.88rem; line-height: 1.6;">
-        عروض الفيديو الكرتونية المتحركة لكتاب درب التشريحي قيد الإعداد والمونتاج، وستُتاح في التحديث القادم لمكتبة البوابة.
-      </p>
-      <div style="display: inline-block; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 20px; padding: 4px 14px; font-size: 0.78rem; color: #7dd3fc;">
-        ✨ يمكنك الآن متابعة القراءة وتفعيل الراوي الصوتي المدمج للنشرات
-      </div>
-    `;
-    
-    cartoonModalEl.style.display = 'flex';
+    openModal(cartoonModalEl);
     return;
   }
 
-  // إذا كان الكتاب الأول epic-v1:
-  const notice = document.getElementById('anatomicalVideoNotice');
-  if (notice) notice.style.display = 'none';
-  if (chapterVideoEl) chapterVideoEl.style.display = 'block';
+  if (anatomicalVideoNoticeEl) anatomicalVideoNoticeEl.style.display = 'none';
+  if (videoWrapperEl) videoWrapperEl.style.display = 'block';
 
   const titles = {
     1: 'كواليس الفصل الأول: نداء الاستغاثة ومخاض الفكرة',
@@ -2908,12 +2529,15 @@ function openChapterVideo(chapterNum) {
   if (cartoonModalTitleEl) {
     cartoonModalTitleEl.textContent = titles[chapterNum] || `كواليس الفصل ${chapterNum}`;
   }
+  if (cartoonModalSubtitleEl) {
+    cartoonModalSubtitleEl.textContent = 'ملخص مرئي متزامن بالصوت الفصيح والرسوم الهندسية';
+  }
   if (chapterVideoEl) {
     chapterVideoEl.src = `${currentVideoDir}ch${chapterNum}.mp4`;
     chapterVideoEl.currentTime = 0;
-    chapterVideoEl.play().catch(e => console.log('Autoplay blocked:', e));
+    chapterVideoEl.play().catch(e => console.warn('Video autoplay deferred:', e));
   }
-  cartoonModalEl.style.display = 'flex';
+  openModal(cartoonModalEl);
 }
 
 function closeChapterVideo() {
@@ -2922,48 +2546,73 @@ function closeChapterVideo() {
     chapterVideoEl.removeAttribute('src');
     chapterVideoEl.load();
   }
-  const notice = document.getElementById('anatomicalVideoNotice');
-  if (notice) notice.style.display = 'none';
-  cartoonModalEl.style.display = 'none';
+  if (anatomicalVideoNoticeEl) anatomicalVideoNoticeEl.style.display = 'none';
+  if (videoWrapperEl) videoWrapperEl.style.display = 'block';
+  closeModal(cartoonModalEl);
 }
 
 if (btnCartoonCloseEl) {
   btnCartoonCloseEl.addEventListener('click', closeChapterVideo);
 }
+if (cartoonModalEl) {
+  cartoonModalEl.addEventListener('click', (e) => {
+    if (e.target === cartoonModalEl) closeChapterVideo();
+  });
+}
 
-// نافذة الاحتفال بإتمام الرواية أو الكتاب
+// نافذة الاحتفال بإتمام الكتاب
 function showCelebrationModal() {
-  stopNarrator();
   if (celebrationModalEl) {
-    const titleEl = celebrationModalEl.querySelector('h2');
-    const pEl = celebrationModalEl.querySelector('p');
     if (currentEditionId === 'anatomical-book') {
-      if (titleEl) titleEl.textContent = '«اكتمل الكتاب التشريحي بحمد الله»';
-      if (pEl) pEl.textContent = 'لقد أتممت تصفح واستماع كتاب درب التشريحي لـ 78 ملفاً برمجياً ومعمارية الـ 39 جدولاً و52 نقطة نهاية سحابية.';
+      if (celebrationTitleEl) celebrationTitleEl.textContent = '«اكتمل الكتاب التشريحي بحمد الله»';
+      if (celebrationDescEl) {
+        celebrationDescEl.textContent =
+          'لقد أتممت تصفح واستماع كتاب درب التشريحي لـ 78 ملفاً برمجياً ومعمارية الـ 39 جدولاً و52 نقطة نهاية سحابية.';
+      }
     } else {
-      if (titleEl) titleEl.textContent = '«اكتملت الرواية بحمد الله»';
-      if (pEl) pEl.textContent = 'لقد أتممت قراءة واستماع ملحمة درب التقنية الكاملة.. من شرارة الفكرة الأولى وحتى معانقة السحاب.';
+      if (celebrationTitleEl) celebrationTitleEl.textContent = '«اكتملت الرواية بحمد الله»';
+      if (celebrationDescEl) {
+        celebrationDescEl.textContent =
+          'لقد أتممت قراءة واستماع ملحمة درب التقنية الكاملة.. من شرارة الفكرة الأولى وحتى معانقة السحاب.';
+      }
     }
-    celebrationModalEl.style.display = 'flex';
+    openModal(celebrationModalEl);
   }
 }
 
+if (btnCelebrationCloseEl) {
+  btnCelebrationCloseEl.addEventListener('click', () => closeModal(celebrationModalEl));
+}
+if (celebrationModalEl) {
+  celebrationModalEl.addEventListener('click', (e) => {
+    if (e.target === celebrationModalEl) closeModal(celebrationModalEl);
+  });
+}
 if (btnRestartBookEl) {
   btnRestartBookEl.addEventListener('click', () => {
-    celebrationModalEl.style.display = 'none';
+    closeModal(celebrationModalEl);
     goToSpread(0);
   });
 }
 if (btnOpenLibraryFromCelebrationEl) {
   btnOpenLibraryFromCelebrationEl.addEventListener('click', () => {
-    celebrationModalEl.style.display = 'none';
-    if (btnLibraryEl) btnLibraryEl.click();
+    closeModal(celebrationModalEl);
+    renderLibraryUI();
+    openModal(libraryModalEl);
   });
 }
 
-// استدعاء التهيئة
-loadLibraryCatalog();
-
+// تهيئة البوابة وإصدار البداية
+async function initPortal() {
+  if (window.Telegram && window.Telegram.WebApp) {
+    try { window.Telegram.WebApp.ready(); } catch (_) {}
+  }
+  await loadLibraryCatalog();
+  const requested = urlParams.get('edition');
+  const initialId = requested || catalogData?.defaultEdition || 'epic-v1';
+  await applyEdition(initialId, { updateUrl: false });
+}
+initPortal();
 </script>
 </body>
 </html>
