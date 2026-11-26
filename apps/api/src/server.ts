@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import type { PrismaClient } from '@prisma/client';
 import { loadEnv, type AppEnv } from './env';
 import { createPrismaClient } from './prismaClient';
@@ -15,6 +16,9 @@ import { registerCmsRoutes } from './routes/cms';
 import { registerBookRoutes } from './routes/books';
 import { registerMediaRoutes } from './routes/media';
 import { registerAuditRoutes } from './routes/audit';
+import { registerTemplateRoutes } from './routes/templates';
+import { registerAuthorRoutes } from './routes/author';
+import { registerModerationRoutes } from './routes/moderation';
 
 export interface BuildServerOptions {
   env?: AppEnv;
@@ -40,6 +44,13 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<{
   });
 
   await app.register(cookie);
+  await app.register(multipart, {
+    limits: {
+      fileSize: 120 * 1024 * 1024,
+      files: 1,
+      fields: 30,
+    },
+  });
   await app.register(cors, {
     origin: env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean),
     credentials: true,
@@ -60,6 +71,9 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<{
   registerCmsRoutes(app, { prisma, authenticate, optionalAuthenticate });
   registerBookRoutes(app, { prisma, authenticate, optionalAuthenticate });
   registerMediaRoutes(app, { prisma, storage, authenticate });
+  registerTemplateRoutes(app, { prisma });
+  registerAuthorRoutes(app, { prisma, storage, authenticate });
+  registerModerationRoutes(app, { prisma, authenticate });
   registerAuditRoutes(app, { prisma, authenticate });
 
   app.addHook('onClose', async () => {

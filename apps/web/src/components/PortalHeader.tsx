@@ -63,6 +63,18 @@ export const PortalHeader: React.FC = () => {
         <NavLink to="/library">📚 المكتبة</NavLink>
         <NavLink to="/guide">📰 الأخبار والدليل</NavLink>
 
+        {mode === 'api' && hasPermission('books.create') && (
+          <NavLink to="/author" data-testid="navAuthorLink">
+            ✍️ بوابة المؤلف
+          </NavLink>
+        )}
+
+        {mode === 'api' && hasPermission('books.review') && (
+          <NavLink to="/review" data-testid="navReviewLink">
+            🧑‍⚖️ المراجعة
+          </NavLink>
+        )}
+
         {canAccessAdmin && (
           <NavLink to="/admin" data-testid="navAdminLink">
             ⚙️ لوحة التحكم

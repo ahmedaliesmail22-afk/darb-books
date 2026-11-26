@@ -10,6 +10,8 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { ProfileSettingsPage } from './pages/ProfileSettingsPage';
 import { GuideAndNewsPage } from './pages/GuideAndNewsPage';
 import { AdminLayout } from './admin/AdminLayout';
+import { AuthorPortalPage } from './pages/AuthorPortalPage';
+import { ModerationPortalPage } from './pages/ModerationPortalPage';
 
 const AppRoutes: React.FC = () => {
   const { toastMessage } = usePortal();
@@ -51,6 +53,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/settings" element={<ProfileSettingsPage />} />
         <Route path="/guide" element={<GuideAndNewsPage />} />
+        <Route path="/author" element={<AuthorPortalPage />} />
+        <Route path="/review" element={<ModerationPortalPage />} />
         <Route path="/admin" element={<AdminLayout />} />
       </Routes>
 

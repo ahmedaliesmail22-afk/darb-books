@@ -134,14 +134,15 @@ async function tryRefreshSession(apiBase: string): Promise<boolean> {
   return refreshPromise;
 }
 
-export async function apiRequest<T>(
+async function executeAuthorizedRequest<T>(
   path: string,
   options: {
     method?: string;
-    body?: unknown;
+    jsonBody?: unknown;
+    formData?: FormData;
     apiBase?: string | null;
     skipRefresh?: boolean;
-  } = {}
+  }
 ): Promise<T> {
   const base = options.apiBase !== undefined ? options.apiBase : resolveApiBaseUrl();
   if (base === null) {
@@ -151,7 +152,7 @@ export async function apiRequest<T>(
   const makeFetch = async () => {
     const tokens = getStoredTokens();
     const headers: Record<string, string> = {};
-    if (options.body !== undefined) {
+    if (options.jsonBody !== undefined) {
       headers['Content-Type'] = 'application/json';
     }
     if (tokens?.accessToken) {
@@ -162,7 +163,11 @@ export async function apiRequest<T>(
       method: options.method ?? 'GET',
       credentials: 'include',
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: options.formData
+        ? options.formData
+        : options.jsonBody !== undefined
+          ? JSON.stringify(options.jsonBody)
+          : undefined,
     });
   };
 
@@ -191,6 +196,45 @@ export async function apiRequest<T>(
   }
 
   return json as T;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: {
+    method?: string;
+    body?: unknown;
+    apiBase?: string | null;
+    skipRefresh?: boolean;
+  } = {}
+): Promise<T> {
+  return executeAuthorizedRequest<T>(path, {
+    method: options.method,
+    jsonBody: options.body,
+    apiBase: options.apiBase,
+    skipRefresh: options.skipRefresh,
+  });
+}
+
+export async function apiUploadFormData<T>(
+  path: string,
+  formData: FormData,
+  options: {
+    method?: string;
+    apiBase?: string | null;
+    skipRefresh?: boolean;
+  } = {}
+): Promise<T> {
+  return executeAuthorizedRequest<T>(path, {
+    method: options.method ?? 'POST',
+    formData,
+    apiBase: options.apiBase,
+    skipRefresh: options.skipRefresh,
+  });
+}
+
+export function resolveApiAssetUrl(path: string, apiBase: string | null): string {
+  const cleaned = path.startsWith('/') ? path : `/${path}`;
+  return apiBase ? `${apiBase}${cleaned}` : cleaned;
 }
 
 export function resolveMediaBaseUrl(

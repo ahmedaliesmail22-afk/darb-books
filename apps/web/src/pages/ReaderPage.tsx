@@ -13,6 +13,13 @@ export const ReaderPage: React.FC<{ fallbackEdition?: string; fallbackSpread?: n
   const spreadRaw = searchParams.get('spread');
   const parsedSpread = spreadRaw ? parseInt(spreadRaw, 10) : fallbackSpread;
   const startSpread = Number.isFinite(parsedSpread) && parsedSpread >= 0 ? parsedSpread : 0;
+  const previewVersionId = searchParams.get('versionId') || undefined;
 
-  return <BookReaderShell initialEditionSlug={editionSlug} initialSpread={startSpread} />;
+  return (
+    <BookReaderShell
+      initialEditionSlug={editionSlug}
+      initialSpread={startSpread}
+      initialVersionId={previewVersionId}
+    />
+  );
 };

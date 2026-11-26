@@ -186,8 +186,50 @@ const SYSTEM_CONFIGS_SEED = [
     isPublic: false,
     description: 'الصيغ المسموح بها والحد الأقصى لحجم الملفات المرفوعة',
     valueJson: {
-      allowedFormats: ['zip', 'json', 'md', 'docx', 'epub', 'pdf'],
+      allowedFormats: ['zip', 'json', 'md', 'docx', 'epub'],
       maxFileSizeMb: 100,
+    },
+  },
+  {
+    key: 'moderation.review_checklist',
+    category: 'moderation',
+    isPublic: false,
+    description: 'قائمة التحقق المعيارية لفحص المحتوى والملكية الفكرية قبل اعتماد النشر',
+    valueJson: {
+      items: [
+        {
+          id: 'ip_ownership',
+          labelAr: 'التحقق من ملكية المؤلف للحقوق وخلو العمل من الانتحال أو التعدي على حقوق الغير',
+          required: true,
+        },
+        {
+          id: 'content_accuracy',
+          labelAr: 'سلامة المادة العلمية والأدبية واللغوية وملاءمتها للمنهج المستهدف',
+          required: true,
+        },
+        {
+          id: 'age_appropriateness',
+          labelAr: 'مطابقة الفئة العمرية والمستوى التعليمي المحددين للمحتوى الفعلي',
+          required: true,
+        },
+        {
+          id: 'media_and_layout',
+          labelAr: 'سلامة الصفحات والتنسيق والوسائط المرفقة في المعاينة ثلاثية الأبعاد',
+          required: false,
+        },
+      ],
+    },
+  },
+  {
+    key: 'templates.official_package',
+    category: 'templates',
+    isPublic: true,
+    description: 'بيانات وإرشادات القالب القياسي الرسمي لرفع الكتب (يستخدمه مولد القالب في بوابة المؤلف)',
+    valueJson: {
+      version: '1.1.0',
+      title: 'قالب كتاب درب التفاعلي القياسي',
+      guideMarkdown:
+        'استخدم بنية مجلد chapters/ وملف book.manifest.json، وأرفق ملفات audio/spread_0.mp3 ومقاطع videos/ch1.mp4 عند الحاجة قبل المعاينة ثلاثية الأبعاد والإرسال للمراجعة.',
     },
   },
 ];

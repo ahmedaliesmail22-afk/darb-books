@@ -5,6 +5,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@darb/book-schema': resolve(__dirname, '../../packages/book-schema/src/index.ts'),
+      '@darb/parsers': resolve(__dirname, '../../packages/parsers/src/index.ts'),
     },
   },
   test: {

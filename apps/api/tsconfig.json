@@ -6,7 +6,8 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@darb/book-schema": ["../../packages/book-schema/src/index.ts"]
+      "@darb/book-schema": ["../../packages/book-schema/src/index.ts"],
+      "@darb/parsers": ["../../packages/parsers/src/index.ts"]
     }
   },
   "include": ["src", "prisma", "tests", "prisma.config.ts"]

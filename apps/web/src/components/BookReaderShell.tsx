@@ -30,6 +30,7 @@ import { LibraryPanel } from '../library/LibraryPanel';
 interface BookReaderShellProps {
   initialEditionSlug?: string;
   initialSpread?: number;
+  initialVersionId?: string;
 }
 
 function getReqEl<T extends HTMLElement>(id: string): T {
@@ -41,11 +42,13 @@ function getReqEl<T extends HTMLElement>(id: string): T {
 export const BookReaderShell: React.FC<BookReaderShellProps> = ({
   initialEditionSlug,
   initialSpread = 0,
+  initialVersionId,
 }) => {
   const { mode, apiBase, configs, user, theme, fontScale, setTheme, setFontScale } = usePortal();
   const navigate = useNavigate();
 
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [previewInfo, setPreviewInfo] = useState<{ label: string; status: string } | null>(null);
   const modeRef = useRef(mode);
   const apiBaseRef = useRef(apiBase);
   const userRef = useRef(user);
@@ -132,7 +135,7 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
 
     let syncTimer: number | null = null;
     const scheduleCloudSync = (editionId: string, spreadIdx: number) => {
-      if (modeRef.current !== 'api' || !userRef.current) return;
+      if (modeRef.current !== 'api' || !userRef.current || initialVersionId) return;
       if (syncTimer !== null) window.clearTimeout(syncTimer);
       syncTimer = window.setTimeout(() => {
         const total = Math.max(1, flipEngine.getTotalSpreads() - 1);
@@ -265,7 +268,7 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
       if (disposed) return;
 
       let resolvedSpread = startSpread;
-      if (modeRef.current === 'api' && userRef.current) {
+      if (modeRef.current === 'api' && userRef.current && !initialVersionId) {
         try {
           const progRes = await apiRequest<{
             progress: { currentSpread: number; bookmarksJson: BookmarkRecord[] } | null;
@@ -452,7 +455,68 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
 
     const bootstrapReader = async () => {
       let defaultId = initialEditionSlug || 'epic-v1';
-      if (modeRef.current === 'api') {
+      setPreviewInfo(null);
+
+      if (initialVersionId && modeRef.current === 'api') {
+        try {
+          const previewRes = await apiRequest<{
+            book: {
+              slug: string;
+              title: string;
+              subtitle?: string | null;
+              description?: string | null;
+              badge?: string | null;
+              badgeColor?: string | null;
+              theme: string;
+            };
+            version: {
+              id: string;
+              versionNumber: number;
+              versionLabel: string;
+              audioDir?: string | null;
+              videoDir?: string | null;
+              chaptersCount: number;
+              spreadsCount: number;
+              status: string;
+            };
+            editionData: unknown;
+          }>(`/api/v1/author/versions/${encodeURIComponent(initialVersionId)}/preview`, {
+            apiBase: apiBaseRef.current,
+          });
+          const parsedData = parseEditionData(previewRes.editionData);
+          editionCache.set(previewRes.book.slug, parsedData);
+          editionsList = [
+            {
+              id: previewRes.book.slug,
+              title: parsedData.title || previewRes.book.title,
+              subtitle: previewRes.book.subtitle ?? '',
+              badge: `معاينة ${previewRes.version.versionLabel}`,
+              badgeColor: previewRes.book.badgeColor ?? '#38bdf8',
+              theme: previewRes.book.theme ?? 'royal-gold',
+              description: previewRes.book.description ?? '',
+              dataFile: `./editions/${previewRes.book.slug}.json`,
+              audioDir: previewRes.version.audioDir ?? '',
+              videoDir: previewRes.version.videoDir ?? '',
+              chaptersCount: previewRes.version.chaptersCount,
+              spreadsCount: previewRes.version.spreadsCount,
+              audioTracksCount: 0,
+              videosCount: 0,
+              releaseDate: '',
+              status: 'draft',
+            },
+          ];
+          defaultId = previewRes.book.slug;
+          setPreviewInfo({
+            label: previewRes.version.versionLabel,
+            status: previewRes.version.status,
+          });
+        } catch (err) {
+          setLoadError(
+            err instanceof Error ? err.message : 'تعذر تحميل معاينة الإصدار غير المنشور'
+          );
+          return;
+        }
+      } else if (modeRef.current === 'api') {
         try {
           const apiBooks = await apiRequest<{ books: PortalBookItem[] }>('/api/v1/books', {
             apiBase: apiBaseRef.current,
@@ -517,7 +581,7 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
       stageEl.removeEventListener('mousemove', onMouseMove);
       stageEl.removeEventListener('mouseleave', onMouseLeave);
     };
-  }, [initialEditionSlug, initialSpread]);
+  }, [initialEditionSlug, initialSpread, initialVersionId]);
 
   return (
     <>
@@ -528,14 +592,27 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
           <button
             type="button"
             className="btn-action"
-            onClick={() => navigate('/library')}
-            title="العودة إلى المكتبة"
+            onClick={() => (initialVersionId ? navigate(-1) : navigate('/library'))}
+            title={initialVersionId ? 'العودة إلى صفحة التأليف/المراجعة' : 'العودة إلى المكتبة'}
             style={{ padding: '4px 10px' }}
           >
-            ← المكتبة
+            {initialVersionId ? '← عودة' : '← المكتبة'}
           </button>
           <span className="brand-icon">📜</span>
           <span id="bookBrandTitle">مَلْحَمَةُ دَرْب: السِّيرَةُ التَّقْنِيَّةُ</span>
+          {previewInfo && (
+            <span
+              className="portal-mode-pill"
+              data-testid="readerPreviewBadge"
+              style={{
+                background: 'rgba(56, 189, 248, 0.16)',
+                color: '#38bdf8',
+                borderColor: 'rgba(56, 189, 248, 0.45)',
+              }}
+            >
+              👁️ معاينة {previewInfo.label} ({previewInfo.status})
+            </span>
+          )}
         </div>
 
         <div className="top-actions">
