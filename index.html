@@ -1,56 +1,259 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>بوابة درب للكتب والروايات والتوثيق الهندسي</title>
-  <meta http-equiv="refresh" content="0; url=engine/index.html">
-  <script>
-    // تمرير معامِلات الاستعلام بالكامل (مثل ?edition=epic-v1) إلى المحرك
-    window.location.replace('engine/index.html' + window.location.search + window.location.hash);
-  </script>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background: #0b0f19;
-      color: #e2e8f0;
-      font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
-    }
-    .loader-card {
-      background: rgba(18, 24, 38, 0.95);
-      border: 1px solid rgba(212, 175, 55, 0.3);
-      border-radius: 16px;
-      padding: 40px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-      max-width: 400px;
-    }
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid rgba(212, 175, 55, 0.2);
-      border-top-color: #d4af37;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 20px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    h1 { font-size: 1.25rem; margin-bottom: 8px; color: #f59e0b; }
-    p { font-size: 0.9rem; color: #94a3b8; margin: 0; }
-    a { color: #38bdf8; text-decoration: none; display: inline-block; margin-top: 15px; font-size: 0.85rem; }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>بوابة درب — المحرك التفاعلي ثلاثي الأبعاد للكتب والروايات</title>
+  <meta name="description" content="بوابة الكتب والروايات التفاعلية ثلاثية الأبعاد لمنظومة درب التعليمية الذكية، مع مجسم Three.js، الراوي الصوتي الفصيح MP3، ملخصات الفيديو، ودعم PWA أوفلاين.">
+  <meta name="theme-color" content="#d4af37">
+
+  <!-- Open Graph & Social Sharing Metadata -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ar_AR">
+  <meta property="og:title" content="بوابة درب للكتب التفاعلية ثلاثية الأبعاد">
+  <meta property="og:description" content="تصفّح ملحمة درب وكتاب درب التشريحي في تجربة قراءة ثلاثية الأبعاد فاخرة مع الراوي الصوتي الفصيح وملخصات الفيديو.">
+  <meta property="og:image" content="./icons/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="بوابة درب للكتب التفاعلية ثلاثية الأبعاد">
+  <meta name="twitter:description" content="تجربة قراءة رقمية ثلاثية الأبعاد مع الراوي الصوتي الفصيح وملخصات الفيديو ودعم القراءة دون إنترنت.">
+  <meta name="twitter:image" content="./icons/og-cover.png">
+
+  <!-- PWA Manifest & Icons -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+  <!-- Arabic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Telegram WebApp SDK (Deferred & silent outside Telegram) -->
+  <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body>
-  <div class="loader-card">
-    <div class="spinner"></div>
-    <h1>بوابة درب للكتب والروايات</h1>
-    <p>جارٍ الانتقال إلى المحرك التفاعلي ثلاثي الأبعاد...</p>
-    <a href="engine/index.html">إذا لم يتم تحويلك تلقائياً اضغط هنا</a>
+<body class="theme-sepia font-scale-md">
+
+  <!-- مشغل الصوت الخفي لملفات الرواية الصوتية المدمجة -->
+  <audio id="narratorAudioPlayer" preload="none" style="display:none;"></audio>
+
+  <!-- الشريط العلوي -->
+  <header class="top-bar">
+    <div class="book-brand">
+      <span class="brand-icon">📜</span>
+      <span id="bookBrandTitle">مَلْحَمَةُ دَرْب: السِّيرَةُ التَّقْنِيَّةُ</span>
+    </div>
+
+    <div class="top-actions">
+      <button class="btn-action" id="btnLibrary" title="مكتبة الأجزاء والإصدارات">
+        <span>📚</span>
+        <span class="btn-text-label">المكتبة</span>
+      </button>
+
+      <button class="btn-action" id="btnToggleNarrator" title="تفعيل وضع الراوي الصوتي التلقائي (N)">
+        <span>🎙️</span>
+        <span class="btn-text-label">الراوي</span>
+      </button>
+
+      <button class="btn-action" id="btnToc" title="الانتقال إلى الفهرس">
+        <span>📑</span>
+        <span class="btn-text-label">الفهرس</span>
+      </button>
+
+      <button class="icon-btn" id="btnSearch" title="البحث داخل الكتاب">🔍</button>
+      <button class="icon-btn" id="btnGrid" title="عرض مصغّرات الصفحات">⊞</button>
+      <button class="icon-btn" id="btnBookmark" title="إشارة مرجعية للصفحة الحالية">☆</button>
+      <button class="icon-btn" id="btnBookmarksList" title="قائمة الإشارات المرجعية">🔖</button>
+
+      <div class="font-size-group" title="تغيير حجم خط القراءة">
+        <button class="icon-btn font-btn" id="btnFontDec" title="تصغير الخط (-)">A-</button>
+        <button class="icon-btn font-btn" id="btnFontInc" title="تكبير الخط (+)">A+</button>
+      </div>
+
+      <button class="icon-btn" id="btnTheme" title="تبديل الثيم (مخطوطة / ليلي / فاتح)">📜</button>
+      <button class="icon-btn" id="btnFullscreen" title="ملء الشاشة (F)">⛶</button>
+    </div>
+  </header>
+
+  <!-- شريط الراوي الصوتي -->
+  <div class="narrator-bar" id="narratorBar">
+    <div class="narrator-eq">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="narrator-text-status" id="narratorStatus">جاهز للرواية...</div>
+    <span class="narrator-time" id="narratorTime">00:00 / 00:00</span>
+    <button class="narrator-btn" id="btnNarratorBack10" title="ترجيع 10 ثوانٍ">10↺</button>
+    <button class="narrator-btn" id="btnNarratorPlay" title="تشغيل / إيقاف مؤقت">▶</button>
+    <button class="narrator-btn" id="btnNarratorFwd10" title="تقديم 10 ثوانٍ">↻10</button>
+    <button class="narrator-btn" id="btnNarratorStop" title="إيقاف نهائي">⏹</button>
+    <select class="speed-select" id="narratorSpeed" title="سرعة القراءة">
+      <option value="0.85">0.85x هادئ</option>
+      <option value="1.0" selected>1.0x متزن</option>
+      <option value="1.15">1.15x سريع</option>
+    </select>
   </div>
+
+  <!-- بيئة المسرح الهجينة (Three.js + الكتاب الورقي التفاعلي) -->
+  <main class="stage" id="stage">
+    <canvas class="book-stage-canvas" id="bookStageCanvas" aria-hidden="true"></canvas>
+    <div class="book book-closed-front" id="book">
+      <div class="spread">
+        <div class="page-leaf right-leaf" id="rightPage">
+          <div class="corner-peel-hotspot" id="cornerHotspotRight" title="انقر للرجوع للصفحة السابقة"></div>
+          <div class="corner-peel-curl"></div>
+        </div>
+        <div class="page-leaf left-leaf" id="leftPage">
+          <div class="corner-peel-hotspot" id="cornerHotspotLeft" title="انقر لتقليب الصفحة التالية"></div>
+          <div class="corner-peel-curl"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- الشريط السفلي للتحكم وتتبع القراءة -->
+  <footer class="bottom-bar">
+    <div class="page-nav-btns">
+      <button class="nav-btn" id="btnPrev" title="الصفحة السابقة">
+        <span>▶</span>
+        <span class="nav-label">السابق</span>
+      </button>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-track" id="progressTrack" title="انقر للقفز المباشر">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="page-indicator" id="pageIndicator">الغلاف الأمامي</div>
+    </div>
+
+    <div class="reader-tools-strip">
+      <button class="icon-btn" id="btnOfflineQuick" title="حفظ هذا الكتاب للقراءة دون إنترنت">📥</button>
+      <button class="icon-btn" id="btnShare" title="مشاركة / نسخ رابط الصفحة الحالية">🔗</button>
+      <button class="icon-btn desktop-only-tool" id="btnShortcuts" title="دليل اختصارات لوحة المفاتيح (?)">?</button>
+      <button class="nav-btn" id="btnNext" title="الصفحة التالية">
+        <span class="nav-label">التالي</span>
+        <span>◀</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- 🎬 نافذة فيديو ملخصات الفصول -->
+  <div class="modal-overlay" id="cartoonModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cartoonModalTitle">
+    <div class="modal-card video-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3 id="cartoonModalTitle">كواليس الفصل</h3>
+          <p id="cartoonModalSubtitle">ملخص مرئي متزامن بالصوت الفصيح</p>
+        </div>
+        <button class="modal-close-btn" id="btnCartoonClose" title="إغلاق">✕</button>
+      </div>
+      <div class="video-wrapper" id="videoWrapper">
+        <video id="chapterVideo" controls playsinline preload="metadata"></video>
+      </div>
+      <div id="anatomicalVideoNotice" class="video-notice" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- 📚 نافذة مكتبة الأجزاء والإصدارات -->
+  <div class="modal-overlay" id="libraryModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="libraryModalTitle">
+    <div class="modal-card library-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3 id="libraryModalTitle">📚 مكتبة أجزاء وإصدارات منظومة درب</h3>
+          <p>تابع القراءة من آخر موضع، بدّل الإصدار فوراً، أو احفظه للقراءة دون إنترنت</p>
+        </div>
+        <button class="modal-close-btn" id="btnLibraryClose" title="إغلاق">✕</button>
+      </div>
+      <div id="libraryList" class="library-grid"></div>
+    </div>
+  </div>
+
+  <!-- ⊞ نافذة مصغّرات الصفحات (Grid Overview) -->
+  <div class="modal-overlay" id="gridModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="gridModalTitle">
+    <div class="modal-card grid-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3 id="gridModalTitle">⊞ استعراض مصغّرات صفحات الكتاب</h3>
+          <p>اضغط على أي نشرة للقفز المباشر إليها</p>
+        </div>
+        <button class="modal-close-btn" id="btnGridClose" title="إغلاق">✕</button>
+      </div>
+      <div id="gridOverview" class="grid-overview"></div>
+    </div>
+  </div>
+
+  <!-- 🔍 نافذة البحث الفوري -->
+  <div class="modal-overlay" id="searchModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="searchModalTitle">
+    <div class="modal-card tools-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3 id="searchModalTitle">🔍 البحث الفوري في صفحات الكتاب</h3>
+          <p>ابحث بالكلمات أو المصطلحات التقنية داخل الكتاب المفتوح</p>
+        </div>
+        <button class="modal-close-btn" id="btnSearchClose" title="إغلاق">✕</button>
+      </div>
+      <div class="search-input-wrap">
+        <input class="search-input" id="searchInput" type="search" placeholder="اكتب كلمة البحث هنا (مثال: دفتر الأستاذ، 64 بايت، Drizzle)...">
+      </div>
+      <div id="searchResults" class="search-results"></div>
+    </div>
+  </div>
+
+  <!-- 🔖 نافذة الإشارات المرجعية -->
+  <div class="modal-overlay" id="bookmarksModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="bookmarksModalTitle">
+    <div class="modal-card tools-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3 id="bookmarksModalTitle">⭐ الإشارات المرجعية المحفوظة</h3>
+          <p>اضغط على أي إشارة للانتقال السريع إلى صفحتها</p>
+        </div>
+        <button class="modal-close-btn" id="btnBookmarksClose" title="إغلاق">✕</button>
+      </div>
+      <div id="bookmarksList" class="bookmarks-list"></div>
+    </div>
+  </div>
+
+  <!-- ⌨️ نافذة دليل اختصارات لوحة المفاتيح -->
+  <div class="modal-overlay" id="shortcutsModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="shortcutsModalTitle">
+    <div class="modal-card tools-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3 id="shortcutsModalTitle">⌨️ اختصارات لوحة المفاتيح السريعة</h3>
+          <p>تحكم كامل وسريع بتجربة القراءة والراوي الصوتي</p>
+        </div>
+        <button class="modal-close-btn" id="btnShortcutsClose" title="إغلاق">✕</button>
+      </div>
+      <div class="shortcuts-grid">
+        <div class="shortcut-row"><span>الصفحة التالية</span><kbd>← / Space</kbd></div>
+        <div class="shortcut-row"><span>الصفحة السابقة</span><kbd>→ / PageUp</kbd></div>
+        <div class="shortcut-row"><span>بداية الكتاب / الغلاف</span><kbd>Home</kbd></div>
+        <div class="shortcut-row"><span>نهاية الكتاب</span><kbd>End</kbd></div>
+        <div class="shortcut-row"><span>تشغيل / إيقاف الراوي</span><kbd>N</kbd></div>
+        <div class="shortcut-row"><span>تكبير / تصغير الخط</span><kbd>+ / -</kbd></div>
+        <div class="shortcut-row"><span>ملء الشاشة</span><kbd>F</kbd></div>
+        <div class="shortcut-row"><span>دليل الاختصارات / إغلاق</span><kbd>? / Esc</kbd></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🏆 نافذة الاحتفال بإتمام الكتاب -->
+  <div class="modal-overlay" id="celebrationModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="celebrationTitle">
+    <div class="modal-card celebration-card">
+      <button class="modal-close-btn celebration-close-btn" id="btnCelebrationClose" title="إغلاق">✕</button>
+      <div class="celebration-badge">🏆</div>
+      <h2 id="celebrationTitle">«اكتملت الرواية بحمد الله»</h2>
+      <p id="celebrationDesc">لقد أتممت قراءة واستماع ملحمة درب التقنية الكاملة.. من شرارة الفكرة الأولى وحتى معانقة السحاب.</p>
+      <div class="celebration-actions">
+        <button class="celebration-btn" id="btnRestartBook">🔄 العودة للبداية</button>
+        <button class="celebration-btn primary" id="btnOpenLibraryFromCelebration">📚 تصفح الأجزاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- إشعار عائم -->
+  <div class="toast-banner" id="toastBanner" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

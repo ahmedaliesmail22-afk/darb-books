@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جاري التحويل إلى بوابة درب التفاعلية...</title>
+  <meta http-equiv="refresh" content="0; url=../">
+  <script>
+    (function () {
+      var target = '../' + window.location.search + window.location.hash;
+      window.location.replace(target);
+    })();
+  </script>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #070a10;
+      color: #f7ebc2;
+      font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    a { color: #38bdf8; text-decoration: none; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div>
+    <p>تمت ترقية بوابة درب إلى المحرك الهجين ثلاثي الأبعاد...</p>
+    <p><a id="fallbackLink" href="../">اضغط هنا للانتقال مباشرة</a></p>
+  </div>
+  <script>
+    var a = document.getElementById('fallbackLink');
+    if (a) a.href = '../' + window.location.search + window.location.hash;
+  </script>
+</body>
+</html>

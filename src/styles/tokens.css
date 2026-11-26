@@ -1,0 +1,43 @@
+:root {
+  --bg-dark: #070a10;
+  --paper-sepia: #fcf8ee;
+  --paper-sepia-txt: #241d15;
+  --paper-sepia-line: #e4d8c2;
+  --paper-sepia-accent: #875c1c;
+  --paper-dark: #101624;
+  --paper-dark-txt: #e6edf8;
+  --paper-dark-line: #22304d;
+  --paper-dark-accent: #58a6ff;
+  --paper-light: #ffffff;
+  --paper-light-txt: #1a202c;
+  --paper-light-line: #edf2f7;
+  --gold: #d4af37;
+  --gold-light: #f7ebc2;
+  --gold-glow: rgba(212, 175, 55, 0.45);
+  --gold-dark: #8c6f16;
+  --leather-navy: #0c1424;
+  --spine-shadow: rgba(0, 0, 0, 0.28);
+  --page-font: "Amiri", "Traditional Arabic", serif;
+  --ui-font: "Cairo", "Tajawal", -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-dark);
+  font-family: var(--ui-font);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+  color: #f0f4f8;
+}

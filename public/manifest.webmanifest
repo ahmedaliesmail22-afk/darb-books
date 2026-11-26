@@ -1,0 +1,27 @@
+{
+  "name": "بوابة درب للكتب التفاعلية",
+  "short_name": "درب بوكس",
+  "description": "بوابة الكتب والروايات التفاعلية ثلاثية الأبعاد لمنظومة درب التعليمية الذكية مع الراوي الصوتي وملخصات الفيديو.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#070a10",
+  "theme_color": "#d4af37",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
