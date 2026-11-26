@@ -7,6 +7,16 @@ packages/*/dist/
 apps/*/dist/
 .vite/
 
+# Env & Local Storage Secrets (NEVER commit real .env files)
+.env
+.env.*
+!.env.example
+apps/*/.env
+apps/*/.env.*
+!apps/*/.env.example
+apps/api/.storage/
+apps/api/generated/
+
 # Python / Build Temp Artifacts
 tools/__pycache__/
 tools/_temp_video_build/

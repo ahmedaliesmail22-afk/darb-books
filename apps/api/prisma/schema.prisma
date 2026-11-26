@@ -1,0 +1,413 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+  PENDING_APPROVAL
+  SUSPENDED
+}
+
+enum PublicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum MediaAssetType {
+  AUDIO
+  VIDEO
+  IMAGE
+  MODEL_3D
+  SOURCE_DOC
+  OTHER
+}
+
+model User {
+  id              String     @id @default(uuid())
+  email           String     @unique
+  passwordHash    String     @map("password_hash")
+  fullName        String     @map("full_name")
+  status          UserStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  lastLoginAt     DateTime?  @map("last_login_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  profile            UserProfile?
+  userRoles          UserRole[]          @relation("UserRoleMember")
+  assignedRoles      UserRole[]          @relation("UserRoleAssigner")
+  refreshTokens      RefreshToken[]
+  verificationTokens VerificationToken[]
+  authoredBooks      Book[]              @relation("BookAuthor")
+  reviewTickets      ReviewTicket[]      @relation("TicketReviewer")
+  authoredNews       NewsPost[]          @relation("NewsAuthor")
+  updatedConfigs     SystemConfig[]      @relation("ConfigUpdater")
+  updatedCmsSections CmsSection[]        @relation("CmsSectionUpdater")
+  readingProgress    ReadingProgress[]
+  auditLogs          AuditLog[]          @relation("AuditActor")
+
+  @@map("users")
+}
+
+model UserProfile {
+  userId              String   @id @map("user_id")
+  ageGroupId          String?  @map("age_group_id")
+  educationLevelId    String?  @map("education_level_id")
+  onboardingCompleted Boolean  @default(false) @map("onboarding_completed")
+  uiPrefsJson         Json     @default("{}") @map("ui_prefs_json")
+  metadataJson        Json     @default("{}") @map("metadata_json")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user                User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ageGroup            Taxonomy?               @relation("UserAgeGroup", fields: [ageGroupId], references: [id], onDelete: SetNull)
+  educationLevel      Taxonomy?               @relation("UserEducationLevel", fields: [educationLevelId], references: [id], onDelete: SetNull)
+  preferredTaxonomies UserPreferredTaxonomy[]
+
+  @@map("user_profiles")
+}
+
+model UserPreferredTaxonomy {
+  userId     String @map("user_id")
+  taxonomyId String @map("taxonomy_id")
+
+  profile  UserProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  taxonomy Taxonomy    @relation(fields: [taxonomyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, taxonomyId])
+  @@map("user_preferred_taxonomies")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  tokenHash    String    @unique @map("token_hash")
+  userAgent    String?   @map("user_agent")
+  ipAddress    String?   @map("ip_address")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  replacedById String?   @map("replaced_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("refresh_tokens")
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  purpose   String
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@map("verification_tokens")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  module      String
+  labelAr     String   @map("label_ar")
+  labelEn     String?  @map("label_en")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  rolePermissions RolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  nameAr      String   @map("name_ar")
+  nameEn      String?  @map("name_en")
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId       String   @map("user_id")
+  roleId       String   @map("role_id")
+  assignedById String?  @map("assigned_by_id")
+  assignedAt   DateTime @default(now()) @map("assigned_at")
+
+  user       User  @relation("UserRoleMember", fields: [userId], references: [id], onDelete: Cascade)
+  role       Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedBy User? @relation("UserRoleAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Taxonomy {
+  id          String   @id @default(uuid())
+  group       String
+  slug        String
+  labelAr     String   @map("label_ar")
+  labelEn     String?  @map("label_en")
+  description String?
+  parentId    String?  @map("parent_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  rulesJson   Json     @default("{}") @map("rules_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  parent                 Taxonomy?               @relation("TaxonomyHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children               Taxonomy[]              @relation("TaxonomyHierarchy")
+  ageGroupUsers          UserProfile[]           @relation("UserAgeGroup")
+  educationLevelUsers    UserProfile[]           @relation("UserEducationLevel")
+  preferredByUsers       UserPreferredTaxonomy[]
+  books                  BookTaxonomy[]
+
+  @@unique([group, slug])
+  @@index([group, isActive, sortOrder])
+  @@map("taxonomies")
+}
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  category    String
+  valueJson   Json     @map("value_json")
+  description String?
+  isPublic    Boolean  @default(false) @map("is_public")
+  updatedById String?  @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation("ConfigUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([category, isPublic])
+  @@map("system_configs")
+}
+
+model CmsPage {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  titleAr     String   @map("title_ar")
+  titleEn     String?  @map("title_en")
+  seoJson     Json     @default("{}") @map("seo_json")
+  isPublished Boolean  @default(true) @map("is_published")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  sections CmsSection[]
+
+  @@map("cms_pages")
+}
+
+model CmsSection {
+  id          String   @id @default(uuid())
+  pageId      String   @map("page_id")
+  sectionKey  String   @map("section_key")
+  titleAr     String   @map("title_ar")
+  titleEn     String?  @map("title_en")
+  contentJson Json     @default("{}") @map("content_json")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isVisible   Boolean  @default(true) @map("is_visible")
+  updatedById String?  @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  page      CmsPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  updatedBy User?   @relation("CmsSectionUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([pageId, sectionKey])
+  @@index([pageId, isVisible, sortOrder])
+  @@map("cms_sections")
+}
+
+model NewsPost {
+  id          String            @id @default(uuid())
+  slug        String            @unique
+  title       String
+  summary     String?
+  bodyMd      String            @map("body_md")
+  coverUrl    String?           @map("cover_url")
+  status      PublicationStatus @default(DRAFT)
+  publishedAt DateTime?         @map("published_at")
+  authorId    String?           @map("author_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  author User? @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+  @@map("news_posts")
+}
+
+model Book {
+  id              String            @id @default(uuid())
+  slug            String            @unique
+  title           String
+  subtitle        String?
+  description     String?
+  badge           String?
+  badgeColor      String?           @map("badge_color")
+  theme           String            @default("royal-gold")
+  direction       String            @default("rtl")
+  coverUrl        String?           @map("cover_url")
+  status          PublicationStatus @default(DRAFT)
+  activeVersionId String?           @unique @map("active_version_id")
+  authorId        String?           @map("author_id")
+  metadataJson    Json              @default("{}") @map("metadata_json")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  author          User?             @relation("BookAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  versions        BookVersion[]     @relation("BookVersions")
+  activeVersion   BookVersion?      @relation("BookActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  taxonomies      BookTaxonomy[]
+  readingProgress ReadingProgress[]
+
+  @@index([status])
+  @@map("books")
+}
+
+model BookTaxonomy {
+  bookId     String @map("book_id")
+  taxonomyId String @map("taxonomy_id")
+
+  book     Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  taxonomy Taxonomy @relation(fields: [taxonomyId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, taxonomyId])
+  @@map("book_taxonomies")
+}
+
+model BookVersion {
+  id                  String            @id @default(uuid())
+  bookId              String            @map("book_id")
+  versionNumber       Int               @map("version_number")
+  versionLabel        String            @map("version_label")
+  sourceFormat        String            @default("json") @map("source_format")
+  sourceFileUrl       String?           @map("source_file_url")
+  canonicalJsonUrl    String?           @map("canonical_json_url")
+  canonicalDataJson   Json?             @map("canonical_data_json")
+  audioDir            String?           @map("audio_dir")
+  videoDir            String?           @map("video_dir")
+  chaptersCount       Int               @default(0) @map("chapters_count")
+  spreadsCount        Int               @default(0) @map("spreads_count")
+  audioTracksCount    Int               @default(0) @map("audio_tracks_count")
+  videosCount         Int               @default(0) @map("videos_count")
+  ipDeclarationSigned Boolean           @default(false) @map("ip_declaration_signed")
+  status              PublicationStatus @default(DRAFT)
+  submittedAt         DateTime?         @map("submitted_at")
+  publishedAt         DateTime?         @map("published_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+
+  book          Book           @relation("BookVersions", fields: [bookId], references: [id], onDelete: Cascade)
+  activeForBook Book?          @relation("BookActiveVersion")
+  reviewTickets ReviewTicket[]
+  mediaAssets   MediaAsset[]
+
+  @@unique([bookId, versionNumber])
+  @@index([bookId, status])
+  @@map("book_versions")
+}
+
+model ReviewTicket {
+  id              String   @id @default(uuid())
+  bookVersionId   String   @map("book_version_id")
+  reviewerId      String?  @map("reviewer_id")
+  checklistJson   Json     @default("{}") @map("checklist_json")
+  contentVerified Boolean  @default(false) @map("content_verified")
+  ipVerified      Boolean  @default(false) @map("ip_verified")
+  decision        String?
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  bookVersion BookVersion @relation(fields: [bookVersionId], references: [id], onDelete: Cascade)
+  reviewer    User?       @relation("TicketReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([bookVersionId])
+  @@map("review_tickets")
+}
+
+model MediaAsset {
+  id             String         @id @default(uuid())
+  bookVersionId  String         @map("book_version_id")
+  assetType      MediaAssetType @map("asset_type")
+  r2Key          String         @unique @map("r2_key")
+  mimeType       String         @map("mime_type")
+  sizeBytes      Int            @map("size_bytes")
+  checksumSha256 String?        @map("checksum_sha256")
+  metadataJson   Json           @default("{}") @map("metadata_json")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  bookVersion BookVersion @relation(fields: [bookVersionId], references: [id], onDelete: Cascade)
+
+  @@index([bookVersionId, assetType])
+  @@map("media_assets")
+}
+
+model ReadingProgress {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  bookId        String   @map("book_id")
+  currentSpread Int      @default(0) @map("current_spread")
+  percent       Float    @default(0)
+  bookmarksJson Json     @default("[]") @map("bookmarks_json")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@map("reading_progress")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorId      String?  @map("actor_id")
+  action       String
+  targetType   String   @map("target_type")
+  targetId     String   @map("target_id")
+  metadataJson Json     @default("{}") @map("metadata_json")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
