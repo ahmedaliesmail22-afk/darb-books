@@ -1,4 +1,4 @@
-import type { EditionMeta } from '../types/book';
+import type { EditionMeta } from '@darb/book-schema';
 
 export interface VideoModalOptions {
   modalEl: HTMLElement;
@@ -11,7 +11,7 @@ export interface VideoModalOptions {
   onBeforeOpen: () => void;
 }
 
-const EPIC_TITLES: Record<number, string> = {
+const DEFAULT_EPIC_TITLES: Record<number, string> = {
   1: 'كواليس الفصل الأول: نداء الاستغاثة ومخاض الفكرة',
   2: 'كواليس الفصل الثاني: المخطط الكبير وصدمة الجداول الـ 39',
   3: 'كواليس الفصل الثالث: معركة القيود المستحيلة وكيف قهرناها',
@@ -21,7 +21,7 @@ const EPIC_TITLES: Record<number, string> = {
   7: 'كواليس الفصل السابع: الإطلاق وملاقاة السحاب',
 };
 
-const ANATOMICAL_TITLES: Record<number, string> = {
+const DEFAULT_ANATOMICAL_TITLES: Record<number, string> = {
   1: 'كواليس الباب الأول: الأسس المعمارية والهندسية وتطويع الـ 64 بايت',
   2: 'كواليس الباب الثاني: التشريح الهيكلي لقاعدة البيانات (39 جدولاً)',
   3: 'كواليس الباب الثالث: المحرك التفاعلي وآلة الحالة المنتهية (FSM)',
@@ -64,11 +64,16 @@ export class VideoModal {
   public open(chapterNum: number, edition: EditionMeta, videoDir: string): void {
     this.onBeforeOpen();
 
-    const hasVideo = edition.videosCount >= chapterNum && chapterNum >= 1;
+    const customTitle = edition.chapterTitles?.[String(chapterNum)];
+    const hasVideo = edition.videosCount >= chapterNum && chapterNum >= 1 && Boolean(videoDir);
+
     if (!hasVideo || edition.id === 'anatomical-book') {
-      const noticeTitle = ANATOMICAL_TITLES[chapterNum] || `كواليس الباب ${chapterNum}`;
+      const noticeTitle =
+        customTitle ||
+        DEFAULT_ANATOMICAL_TITLES[chapterNum] ||
+        `كواليس الفصل ${chapterNum}`;
       this.titleEl.textContent = noticeTitle;
-      this.subtitleEl.textContent = 'بطاقة كواليس الباب التشريحي';
+      this.subtitleEl.textContent = 'بطاقة كواليس الفصل';
 
       this.videoEl.pause();
       this.videoEl.removeAttribute('src');
@@ -92,7 +97,8 @@ export class VideoModal {
 
     this.noticeEl.style.display = 'none';
     this.videoWrapperEl.style.display = 'block';
-    this.titleEl.textContent = EPIC_TITLES[chapterNum] || `كواليس الفصل ${chapterNum}`;
+    this.titleEl.textContent =
+      customTitle || DEFAULT_EPIC_TITLES[chapterNum] || `كواليس الفصل ${chapterNum}`;
     this.subtitleEl.textContent = 'ملخص مرئي متزامن بالصوت الفصيح والرسوم الهندسية';
 
     this.videoEl.src = `${videoDir}ch${chapterNum}.mp4`;

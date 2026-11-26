@@ -1,25 +1,46 @@
-import type { EditionMeta } from '../types/book';
-import { normalizeAssetDir, normalizeDataFile } from '../types/book';
+import {
+  normalizeAssetDir,
+  normalizeDataFile,
+  type EditionMeta,
+} from '@darb/book-schema';
 
-const OFFLINE_META_KEY = 'darb_books_offline_editions_v1';
+export interface OfflineManagerConfig {
+  swUrl?: string;
+  swScope?: string;
+  storagePrefix?: string;
+  cachePrefix?: string;
+}
 
 export class OfflineManager {
+  private swUrl: string;
+  private swScope: string;
+  private offlineMetaKey: string;
+  private cachePrefix: string;
+
+  constructor(config: OfflineManagerConfig = {}) {
+    this.swUrl = config.swUrl ?? './sw.js';
+    this.swScope = config.swScope ?? './';
+    const prefix = config.storagePrefix ?? 'darb_books';
+    this.offlineMetaKey = `${prefix}_offline_editions_v1`;
+    this.cachePrefix = config.cachePrefix ?? 'darb-edition';
+  }
+
   public async registerServiceWorker(): Promise<void> {
     if (!('serviceWorker' in navigator)) return;
     try {
-      await navigator.serviceWorker.register('./sw.js', { scope: './' });
+      await navigator.serviceWorker.register(this.swUrl, { scope: this.swScope });
     } catch {
       // ignore on unsupported environments or file://
     }
   }
 
   private getCacheName(editionId: string): string {
-    return `darb-edition-${editionId}-v1`;
+    return `${this.cachePrefix}-${editionId}-v1`;
   }
 
   private readSavedMap(): Record<string, boolean> {
     try {
-      const raw = localStorage.getItem(OFFLINE_META_KEY);
+      const raw = localStorage.getItem(this.offlineMetaKey);
       return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
     } catch {
       return {};
@@ -28,7 +49,7 @@ export class OfflineManager {
 
   private writeSavedMap(map: Record<string, boolean>): void {
     try {
-      localStorage.setItem(OFFLINE_META_KEY, JSON.stringify(map));
+      localStorage.setItem(this.offlineMetaKey, JSON.stringify(map));
     } catch {
       // ignore
     }

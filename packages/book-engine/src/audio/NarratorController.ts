@@ -1,3 +1,8 @@
+export interface NarratorConfig {
+  autoFlipDelayMs?: number;
+  preloadNext?: boolean;
+}
+
 export interface NarratorCallbacks {
   getTotalSpreads: () => number;
   getUnifiedSpreadIndex: () => number;
@@ -16,10 +21,7 @@ function formatSeconds(sec: number): string {
 }
 
 /**
- * محرك الراوي الصوتي المدمج (MP3-only):
- * - يعتمد حصرياً على ملفات MP3 المدمجة بدون أي صوت تقليب برمجي.
- * - انتقال تلقائي بعد 100ms من انتهاء الصوت.
- * - أزرار تقديم/تأخير ±10 ثوانٍ، ومؤشر زمني MM:SS / MM:SS، والتحميل المسبق للنشرة التالية.
+ * محرك الراوي الصوتي المدمج (MP3-only) القابل للتهيئة.
  */
 export class NarratorController {
   private audioEl: HTMLAudioElement;
@@ -34,6 +36,8 @@ export class NarratorController {
   private btnFwd10El: HTMLElement;
   private speedEl: HTMLSelectElement;
   private callbacks: NarratorCallbacks;
+  private autoFlipDelayMs: number;
+  private preloadNext: boolean;
 
   private audioDir = './audio/epic-v1/';
   private active = false;
@@ -55,7 +59,8 @@ export class NarratorController {
       btnFwd10El: HTMLElement;
       speedEl: HTMLSelectElement;
     },
-    callbacks: NarratorCallbacks
+    callbacks: NarratorCallbacks,
+    config: NarratorConfig = {}
   ) {
     this.audioEl = elements.audioEl;
     this.preloadAudioEl = new Audio();
@@ -71,6 +76,9 @@ export class NarratorController {
     this.btnFwd10El = elements.btnFwd10El;
     this.speedEl = elements.speedEl;
     this.callbacks = callbacks;
+
+    this.autoFlipDelayMs = config.autoFlipDelayMs ?? 100;
+    this.preloadNext = config.preloadNext ?? true;
 
     this.bindControls();
   }
@@ -201,6 +209,7 @@ export class NarratorController {
   }
 
   private preloadNextSpread(currentUnifiedIdx: number): void {
+    if (!this.preloadNext) return;
     const total = this.callbacks.getTotalSpreads();
     const nextIdx = currentUnifiedIdx + 1;
     if (nextIdx >= total) return;
@@ -245,7 +254,7 @@ export class NarratorController {
           } else {
             this.callbacks.nextPage();
           }
-        }, 100);
+        }, this.autoFlipDelayMs);
       }
     };
 

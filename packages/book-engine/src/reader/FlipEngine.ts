@@ -1,27 +1,29 @@
 import type {
+  BookBlock,
   BookPageSide,
   BookSpread,
+  EngineConfig,
   FontScale,
   MobilePage,
   SearchHit,
   ThemeMode,
-} from '../types/book';
-import { normalizeArabic, stripHtmlText } from '../types/book';
+} from '@darb/book-schema';
+import { normalizeArabic, stripHtmlText } from '@darb/book-schema';
 import type { BookStage3D } from '../scene/BookStage3D';
+
+export type BlockRendererFn = (block: BookBlock) => string;
 
 export interface FlipEngineCallbacks {
   onSpreadChanged: (spreadIdx: number) => void;
   onChapterLongPress: (chapterNum: number) => void;
+  renderBlock?: BlockRendererFn;
 }
 
-const FONT_SCALE_KEY = 'darb_books_font_scale_v1';
-const THEME_KEY = 'darb_books_theme_v1';
-
 /**
- * نواة القراءة الورقية RTL:
+ * نواة القراءة الورقية RTL القابلة للتهيئة الديناميكية:
  * - عرض مزدوج للحواسيب وفردي متسلسل للهواتف مع تخطي الصفحات الفارغة.
  * - تقليب 180° ثلاثي الأبعاد متزامن مع مجسم BookStage3D.
- * - دعم الروابط العميقة (?edition=...&spread=...) والتحكم بـ 3 مستويات للخط.
+ * - دعم الروابط العميقة و3 مستويات لحجم الخط وتخصيص المفاتيح والخطوط من EngineConfig.
  */
 export class FlipEngine {
   private bookEl: HTMLElement;
@@ -32,6 +34,12 @@ export class FlipEngine {
   private stage3D: BookStage3D | null;
   private callbacks: FlipEngineCallbacks;
 
+  private mobileBreakpointPx: number;
+  private longPressDelayMs: number;
+  private cloudLabel: string;
+  private fontScaleStorageKey: string;
+  private themeStorageKey: string;
+
   private spreads: BookSpread[] = [];
   private mobilePages: MobilePage[] = [];
   private currentSpreadIndex = 0;
@@ -40,8 +48,8 @@ export class FlipEngine {
   private bookFooter = 'مَلْحَمَةُ دَرْب — السيرة التقنية الكاملة';
   private activeChaptersCount = 7;
 
-  private fontScale: FontScale = 'md';
-  private theme: ThemeMode = 'sepia';
+  private fontScale: FontScale;
+  private theme: ThemeMode;
 
   constructor(
     elements: {
@@ -52,7 +60,8 @@ export class FlipEngine {
       pageIndicatorEl: HTMLElement;
     },
     stage3D: BookStage3D | null,
-    callbacks: FlipEngineCallbacks
+    callbacks: FlipEngineCallbacks,
+    config?: Partial<EngineConfig>
   ) {
     this.bookEl = elements.bookEl;
     this.rightPageEl = elements.rightPageEl;
@@ -62,32 +71,42 @@ export class FlipEngine {
     this.stage3D = stage3D;
     this.callbacks = callbacks;
 
+    this.mobileBreakpointPx = config?.mobileBreakpointPx ?? 960;
+    this.longPressDelayMs = config?.longPressDelayMs ?? 600;
+    this.cloudLabel = config?.branding?.cloudLabel ?? 'منظومة درب السحابية';
+    const prefix = config?.storagePrefix ?? 'darb_books';
+    this.fontScaleStorageKey = `${prefix}_font_scale_v1`;
+    this.themeStorageKey = `${prefix}_theme_v1`;
+
+    this.fontScale = config?.defaultFontScale ?? 'md';
+    this.theme = config?.defaultTheme ?? 'sepia';
+
     this.restorePreferences();
   }
 
   private restorePreferences(): void {
     try {
-      const savedScale = localStorage.getItem(FONT_SCALE_KEY) as FontScale | null;
+      const savedScale = localStorage.getItem(this.fontScaleStorageKey) as FontScale | null;
       if (savedScale === 'sm' || savedScale === 'md' || savedScale === 'lg') {
         this.setFontScale(savedScale, false);
       } else {
-        this.setFontScale('md', false);
+        this.setFontScale(this.fontScale, false);
       }
 
-      const savedTheme = localStorage.getItem(THEME_KEY) as ThemeMode | null;
+      const savedTheme = localStorage.getItem(this.themeStorageKey) as ThemeMode | null;
       if (savedTheme === 'sepia' || savedTheme === 'dark' || savedTheme === 'light') {
         this.setTheme(savedTheme, false);
       } else {
-        this.setTheme('sepia', false);
+        this.setTheme(this.theme, false);
       }
     } catch {
-      this.setFontScale('md', false);
-      this.setTheme('sepia', false);
+      this.setFontScale(this.fontScale, false);
+      this.setTheme(this.theme, false);
     }
   }
 
   public isMobile(): boolean {
-    return window.innerWidth < 960;
+    return window.innerWidth < this.mobileBreakpointPx;
   }
 
   public setEdition(
@@ -144,7 +163,7 @@ export class FlipEngine {
     this.stage3D?.setTheme(theme);
     if (persist) {
       try {
-        localStorage.setItem(THEME_KEY, theme);
+        localStorage.setItem(this.themeStorageKey, theme);
       } catch {
         // ignore storage quota errors
       }
@@ -168,7 +187,7 @@ export class FlipEngine {
     document.body.classList.add(`font-scale-${scale}`);
     if (persist) {
       try {
-        localStorage.setItem(FONT_SCALE_KEY, scale);
+        localStorage.setItem(this.fontScaleStorageKey, scale);
       } catch {
         // ignore
       }
@@ -304,7 +323,12 @@ export class FlipEngine {
     if (spreadIdx === this.currentSpreadIndex && !this.isMobile()) return;
 
     const prev = this.currentSpreadIndex;
-    const dir = spreadIdx > this.currentSpreadIndex ? 'forward' : spreadIdx < this.currentSpreadIndex ? 'backward' : 'none';
+    const dir =
+      spreadIdx > this.currentSpreadIndex
+        ? 'forward'
+        : spreadIdx < this.currentSpreadIndex
+          ? 'backward'
+          : 'none';
     this.currentSpreadIndex = spreadIdx;
     if (this.isMobile()) {
       const mIdx = this.mobilePages.findIndex((p) => p.spreadIdx === spreadIdx);
@@ -341,16 +365,20 @@ export class FlipEngine {
 
     const hotspotId = isRight ? 'cornerHotspotRight' : 'cornerHotspotLeft';
     const hotspotTitle = isRight ? 'انقر للرجوع للصفحة السابقة' : 'انقر لتقليب الصفحة التالية';
+    const blocksHtml =
+      data.blocks && data.blocks.length > 0 && this.callbacks.renderBlock
+        ? data.blocks.map((b) => this.callbacks.renderBlock?.(b) ?? '').join('')
+        : '';
 
     return `
       <div class="corner-peel-hotspot" id="${hotspotId}" title="${hotspotTitle}"></div>
       <div class="corner-peel-curl"></div>
       <div class="page-header-tag">
         <span>${data.header || this.bookTitle}</span>
-        <span>منظومة درب السحابية</span>
+        <span>${this.cloudLabel}</span>
       </div>
       ${data.title ? `<h2 class="page-title">${data.title}</h2>` : ''}
-      <div class="page-body">${data.html}</div>
+      <div class="page-body">${data.html}${blocksHtml}</div>
       <div class="page-footer">
         ${isRight
           ? `<span class="page-num-tag">${pageNum ? 'صفحة ' + pageNum : ''}</span><span class="page-book-tag">${this.bookFooter}</span>`
@@ -511,7 +539,7 @@ export class FlipEngine {
           item.classList.remove('holding');
           if (navigator.vibrate) navigator.vibrate([40, 20, 60]);
           this.callbacks.onChapterLongPress(chId);
-        }, 600);
+        }, this.longPressDelayMs);
       };
 
       const cancelPress = () => {

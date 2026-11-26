@@ -1,17 +1,18 @@
 {
   "name": "darb-books",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "private": true,
   "type": "module",
-  "description": "بوابة درب للكتب والروايات التفاعلية ثلاثية الأبعاد (Vite + TypeScript + Three.js + PWA)",
+  "description": "منصة درب للكتب التفاعلية ثلاثية الأبعاد — بنية Monorepo مرنة وقابلة للتمديد",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "three": "^0.174.0"
+    "dev": "npm run dev --workspace=@darb/web",
+    "typecheck": "npm run typecheck --workspaces",
+    "build": "npm run typecheck --workspaces && npm run build --workspace=@darb/web",
+    "preview": "npm run preview --workspace=@darb/web"
   },
   "devDependencies": {
     "@types/three": "^0.174.0",

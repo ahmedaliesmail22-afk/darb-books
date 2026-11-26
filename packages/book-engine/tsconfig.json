@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@darb/book-schema": ["../book-schema/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

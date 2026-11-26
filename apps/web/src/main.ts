@@ -1,15 +1,28 @@
-import './styles/tokens.css';
-import './styles/book.css';
-import './styles/modals.css';
-import './styles/themes.css';
+import '@darb/book-engine/styles/tokens.css';
+import '@darb/book-engine/styles/book.css';
+import '@darb/book-engine/styles/modals.css';
+import '@darb/book-engine/styles/themes.css';
 
-import type { CatalogData, EditionData, EditionMeta } from './types/book';
-import { normalizeAssetDir, normalizeDataFile } from './types/book';
-import { BookStage3D } from './scene/BookStage3D';
-import { FlipEngine } from './reader/FlipEngine';
-import { NarratorController } from './audio/NarratorController';
-import { VideoModal } from './video/VideoModal';
-import { OfflineManager } from './pwa/OfflineManager';
+import {
+  normalizeAssetDir,
+  normalizeDataFile,
+  parseCatalogData,
+  parseEditionData,
+  type CatalogData,
+  type EditionData,
+  type EditionMeta,
+  type EngineConfig,
+  type EngineConfigInput,
+} from '@darb/book-schema';
+import {
+  applyEngineThemeTokens,
+  BookStage3D,
+  FlipEngine,
+  NarratorController,
+  OfflineManager,
+  resolveEngineConfig,
+  VideoModal,
+} from '@darb/book-engine';
 import { LibraryPanel } from './library/LibraryPanel';
 
 declare global {
@@ -29,6 +42,7 @@ function getEl<T extends HTMLElement>(id: string): T {
 }
 
 class DarbBooksApp {
+  private engineConfig: EngineConfig;
   private stage3D: BookStage3D;
   private flipEngine: FlipEngine;
   private narrator: NarratorController;
@@ -45,7 +59,10 @@ class DarbBooksApp {
   private bookBrandTitleEl: HTMLElement;
   private btnThemeEl: HTMLElement;
 
-  constructor() {
+  constructor(configInput?: EngineConfigInput) {
+    this.engineConfig = resolveEngineConfig(configInput);
+    applyEngineThemeTokens(this.engineConfig);
+
     if (window.Telegram?.WebApp?.ready) {
       try {
         window.Telegram.WebApp.ready();
@@ -60,10 +77,20 @@ class DarbBooksApp {
 
     const stageEl = getEl('stage');
     const stageCanvasEl = getEl<HTMLCanvasElement>('bookStageCanvas');
-    this.stage3D = new BookStage3D(stageEl, stageCanvasEl);
+    this.stage3D = new BookStage3D(stageEl, stageCanvasEl, {
+      enabled: this.engineConfig.features.enable3DStage,
+      mobileBreakpointPx: this.engineConfig.mobileBreakpointPx,
+      lightingOverrides: this.engineConfig.stageLightingOverrides,
+    });
 
-    this.offlineManager = new OfflineManager();
-    void this.offlineManager.registerServiceWorker();
+    this.offlineManager = new OfflineManager({
+      swUrl: this.engineConfig.swUrl,
+      swScope: this.engineConfig.swScope,
+      storagePrefix: this.engineConfig.storagePrefix,
+    });
+    if (this.engineConfig.features.enableOfflineCache) {
+      void this.offlineManager.registerServiceWorker();
+    }
 
     this.narrator = new NarratorController(
       {
@@ -85,6 +112,10 @@ class DarbBooksApp {
         goToSpread: (idx) => this.flipEngine.goToSpread(idx),
         nextPage: () => this.flipEngine.nextPage(),
         onBookCompleted: () => this.libraryPanel.showCelebration(),
+      },
+      {
+        autoFlipDelayMs: this.engineConfig.autoFlipDelayMs,
+        preloadNext: true,
       }
     );
 
@@ -111,7 +142,8 @@ class DarbBooksApp {
       {
         onSpreadChanged: (spreadIdx) => this.handleSpreadChanged(spreadIdx),
         onChapterLongPress: (chapterNum) => this.handleChapterLongPress(chapterNum),
-      }
+      },
+      this.engineConfig
     );
 
     this.libraryPanel = new LibraryPanel(
@@ -149,10 +181,29 @@ class DarbBooksApp {
       }
     );
 
+    this.applyFeatureVisibility();
     this.syncThemeButtonIcon();
     this.stage3D.setTheme(this.flipEngine.getTheme());
     this.bindGlobalControls(stageEl);
     void this.bootstrap();
+  }
+
+  private applyFeatureVisibility(): void {
+    const f = this.engineConfig.features;
+    const toggle = (id: string, visible: boolean) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = visible ? '' : 'none';
+    };
+    toggle('btnToggleNarrator', f.enableNarrator);
+    toggle('btnSearch', f.enableSearch);
+    toggle('btnGrid', f.enableGridOverview);
+    toggle('btnBookmark', f.enableBookmarks);
+    toggle('btnBookmarksList', f.enableBookmarks);
+    toggle('btnFontDec', f.enableFontScaling);
+    toggle('btnFontInc', f.enableFontScaling);
+    toggle('btnTheme', f.enableThemeSwitch);
+    toggle('btnOfflineQuick', f.enableOfflineCache);
+    toggle('btnShare', f.enableShare);
   }
 
   private isAnyModalOpen(): boolean {
@@ -185,7 +236,7 @@ class DarbBooksApp {
   }
 
   private handleChapterLongPress(chapterNum: number): void {
-    if (!this.currentEdition) return;
+    if (!this.currentEdition || !this.engineConfig.features.enableChapterVideos) return;
     const videoDir = normalizeAssetDir(this.currentEdition.videoDir);
     this.videoModal.open(chapterNum, this.currentEdition, videoDir);
   }
@@ -261,13 +312,13 @@ class DarbBooksApp {
       } else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
         e.preventDefault();
         this.libraryPanel.openShortcuts();
-      } else if (e.key === '+' || e.key === '=') {
+      } else if ((e.key === '+' || e.key === '=') && this.engineConfig.features.enableFontScaling) {
         this.flipEngine.stepFontScale(1);
-      } else if (e.key === '-') {
+      } else if (e.key === '-' && this.engineConfig.features.enableFontScaling) {
         this.flipEngine.stepFontScale(-1);
       } else if (e.key === 'f' || e.key === 'F') {
         this.toggleFullscreen();
-      } else if (e.key === 'n' || e.key === 'N') {
+      } else if ((e.key === 'n' || e.key === 'N') && this.engineConfig.features.enableNarrator) {
         this.narrator.toggle();
       }
     });
@@ -322,7 +373,7 @@ class DarbBooksApp {
     try {
       const res = await fetch('./editions/catalog.json');
       if (!res.ok) throw new Error('Failed to load catalog.json');
-      this.catalog = (await res.json()) as CatalogData;
+      this.catalog = parseCatalogData(await res.json());
     } catch (err) {
       console.error('Error loading catalog.json:', err);
       this.showToast('تعذر تحميل فهرس الإصدارات');
@@ -366,13 +417,13 @@ class DarbBooksApp {
         this.showToast(`تعذر تحميل بيانات ${ed.title}`);
         return;
       }
-      data = (await res.json()) as EditionData;
+      data = parseEditionData(await res.json());
       this.editionCache.set(ed.id, data);
     }
 
     const titleText = data.title || ed.title;
     this.bookBrandTitleEl.textContent = titleText;
-    document.title = `${titleText} — بوابة درب`;
+    document.title = `${titleText} — ${this.engineConfig.branding?.portalTitle ?? 'بوابة درب'}`;
 
     this.flipEngine.setEdition(data.spreads, {
       title: titleText,
@@ -383,4 +434,10 @@ class DarbBooksApp {
   }
 }
 
-new DarbBooksApp();
+new DarbBooksApp({
+  direction: 'rtl',
+  defaultTheme: 'sepia',
+  defaultFontScale: 'md',
+  autoFlipDelayMs: 100,
+  longPressDelayMs: 600,
+});

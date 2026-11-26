@@ -2,9 +2,8 @@ import type {
   BookmarkRecord,
   EditionMeta,
   ReadingProgressRecord,
-} from '../types/book';
-import type { FlipEngine } from '../reader/FlipEngine';
-import type { OfflineManager } from '../pwa/OfflineManager';
+} from '@darb/book-schema';
+import type { FlipEngine, OfflineManager } from '@darb/book-engine';
 
 const PROGRESS_STORAGE_KEY = 'darb_books_progress_v1';
 const BOOKMARKS_STORAGE_KEY = 'darb_books_bookmarks_v1';

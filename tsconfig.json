@@ -1,19 +1,16 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "baseUrl": ".",
+    "paths": {
+      "@darb/book-schema": ["./packages/book-schema/src/index.ts"],
+      "@darb/book-engine": ["./packages/book-engine/src/index.ts"],
+      "@darb/book-engine/*": ["./packages/book-engine/src/*"]
+    }
   },
-  "include": ["src"]
+  "include": [
+    "packages/book-schema/src",
+    "packages/book-engine/src",
+    "apps/web/src"
+  ]
 }

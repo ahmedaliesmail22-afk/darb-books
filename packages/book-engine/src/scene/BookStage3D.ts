@@ -11,7 +11,13 @@ import {
   Scene,
   WebGLRenderer,
 } from 'three';
-import type { ThemeMode } from '../types/book';
+import type { Stage3DThemeLighting, ThemeMode } from '@darb/book-schema';
+
+export interface BookStage3DConfig {
+  enabled?: boolean;
+  mobileBreakpointPx?: number;
+  lightingOverrides?: Partial<Record<ThemeMode, Stage3DThemeLighting>>;
+}
 
 interface BookVisualState {
   spreadIndex: number;
@@ -20,16 +26,44 @@ interface BookVisualState {
   isClosedBack: boolean;
 }
 
+const DEFAULT_LIGHTING: Record<ThemeMode, Stage3DThemeLighting> = {
+  sepia: {
+    ambientColor: '#ffe9c2',
+    ambientIntensity: 0.78,
+    keyColor: '#ffd991',
+    keyIntensity: 1.35,
+    accentColor: '#d4af37',
+    accentIntensity: 1.9,
+    paperEdgeColor: '#ede0c4',
+  },
+  dark: {
+    ambientColor: '#93c5fd',
+    ambientIntensity: 0.6,
+    keyColor: '#60a5fa',
+    keyIntensity: 1.2,
+    accentColor: '#38bdf8',
+    accentIntensity: 2.1,
+    paperEdgeColor: '#1e293b',
+  },
+  light: {
+    ambientColor: '#ffffff',
+    ambientIntensity: 0.95,
+    keyColor: '#fffbeb',
+    keyIntensity: 1.25,
+    accentColor: '#f59e0b',
+    accentIntensity: 1.1,
+    paperEdgeColor: '#e2e8f0',
+  },
+};
+
 /**
- * مشهد Three.js خفيف الوزن (Low-Poly) يحيط بصفحات القراءة ويمثّل المجسم الفيزيائي للكتاب:
- * - غلاف جلدي صلب + كعب متحرك + حواف زخرفية معدنية.
- * - رزمة أوراق ديناميكية يميناً ويساراً تعكس عدد الصفحات المقروءة والمتبقية (RTL).
- * - إضاءة ديناميكية مرتبطة بالثيم الحالي (Sepia / Dark / Light).
- * - وضع أداء تلقائي خفيف للهواتف الذكية.
+ * مشهد Three.js خفيف الوزن (Low-Poly) يحيط بصفحات القراءة ويمثّل المجسم الفيزيائي للكتاب.
+ * يقبل تهيئة ديناميكية للإضاءة ونقاط التوقف ومفاتيح الميزات.
  */
 export class BookStage3D {
   private container: HTMLElement;
   private canvas: HTMLCanvasElement;
+  private config: BookStage3DConfig;
   private renderer: WebGLRenderer | null = null;
   private scene: Scene | null = null;
   private camera: PerspectiveCamera | null = null;
@@ -59,23 +93,29 @@ export class BookStage3D {
   private currentTiltX = 0;
   private currentTiltY = 0;
   private flipImpulse = 0;
-  private targetOpenFactor = 0; // 0 = مغلق على الغلاف، 1 = مفتوح مزدوج
+  private targetOpenFactor = 0;
   private currentOpenFactor = 0;
-  private targetProgress = 0; // 0 = بداية الكتاب (السمك يساراً)، 1 = نهايته (السمك يميناً)
+  private targetProgress = 0;
   private currentProgress = 0;
 
-  constructor(container: HTMLElement, canvas: HTMLCanvasElement) {
+  constructor(container: HTMLElement, canvas: HTMLCanvasElement, config: BookStage3DConfig = {}) {
     this.container = container;
     this.canvas = canvas;
+    this.config = config;
+    if (config.enabled === false) {
+      this.canvas.style.display = 'none';
+      return;
+    }
     this.detectPerformanceMode();
     this.initWebGL();
   }
 
   private detectPerformanceMode(): void {
+    const bp = this.config.mobileBreakpointPx ?? 960;
     const reducedMotion =
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.isMobileLightMode = window.innerWidth < 960 || reducedMotion;
+    this.isMobileLightMode = window.innerWidth < bp || reducedMotion;
   }
 
   private initWebGL(): void {
@@ -101,7 +141,6 @@ export class BookStage3D {
       camera.lookAt(0, 0, 0);
       this.camera = camera;
 
-      // إضاءة متكيفة مع الثيم
       const ambient = new AmbientLight(0xfff1d6, 0.75);
       const key = new DirectionalLight(0xffe4b5, 1.35);
       key.position.set(3.5, 5.5, 8.0);
@@ -117,7 +156,6 @@ export class BookStage3D {
       this.resize();
       this.requestFrame();
     } catch {
-      // تراجع آمن إذا لم يتوفر WebGL
       this.canvas.style.display = 'none';
       this.renderer = null;
     }
@@ -151,7 +189,6 @@ export class BookStage3D {
     const bookH = 6.22;
     const boardThick = 0.11;
 
-    // الغلاف الأيمن + إطار ذهبي خفيف
     const rightCoverGroup = new Group();
     const rightBoard = new Mesh(new BoxGeometry(halfW, bookH, boardThick), coverMat);
     rightBoard.position.set(halfW / 2 + 0.08, 0, -0.22);
@@ -164,7 +201,6 @@ export class BookStage3D {
     rightCoverGroup.add(rightBoard, rightTrim, rightTopTrim, rightBotTrim);
     this.rightCoverGroup = rightCoverGroup;
 
-    // الغلاف الأيسر + إطار ذهبي خفيف
     const leftCoverGroup = new Group();
     const leftBoard = new Mesh(new BoxGeometry(halfW, bookH, boardThick), coverMat);
     leftBoard.position.set(-halfW / 2 - 0.08, 0, -0.22);
@@ -177,7 +213,6 @@ export class BookStage3D {
     leftCoverGroup.add(leftBoard, leftTrim, leftTopTrim, leftBotTrim);
     this.leftCoverGroup = leftCoverGroup;
 
-    // كعب الكتاب المتحرك في المنتصف
     const spineMesh = new Mesh(new BoxGeometry(0.32, bookH + 0.08, 0.34), coverMat);
     spineMesh.position.set(0, 0, -0.26);
     const spineBandTop = new Mesh(new BoxGeometry(0.34, 0.14, 0.36), trimMat);
@@ -187,7 +222,6 @@ export class BookStage3D {
     spineMesh.add(spineBandTop, spineBandBot);
     this.spineMesh = spineMesh;
 
-    // رزمة الأوراق اليمنى واليسرى (يتغير سُمكها ديناميكياً حسب موضع القارئ RTL)
     const rightPages = new Mesh(new BoxGeometry(halfW - 0.14, bookH - 0.16, 1), paperEdgeMat);
     rightPages.position.set(halfW / 2 + 0.05, 0, -0.06);
     this.rightPagesMesh = rightPages;
@@ -233,31 +267,16 @@ export class BookStage3D {
 
   public setTheme(theme: ThemeMode): void {
     if (!this.ambientLight || !this.keyLight || !this.accentLight || !this.paperEdgeMat) return;
-    if (theme === 'sepia') {
-      this.ambientLight.color.set('#ffe9c2');
-      this.ambientLight.intensity = 0.78;
-      this.keyLight.color.set('#ffd991');
-      this.keyLight.intensity = 1.35;
-      this.accentLight.color.set('#d4af37');
-      this.accentLight.intensity = 1.9;
-      this.paperEdgeMat.color.set('#ede0c4');
-    } else if (theme === 'dark') {
-      this.ambientLight.color.set('#93c5fd');
-      this.ambientLight.intensity = 0.6;
-      this.keyLight.color.set('#60a5fa');
-      this.keyLight.intensity = 1.2;
-      this.accentLight.color.set('#38bdf8');
-      this.accentLight.intensity = 2.1;
-      this.paperEdgeMat.color.set('#1e293b');
-    } else {
-      this.ambientLight.color.set('#ffffff');
-      this.ambientLight.intensity = 0.95;
-      this.keyLight.color.set('#fffbeb');
-      this.keyLight.intensity = 1.25;
-      this.accentLight.color.set('#f59e0b');
-      this.accentLight.intensity = 1.1;
-      this.paperEdgeMat.color.set('#e2e8f0');
-    }
+    const palette = this.config.lightingOverrides?.[theme] ?? DEFAULT_LIGHTING[theme];
+
+    this.ambientLight.color.set(palette.ambientColor);
+    this.ambientLight.intensity = palette.ambientIntensity;
+    this.keyLight.color.set(palette.keyColor);
+    this.keyLight.intensity = palette.keyIntensity;
+    this.accentLight.color.set(palette.accentColor);
+    this.accentLight.intensity = palette.accentIntensity;
+    this.paperEdgeMat.color.set(palette.paperEdgeColor);
+
     this.dirty = true;
     this.requestFrame();
   }
@@ -310,7 +329,6 @@ export class BookStage3D {
     const prog = this.currentProgress;
 
     if (this.leftCoverGroup && this.rightCoverGroup && this.spineMesh) {
-      // إخفاء الجناح الأيسر عند إغلاق الغلاف وتمركزه بسلاسة
       this.leftCoverGroup.visible = open > 0.04;
       this.leftCoverGroup.position.x = (1 - open) * 1.75;
       this.rightCoverGroup.position.x = (1 - open) * -1.78;
@@ -319,7 +337,6 @@ export class BookStage3D {
     }
 
     if (this.rightPagesMesh && this.leftPagesMesh) {
-      // في الكتاب العربي RTL: بداية الكتاب تكون السماكة الكبرى يساراً، وعند التقدم تنتقل يميناً
       const maxThickness = 0.28;
       const rightThick = Math.max(0.02, maxThickness * prog) * open;
       const leftThick = Math.max(0.02, maxThickness * (1 - prog)) * open;
@@ -335,8 +352,9 @@ export class BookStage3D {
     this.bookGroup.rotation.x = this.currentTiltX;
     this.bookGroup.rotation.y = this.currentTiltY + this.flipImpulse;
 
-    // ملاءمة حجم المجسم الثلاثي الأبعاد بحسب عرض الشاشة
-    const scaleFactor = this.isMobileLightMode ? 0.62 : Math.min(1, Math.max(0.76, this.container.clientWidth / 1060));
+    const scaleFactor = this.isMobileLightMode
+      ? 0.62
+      : Math.min(1, Math.max(0.76, this.container.clientWidth / 1060));
     this.bookGroup.scale.setScalar(scaleFactor);
 
     this.renderer.render(this.scene, this.camera);

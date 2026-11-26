@@ -1,0 +1,21 @@
+{
+  "name": "@darb/web",
+  "version": "4.1.0",
+  "private": true,
+  "type": "module",
+  "description": "واجهة الويب الرئيسية لبوابة درب للكتب التفاعلية",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@darb/book-engine": "*",
+    "@darb/book-schema": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0"
+  }
+}

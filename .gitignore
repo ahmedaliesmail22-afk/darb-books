@@ -1,6 +1,10 @@
 # Dependencies & Build Artifacts
 node_modules/
+packages/*/node_modules/
+apps/*/node_modules/
 dist/
+packages/*/dist/
+apps/*/dist/
 .vite/
 
 # Python / Build Temp Artifacts

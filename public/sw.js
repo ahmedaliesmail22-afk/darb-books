@@ -105,7 +105,7 @@ self.addEventListener('fetch', (event) => {
         .catch(async () => {
           const cached = await caches.match(req, { ignoreSearch: true });
           if (cached) return cached;
-          if (req.mode === 'navigate') {
+          if (req.mode === 'navigate' && !url.pathname.includes('/engine/')) {
             return (await caches.match('./index.html')) || Response.error();
           }
           return Response.error();
