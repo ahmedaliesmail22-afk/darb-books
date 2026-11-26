@@ -1110,9 +1110,18 @@ const GOLDEN_COMPASS_SVG = `
 `;
 
 // =============================================================================
+// قراءة معرّف الإصدار من رابط الصفحة ?edition=... وضبط مسارات الوسائط
+// =============================================================================
+const urlParams = new URLSearchParams(window.location.search);
+let currentEditionId = urlParams.get('edition') || 'epic-v1';
+let currentAudioDir = (currentEditionId === 'anatomical-book') ? '../audio/anatomical-v1/' : '../audio/epic-v1/';
+let currentVideoDir = (currentEditionId === 'anatomical-book') ? '../videos/anatomical-book/' : '../videos/epic-v1/';
+let catalogData = null;
+
+// =============================================================================
 // مصفوفة النشرات الكاملة (SPREADS DATA ARCHITECTURE)
 // =============================================================================
-const SPREADS = [
+let SPREADS = [
   // ---------------------------------------------------------------------------
   // نشرة 0: الغلاف الملكي الأمامي مغلقاً
   // ---------------------------------------------------------------------------
@@ -2028,47 +2037,59 @@ Local revision: 23 | Webhook: in sync
 // بناء قائمة الصفحات الفردية للهواتف الذكية (MOBILE PAGES LIST)
 // يضمن عرض كل المحتويات (اليمين ثم اليسار) مع تخطي الصفحات الفارغة فقط
 // =============================================================================
-const MOBILE_PAGES = [];
-SPREADS.forEach((spread, spreadIdx) => {
-  if (spread.isFrontCover) {
-    MOBILE_PAGES.push({
-      spreadIdx,
-      isCover: true,
-      side: 'right',
-      data: spread.right,
-      indicator: 'الغلاف الملكي الأمامي'
-    });
-  } else if (spread.isBackCover) {
-    MOBILE_PAGES.push({
-      spreadIdx,
-      isCover: true,
-      side: 'right',
-      data: spread.right,
-      indicator: 'الغلاف الملكي الخلفي'
-    });
-  } else {
-    // إذا كانت الصفحة اليمنى غير فارغة، أضفها
-    if (spread.right && !spread.right.isBlank) {
+function getMaxPageNumber() {
+  let max = 0;
+  SPREADS.forEach(s => {
+    if (s.pageRightNum && s.pageRightNum > max) max = s.pageRightNum;
+    if (s.pageLeftNum && s.pageLeftNum > max) max = s.pageLeftNum;
+  });
+  return max || 50;
+}
+
+let MOBILE_PAGES = [];
+function rebuildMobilePages() {
+  MOBILE_PAGES.length = 0;
+  const maxPage = getMaxPageNumber();
+  SPREADS.forEach((spread, spreadIdx) => {
+    if (spread.isFrontCover) {
       MOBILE_PAGES.push({
         spreadIdx,
+        isCover: true,
         side: 'right',
         data: spread.right,
-        pageNum: spread.pageRightNum,
-        indicator: 'صفحة ' + spread.pageRightNum + ' من 50'
+        indicator: 'الغلاف الملكي الأمامي'
       });
-    }
-    // إذا كانت الصفحة اليسرى غير فارغة، أضفها
-    if (spread.left && !spread.left.isBlank) {
+    } else if (spread.isBackCover) {
       MOBILE_PAGES.push({
         spreadIdx,
-        side: 'left',
-        data: spread.left,
-        pageNum: spread.pageLeftNum,
-        indicator: 'صفحة ' + spread.pageLeftNum + ' من 50'
+        isCover: true,
+        side: 'right',
+        data: spread.right,
+        indicator: 'الغلاف الملكي الخلفي'
       });
+    } else {
+      if (spread.right && !spread.right.isBlank) {
+        MOBILE_PAGES.push({
+          spreadIdx,
+          side: 'right',
+          data: spread.right,
+          pageNum: spread.pageRightNum,
+          indicator: 'صفحة ' + spread.pageRightNum + ' من ' + maxPage
+        });
+      }
+      if (spread.left && !spread.left.isBlank) {
+        MOBILE_PAGES.push({
+          spreadIdx,
+          side: 'left',
+          data: spread.left,
+          pageNum: spread.pageLeftNum,
+          indicator: 'صفحة ' + spread.pageLeftNum + ' من ' + maxPage
+        });
+      }
     }
-  }
-});
+  });
+}
+rebuildMobilePages();
 
 // =============================================================================
 // المشاهد الكرتونية والإنفوجرافيك الحركية لجميع الفصول (1 إلى 7)
@@ -2079,7 +2100,7 @@ SPREADS.forEach((spread, spreadIdx) => {
 // =============================================================================
 let currentSpreadIndex = 0;
 let mobilePageIndex = 0;
-const totalSpreads = SPREADS.length;
+let totalSpreads = SPREADS.length;
 let soundEnabled = true;
 
 // عناصر واجهة المستخدم
@@ -2286,16 +2307,18 @@ function trigger3DLeafTurn(dir, prevSpreadIndex) {
 function updateIndicators() {
   const spreadData = SPREADS[currentSpreadIndex];
   if (!spreadData) return;
+  const maxPage = getMaxPageNumber();
 
   if (spreadData.isFrontCover) {
     pageIndicatorEl.textContent = 'الغلاف الملكي الأمامي';
   } else if (spreadData.isBackCover) {
     pageIndicatorEl.textContent = 'الغلاف الملكي الخلفي';
   } else {
-    pageIndicatorEl.textContent = 'صفحة ' + (spreadData.pageRightNum || '') + ' - ' + (spreadData.pageLeftNum || '') + ' من 50';
+    pageIndicatorEl.textContent = 'صفحة ' + (spreadData.pageRightNum || '') + ' - ' + (spreadData.pageLeftNum || '') + ' من ' + maxPage;
   }
 
-  const pct = (currentSpreadIndex / (totalSpreads - 1)) * 100;
+  const count = SPREADS.length;
+  const pct = count > 1 ? (currentSpreadIndex / (count - 1)) * 100 : 0;
   progressFillEl.style.width = pct + '%';
 }
 
@@ -2718,26 +2741,32 @@ stageEl.addEventListener('mouseleave', () => {
   bookEl.style.transform = 'rotateY(0deg) rotateX(0deg)';
 });
 
-// بدء العرض الأولي (الكتاب مغلق على الغلاف الأمامي)
-renderSpread('none');
+// بدء العرض الأولي ودعم التحميل الديناميكي للإصدار المختار
+async function initEdition() {
+  if (currentEditionId === 'anatomical-book') {
+    try {
+      const res = await fetch('editions/anatomical-v1.json');
+      if (res.ok) {
+        const d = await res.json();
+        if (d && d.spreads && d.spreads.length > 0) {
+          SPREADS = d.spreads;
+          totalSpreads = SPREADS.length;
+          rebuildMobilePages();
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load anatomical-v1.json dynamically:', e);
+    }
+  }
+  renderSpread('none');
+}
+initEdition();
 </script>
 <script>
 
 // =============================================================================
 // 🏛️ محرك الأجزاء المتعددة والمكتبة التفاعلية (Multi-Edition & Video Engine)
 // =============================================================================
-let currentEditionId = 'epic-v1';
-let currentAudioDir = '../audio/epic-v1/';
-let currentVideoDir = '../videos/epic-v1/';
-let catalogData = null;
-
-// قراءة معرّف الإصدار من رابط الصفحة ?edition=...
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.has('edition')) {
-  currentEditionId = urlParams.get('edition');
-  currentAudioDir = `../audio/${currentEditionId}/`;
-  currentVideoDir = `../videos/${currentEditionId}/`;
-}
 
 // عناصر واجهة المكتبة والفيديو والاحتفال
 const btnLibraryEl = document.getElementById('btnLibrary');
@@ -2782,7 +2811,7 @@ function renderLibraryUI() {
       <div class="edition-meta">
         <span>📖 ${ed.spreadsCount || 27} نشرة</span>
         <span>🎧 ${ed.audioTracksCount || 27} تراكاً صوتياً</span>
-        <span>🎬 ${ed.videosCount || 7} فيديوهات كواليس</span>
+        <span>🎬 ${ed.videosCount !== undefined ? ed.videosCount : 7} فيديوهات كواليس</span>
         <span>📅 ${ed.releaseDate || '2026'}</span>
       </div>
     `;
@@ -2812,6 +2841,61 @@ if (btnLibraryCloseEl) {
 // مشغل فيديو كواليس الفصول (الضغط المطول)
 function openChapterVideo(chapterNum) {
   pauseNarrator();
+  
+  if (currentEditionId === 'anatomical-book') {
+    const anatomicalChapterTitles = {
+      1: 'كواليس الباب الأول: الأسس المعمارية والهندسية وتطويع الـ 64 بايت',
+      2: 'كواليس الباب الثاني: التشريح الهيكلي لقاعدة البيانات (39 جدولاً)',
+      3: 'كواليس الباب الثالث: المحرك التفاعلي وآلة الحالة المنتهية (FSM)',
+      4: 'كواليس الباب الرابع: محركات المنطق البرمجي والمكتبات المشتركة (179 دالة)',
+      5: 'كواليس الباب الخامس: نقاط النهاية السحابية (52 Endpoint) وتكامل initData',
+      6: 'كواليس الباب السادس: تطبيقات الويب المصغرة وتجربة المستخدم Pure SVG',
+      7: 'كواليس الباب السابع: هندسة الإطلاق والنشر السحابي والحوكمة'
+    };
+
+    if (cartoonModalTitleEl) {
+      cartoonModalTitleEl.textContent = anatomicalChapterTitles[chapterNum] || `كواليس الباب ${chapterNum}`;
+    }
+    
+    if (chapterVideoEl) {
+      chapterVideoEl.pause();
+      chapterVideoEl.removeAttribute('src');
+      chapterVideoEl.load();
+      chapterVideoEl.style.display = 'none';
+    }
+    
+    let notice = document.getElementById('anatomicalVideoNotice');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'anatomicalVideoNotice';
+      notice.style.cssText = 'background: rgba(15, 23, 42, 0.95); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 24px 20px; text-align: center; color: #f0f9ff; font-family: var(--ui-font); margin: 10px 0;';
+      if (chapterVideoEl && chapterVideoEl.parentNode) {
+        chapterVideoEl.parentNode.appendChild(notice);
+      }
+    }
+    notice.style.display = 'block';
+    notice.innerHTML = `
+      <div style="font-size: 2.2rem; margin-bottom: 8px;">🎬</div>
+      <h4 style="margin: 0 0 8px; color: #38bdf8; font-size: 1.1rem; font-weight: bold;">
+        ${anatomicalChapterTitles[chapterNum] || 'كواليس الباب ' + chapterNum}
+      </h4>
+      <p style="margin: 0 0 12px; color: #94a3b8; font-size: 0.88rem; line-height: 1.6;">
+        عروض الفيديو الكرتونية المتحركة لكتاب درب التشريحي قيد الإعداد والمونتاج، وستُتاح في التحديث القادم لمكتبة البوابة.
+      </p>
+      <div style="display: inline-block; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 20px; padding: 4px 14px; font-size: 0.78rem; color: #7dd3fc;">
+        ✨ يمكنك الآن متابعة القراءة وتفعيل الراوي الصوتي المدمج للنشرات
+      </div>
+    `;
+    
+    cartoonModalEl.style.display = 'flex';
+    return;
+  }
+
+  // إذا كان الكتاب الأول epic-v1:
+  const notice = document.getElementById('anatomicalVideoNotice');
+  if (notice) notice.style.display = 'none';
+  if (chapterVideoEl) chapterVideoEl.style.display = 'block';
+
   const titles = {
     1: 'كواليس الفصل الأول: نداء الاستغاثة ومخاض الفكرة',
     2: 'كواليس الفصل الثاني: المخطط الكبير وصدمة الجداول الـ 39',
@@ -2838,6 +2922,8 @@ function closeChapterVideo() {
     chapterVideoEl.removeAttribute('src');
     chapterVideoEl.load();
   }
+  const notice = document.getElementById('anatomicalVideoNotice');
+  if (notice) notice.style.display = 'none';
   cartoonModalEl.style.display = 'none';
 }
 
@@ -2845,29 +2931,21 @@ if (btnCartoonCloseEl) {
   btnCartoonCloseEl.addEventListener('click', closeChapterVideo);
 }
 
-// ربط الضغط المطول والنقر على عناصر الفهرس
-function setupChapterCards() {
-  document.querySelectorAll('[data-chapter-id]').forEach(el => {
-    const chId = parseInt(el.getAttribute('data-chapter-id'));
-    let pressTimer = null;
-    
-    el.addEventListener('pointerdown', (e) => {
-      pressTimer = setTimeout(() => {
-        if ('vibrate' in navigator) navigator.vibrate(50);
-        openChapterVideo(chId);
-      }, 550);
-    });
-    
-    el.addEventListener('pointerup', () => clearTimeout(pressTimer));
-    el.addEventListener('pointerleave', () => clearTimeout(pressTimer));
-    el.addEventListener('pointercancel', () => clearTimeout(pressTimer));
-  });
-}
-
-// نافذة الاحتفال بإتمام الرواية
+// نافذة الاحتفال بإتمام الرواية أو الكتاب
 function showCelebrationModal() {
   stopNarrator();
-  if (celebrationModalEl) celebrationModalEl.style.display = 'flex';
+  if (celebrationModalEl) {
+    const titleEl = celebrationModalEl.querySelector('h2');
+    const pEl = celebrationModalEl.querySelector('p');
+    if (currentEditionId === 'anatomical-book') {
+      if (titleEl) titleEl.textContent = '«اكتمل الكتاب التشريحي بحمد الله»';
+      if (pEl) pEl.textContent = 'لقد أتممت تصفح واستماع كتاب درب التشريحي لـ 78 ملفاً برمجياً ومعمارية الـ 39 جدولاً و52 نقطة نهاية سحابية.';
+    } else {
+      if (titleEl) titleEl.textContent = '«اكتملت الرواية بحمد الله»';
+      if (pEl) pEl.textContent = 'لقد أتممت قراءة واستماع ملحمة درب التقنية الكاملة.. من شرارة الفكرة الأولى وحتى معانقة السحاب.';
+    }
+    celebrationModalEl.style.display = 'flex';
+  }
 }
 
 if (btnRestartBookEl) {
@@ -2885,7 +2963,6 @@ if (btnOpenLibraryFromCelebrationEl) {
 
 // استدعاء التهيئة
 loadLibraryCatalog();
-setTimeout(setupChapterCards, 600);
 
 </script>
 </body>

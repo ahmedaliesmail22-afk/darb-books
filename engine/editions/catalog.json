@@ -22,20 +22,20 @@
     {
       "id": "anatomical-book",
       "title": "كِتَابُ دَرْب التَّشْرِيحِي لـ 78 مَلَفّاً",
-      "subtitle": "التشريح المعماري للشيفرة البرمجية سطراً بسطر",
-      "badge": "الجزء الثاني (قيد التطوير)",
+      "subtitle": "التشريح المعماري للشيفرة البرمجية سطراً بسطر (Revision 31)",
+      "badge": "الجزء الثاني (مكتمل ومتاح)",
       "badgeColor": "#38bdf8",
       "theme": "cyan-emerald",
-      "description": "تشريح معماري عميق لكافة ملفات المنظومة الـ 78، هندسة الـ FSM، محركات التمارين التكيفية، ونقاط النهاية السحابية الـ 53.",
-      "dataFile": "editions/epic-v1.json",
-      "audioDir": "../audio/epic-v1/",
-      "videoDir": "../videos/epic-v1/",
-      "chaptersCount": 6,
+      "description": "تشريح معماري عميق لكافة ملفات المنظومة الـ 78، هندسة الـ FSM، محركات التمارين التكيفية، ونقاط النهاية السحابية الـ 52.",
+      "dataFile": "editions/anatomical-v1.json",
+      "audioDir": "../audio/anatomical-v1/",
+      "videoDir": "../videos/anatomical-book/",
+      "chaptersCount": 7,
       "spreadsCount": 27,
       "audioTracksCount": 27,
-      "videosCount": 7,
-      "releaseDate": "قريباً",
-      "status": "مدرج في الفهرس"
+      "videosCount": 0,
+      "releaseDate": "نوفمبر 2026",
+      "status": "مكتمل ومتاح بالكامل"
     }
   ]
 }
