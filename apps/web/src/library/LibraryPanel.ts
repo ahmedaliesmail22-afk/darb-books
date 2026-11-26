@@ -15,6 +15,7 @@ export interface LibraryPanelOptions {
   getCurrentEdition: () => EditionMeta | null;
   onSwitchEdition: (editionId: string, startSpread?: number) => Promise<void>;
   onToast: (msg: string) => void;
+  onBookmarksChanged?: (editionId: string, bookmarks: BookmarkRecord[]) => void;
 }
 
 export class LibraryPanel {
@@ -337,6 +338,23 @@ export class LibraryPanel {
     }
   }
 
+  public getBookmarksForEdition(editionId: string): BookmarkRecord[] {
+    return this.readBookmarks().filter((b) => b.editionId === editionId);
+  }
+
+  public mergeEditionBookmarks(editionId: string, remote: BookmarkRecord[]): void {
+    const others = this.readBookmarks().filter((b) => b.editionId !== editionId);
+    const local = this.readBookmarks().filter((b) => b.editionId === editionId);
+    const byId = new Map<string, BookmarkRecord>();
+    for (const b of [...remote, ...local]) {
+      if (b && typeof b.spreadIdx === 'number') {
+        byId.set(b.id || `${editionId}_${b.spreadIdx}`, { ...b, editionId });
+      }
+    }
+    this.writeBookmarks([...Array.from(byId.values()), ...others]);
+    this.syncBookmarkButton();
+  }
+
   public syncBookmarkButton(): void {
     const ed = this.opts.getCurrentEdition();
     if (!ed) return;
@@ -362,6 +380,7 @@ export class LibraryPanel {
       list.splice(existingIdx, 1);
       this.writeBookmarks(list);
       this.syncBookmarkButton();
+      this.opts.onBookmarksChanged?.(ed.id, list.filter((b) => b.editionId === ed.id));
       this.opts.onToast('تمت إزالة الإشارة المرجعية');
     } else {
       const summary = this.opts.flipEngine.getSpreadSummary(spreadIdx);
@@ -375,6 +394,7 @@ export class LibraryPanel {
       });
       this.writeBookmarks(list);
       this.syncBookmarkButton();
+      this.opts.onBookmarksChanged?.(ed.id, list.filter((b) => b.editionId === ed.id));
       this.opts.onToast(`تم حفظ إشارة مرجعية (${summary.pageLabel}) ⭐`);
     }
   }
@@ -416,6 +436,9 @@ export class LibraryPanel {
           const next = this.readBookmarks().filter((x) => x.id !== bm.id);
           this.writeBookmarks(next);
           this.syncBookmarkButton();
+          if (ed) {
+            this.opts.onBookmarksChanged?.(ed.id, next.filter((b) => b.editionId === ed.id));
+          }
           this.openBookmarks();
         });
         this.bookmarksListEl.appendChild(row);

@@ -373,4 +373,43 @@ export function registerBookRoutes(
       return reply.send({ progress });
     }
   );
+
+  app.get(
+    '/api/v1/books/:slug/progress',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const { slug } = request.params as { slug: string };
+      const book = await prisma.book.findUnique({ where: { slug }, select: { id: true } });
+      if (!book) {
+        return reply.code(404).send({ error: 'BOOK_NOT_FOUND' });
+      }
+
+      const progress = await prisma.readingProgress.findUnique({
+        where: { userId_bookId: { userId: request.authUser!.userId, bookId: book.id } },
+      });
+
+      return reply.send({ progress });
+    }
+  );
+
+  app.get(
+    '/api/v1/books/progress/mine',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const rows = await prisma.readingProgress.findMany({
+        where: { userId: request.authUser!.userId },
+        include: { book: { select: { slug: true } } },
+      });
+      const bySlug: Record<string, { currentSpread: number; percent: number; bookmarksJson: unknown; updatedAt: Date }> = {};
+      for (const r of rows) {
+        bySlug[r.book.slug] = {
+          currentSpread: r.currentSpread,
+          percent: r.percent,
+          bookmarksJson: r.bookmarksJson,
+          updatedAt: r.updatedAt,
+        };
+      }
+      return reply.send({ progressBySlug: bySlug });
+    }
+  );
 }

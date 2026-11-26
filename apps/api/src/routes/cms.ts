@@ -40,6 +40,20 @@ export function registerCmsRoutes(
 ): void {
   const { prisma, authenticate, optionalAuthenticate } = deps;
 
+  app.get(
+    '/api/v1/cms/pages',
+    { preHandler: [authenticate, requirePermission('cms.manage')] },
+    async (_request, reply) => {
+      const pages = await prisma.cmsPage.findMany({
+        include: {
+          sections: { orderBy: { sortOrder: 'asc' } },
+        },
+        orderBy: { slug: 'asc' },
+      });
+      return reply.send({ pages });
+    }
+  );
+
   app.get('/api/v1/cms/pages/:slug', { preHandler: [optionalAuthenticate] }, async (request, reply) => {
     const { slug } = request.params as { slug: string };
     const canManage = request.authUser?.permissions.has('cms.manage') ?? false;
@@ -227,6 +241,32 @@ export function registerCmsRoutes(
       });
 
       return reply.send({ post });
+    }
+  );
+
+  app.delete(
+    '/api/v1/news/:id',
+    { preHandler: [authenticate, requirePermission('news.manage')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const existing = await prisma.newsPost.findUnique({ where: { id } });
+      if (!existing) {
+        return reply.code(404).send({ error: 'NEWS_NOT_FOUND' });
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.newsPost.delete({ where: { id } });
+        await recordAuditLog(tx, {
+          actorId: request.authUser!.userId,
+          action: 'news.delete',
+          targetType: 'news_post',
+          targetId: id,
+          metadata: { slug: existing.slug, title: existing.title },
+          request,
+        });
+      });
+
+      return reply.send({ ok: true });
     }
   );
 }

@@ -132,6 +132,19 @@ describe('Dynamic RBAC, Custom Roles & Audit Logs', () => {
     });
     expect(revokedTax.statusCode).toBe(403);
 
+    // Admin can list users with roles & profiles
+    const usersRes = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/v1/users',
+      headers: { authorization: `Bearer ${admin.accessToken}` },
+    });
+    expect(usersRes.statusCode).toBe(200);
+    expect(
+      (usersRes.json().users as Array<{ email: string }>).some(
+        (u) => u.email === 'curriculum-editor@example.com'
+      )
+    ).toBe(true);
+
     // Audit logs recorded role creation, assignment, update, and taxonomy creation
     const auditRes = await ctx.app.inject({
       method: 'GET',

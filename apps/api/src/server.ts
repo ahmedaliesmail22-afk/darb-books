@@ -43,6 +43,9 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<{
   await app.register(cors, {
     origin: env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean),
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
+    exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length'],
   });
 
   app.decorateRequest('authUser', null);

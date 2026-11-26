@@ -1,7 +1,9 @@
 import { resolve } from 'node:path';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  plugins: [react()],
   base: './',
   publicDir: resolve(__dirname, '../../public'),
   resolve: {
@@ -23,6 +25,9 @@ export default defineConfig({
           if (id.includes('node_modules/three')) {
             return 'three-vendor';
           }
+          if (id.includes('node_modules/react')) {
+            return 'react-vendor';
+          }
           if (id.includes('node_modules/zod')) {
             return 'schema-vendor';
           }
@@ -35,6 +40,12 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 4173,
     open: false,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     host: '127.0.0.1',

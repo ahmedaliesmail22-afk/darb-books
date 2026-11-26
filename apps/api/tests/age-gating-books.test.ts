@@ -31,6 +31,36 @@ describe('Mandatory Age-Gating, Migrated Book Versions & Range 206 Streaming', (
     });
     expect(epicDataRes.statusCode).toBe(200);
     expect(epicDataRes.json().spreads).toHaveLength(27);
+
+    // Cloud progress & bookmarks sync check
+    const admin = await ctx.login(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+    const saveProg = await ctx.app.inject({
+      method: 'PUT',
+      url: '/api/v1/books/epic-v1/progress',
+      headers: { authorization: `Bearer ${admin.accessToken}` },
+      payload: {
+        currentSpread: 4,
+        percent: 15,
+        bookmarksJson: [{ id: 'bm-4', editionId: 'epic-v1', spreadIdx: 4, title: 'الفصل الأول', subtitle: 'صفحة 7', createdAt: 1700000000 }],
+      },
+    });
+    expect(saveProg.statusCode).toBe(200);
+
+    const getProg = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/v1/books/epic-v1/progress',
+      headers: { authorization: `Bearer ${admin.accessToken}` },
+    });
+    expect(getProg.statusCode).toBe(200);
+    expect(getProg.json().progress.currentSpread).toBe(4);
+
+    const mineProg = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/v1/books/progress/mine',
+      headers: { authorization: `Bearer ${admin.accessToken}` },
+    });
+    expect(mineProg.statusCode).toBe(200);
+    expect(mineProg.json().progressBySlug['epic-v1'].currentSpread).toBe(4);
   });
 
   it('enforces mandatory age-gating for younger learners while highlighting matched domains for adults', async () => {

@@ -8,7 +8,7 @@ import {
   resolveAuthUser,
 } from '../plugins/auth';
 import { recordAuditLog } from '../plugins/audit';
-import { requirePermission } from '../plugins/rbac';
+import { requireAnyPermission, requirePermission } from '../plugins/rbac';
 import { getRegistrationPolicy } from '../services/configService';
 import {
   generateOpaqueToken,
@@ -668,6 +668,58 @@ export function registerAuthRoutes(
           fullName: updated.fullName,
           status: updated.status,
         },
+      });
+    }
+  );
+
+  app.get(
+    '/api/v1/users',
+    { preHandler: [authenticate, requireAnyPermission(['users.manage', 'roles.manage'])] },
+    async (request, reply) => {
+      const q = request.query as { status?: UserStatus; limit?: string };
+      const limit = Math.min(200, Math.max(1, parseInt(q.limit || '100', 10) || 100));
+
+      const users = await prisma.user.findMany({
+        where: q.status ? { status: q.status } : undefined,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          status: true,
+          emailVerifiedAt: true,
+          lastLoginAt: true,
+          createdAt: true,
+          userRoles: {
+            select: {
+              role: {
+                select: { id: true, code: true, nameAr: true },
+              },
+            },
+          },
+          profile: {
+            select: {
+              onboardingCompleted: true,
+              ageGroup: { select: { id: true, slug: true, labelAr: true } },
+              educationLevel: { select: { id: true, slug: true, labelAr: true } },
+            },
+          },
+        },
+      });
+
+      return reply.send({
+        users: users.map((u) => ({
+          id: u.id,
+          email: u.email,
+          fullName: u.fullName,
+          status: u.status,
+          emailVerifiedAt: u.emailVerifiedAt,
+          lastLoginAt: u.lastLoginAt,
+          createdAt: u.createdAt,
+          roles: u.userRoles.map((ur) => ur.role),
+          profile: u.profile,
+        })),
       });
     }
   );
