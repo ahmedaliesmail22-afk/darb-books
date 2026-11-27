@@ -12,14 +12,18 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@darb/book-schema": "*",
-    "three": "^0.174.0"
+    "three": "^0.174.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/node": "^22.15.0",
     "@types/three": "^0.174.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.0"
   }
 }

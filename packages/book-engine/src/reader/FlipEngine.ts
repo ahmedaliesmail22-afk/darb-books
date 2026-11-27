@@ -10,13 +10,22 @@ import type {
 } from '@darb/book-schema';
 import { normalizeArabic, stripHtmlText } from '@darb/book-schema';
 import type { BookStage3D } from '../scene/BookStage3D';
+import type { InteractiveBlockRegistry } from '../blocks/registry';
 
 export type BlockRendererFn = (block: BookBlock) => string;
+
+interface PendingBlockMount {
+  slotId: string;
+  block: BookBlock;
+}
 
 export interface FlipEngineCallbacks {
   onSpreadChanged: (spreadIdx: number) => void;
   onChapterLongPress: (chapterNum: number) => void;
   renderBlock?: BlockRendererFn;
+  blockRegistry?: InteractiveBlockRegistry;
+  onOpenBlockFullscreen?: (block: BookBlock) => void;
+  onToast?: (msg: string) => void;
 }
 
 /**
@@ -42,6 +51,8 @@ export class FlipEngine {
 
   private spreads: BookSpread[] = [];
   private mobilePages: MobilePage[] = [];
+  private activeBlockDisposers: Array<() => void> = [];
+  private blockSlotSeq = 0;
   private currentSpreadIndex = 0;
   private mobilePageIndex = 0;
   private bookTitle = 'مَلْحَمَةُ دَرْب';
@@ -358,17 +369,75 @@ export class FlipEngine {
     this.stage3D?.resize();
   }
 
-  private renderPageContent(data: BookPageSide | null | undefined, pageNum?: number, isRight = true): string {
+  private disposeActiveBlocks(): void {
+    while (this.activeBlockDisposers.length > 0) {
+      const disposeFn = this.activeBlockDisposers.pop();
+      if (disposeFn) {
+        try {
+          disposeFn();
+        } catch {
+          // ignore plugin disposal errors to avoid breaking navigation
+        }
+      }
+    }
+  }
+
+  public dispose(): void {
+    this.disposeActiveBlocks();
+  }
+
+  private mountRenderedBlocks(targets: PendingBlockMount[]): void {
+    const registry = this.callbacks.blockRegistry;
+    if (!registry || targets.length === 0) return;
+    const mobile = this.isMobile();
+
+    for (const target of targets) {
+      const slotEl = document.querySelector<HTMLElement>(
+        `[data-block-slot-id="${target.slotId}"]`
+      );
+      if (!slotEl) continue;
+      const cleanup = registry.mountBlock(slotEl, target.block, {
+        mode: 'inline',
+        isMobile: mobile,
+        onOpenFullscreen: () => this.callbacks.onOpenBlockFullscreen?.(target.block),
+        onToast: this.callbacks.onToast,
+      });
+      this.activeBlockDisposers.push(cleanup);
+    }
+  }
+
+  private renderPageContent(
+    data: BookPageSide | null | undefined,
+    pageNum?: number,
+    isRight = true,
+    mountTargets?: PendingBlockMount[]
+  ): string {
     if (!data) return '';
     if (data.isCover) return data.html;
     if (data.isBlank) return data.html;
 
     const hotspotId = isRight ? 'cornerHotspotRight' : 'cornerHotspotLeft';
     const hotspotTitle = isRight ? 'انقر للرجوع للصفحة السابقة' : 'انقر لتقليب الصفحة التالية';
-    const blocksHtml =
-      data.blocks && data.blocks.length > 0 && this.callbacks.renderBlock
-        ? data.blocks.map((b) => this.callbacks.renderBlock?.(b) ?? '').join('')
-        : '';
+    let blocksHtml = '';
+    if (data.blocks && data.blocks.length > 0) {
+      if (this.callbacks.blockRegistry) {
+        if (mountTargets) {
+          blocksHtml = data.blocks
+            .map((b) => {
+              const slotId = `darb-blk-${++this.blockSlotSeq}`;
+              mountTargets.push({ slotId, block: b });
+              return `<div class="darb-block-slot" data-block-slot-id="${slotId}"></div>`;
+            })
+            .join('');
+        } else {
+          blocksHtml = data.blocks
+            .map((b) => this.callbacks.blockRegistry!.renderPlaceholderCard(b))
+            .join('');
+        }
+      } else if (this.callbacks.renderBlock) {
+        blocksHtml = data.blocks.map((b) => this.callbacks.renderBlock?.(b) ?? '').join('');
+      }
+    }
 
     return `
       <div class="corner-peel-hotspot" id="${hotspotId}" title="${hotspotTitle}"></div>
@@ -390,10 +459,15 @@ export class FlipEngine {
   private renderSpread(direction: 'none' | 'forward' | 'backward', prevSpreadIndex: number): void {
     if (this.spreads.length === 0) return;
 
+    // تحرير سياقات WebGL والكتل النشطة قبل استبدال DOM الصفحة المغادرة
+    this.disposeActiveBlocks();
+
     if (direction !== 'none') {
       this.trigger3DLeafTurn(direction, prevSpreadIndex);
       this.stage3D?.triggerFlipImpulse(direction);
     }
+
+    const mountTargets: PendingBlockMount[] = [];
 
     if (this.isMobile()) {
       const mobilePage = this.mobilePages[this.mobilePageIndex];
@@ -408,7 +482,8 @@ export class FlipEngine {
       this.rightPageEl.innerHTML = this.renderPageContent(
         mobilePage.data,
         mobilePage.pageNum,
-        mobilePage.side === 'right'
+        mobilePage.side === 'right',
+        mountTargets
       );
       this.leftPageEl.innerHTML = '';
       this.leftPageEl.style.display = 'none';
@@ -428,10 +503,10 @@ export class FlipEngine {
 
       this.leftPageEl.style.display = '';
       this.rightPageEl.innerHTML = spreadData.right
-        ? this.renderPageContent(spreadData.right, spreadData.pageRightNum, true)
+        ? this.renderPageContent(spreadData.right, spreadData.pageRightNum, true, mountTargets)
         : '';
       this.leftPageEl.innerHTML = spreadData.left
-        ? this.renderPageContent(spreadData.left, spreadData.pageLeftNum, false)
+        ? this.renderPageContent(spreadData.left, spreadData.pageLeftNum, false, mountTargets)
         : '';
 
       this.updateDesktopIndicators();
@@ -448,6 +523,7 @@ export class FlipEngine {
       isClosedBack: Boolean(activeSpread?.isBackCover),
     });
 
+    this.mountRenderedBlocks(mountTargets);
     this.bindPageInteractions();
     this.callbacks.onSpreadChanged(this.currentSpreadIndex);
   }
@@ -579,6 +655,11 @@ export class FlipEngine {
         if (!side || side.isBlank) continue;
         if (side.title) textParts.push(side.title);
         if (side.html) textParts.push(stripHtmlText(side.html));
+        if (side.blocks && this.callbacks.blockRegistry) {
+          for (const b of side.blocks) {
+            textParts.push(this.callbacks.blockRegistry.extractSearchableText(b));
+          }
+        }
       }
       const combined = textParts.join(' — ');
       const normCombined = normalizeArabic(combined);

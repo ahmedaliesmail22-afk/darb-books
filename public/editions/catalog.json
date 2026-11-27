@@ -36,6 +36,24 @@
       "videosCount": 0,
       "releaseDate": "نوفمبر 2026",
       "status": "مكتمل ومتاح بالكامل"
+    },
+    {
+      "id": "interactive-showcase",
+      "title": "مُختَبَرُ دَرْبٍ التَّفاعُلِي: مَوسُوعَةُ الكُتَلِ السِّتّ",
+      "subtitle": "كتاب تجريبي شامل يعرض عملياً قدرات المحرك الغامر وسجل الإضافات عبر كل التخصصات",
+      "badge": "مختبر تفاعلي شامل",
+      "badgeColor": "#10b981",
+      "theme": "cyan-emerald",
+      "description": "استعراض تفاعلي مباشر لمجسمات 3D، محاكاة الفيزياء والموجات، الخرائط والخطوط الزمنية، التلاوة والتجويد، محرر البرمجة الآمن، وتخطيطات المجلات.",
+      "dataFile": "editions/interactive-showcase.json",
+      "audioDir": "",
+      "videoDir": "",
+      "chaptersCount": 6,
+      "spreadsCount": 7,
+      "audioTracksCount": 0,
+      "videosCount": 0,
+      "releaseDate": "نوفمبر 2026",
+      "status": "مكتمل ومتاح بالكامل"
     }
   ]
 }

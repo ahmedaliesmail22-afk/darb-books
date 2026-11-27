@@ -1,12 +1,14 @@
 import {
+  BookBlockSchema,
   parseEditionData,
   stripHtmlText,
+  type BookBlock,
   type BookChapterMeta,
   type BookDirection,
   type BookSpread,
   type EditionData,
 } from '@darb/book-schema';
-import type { ChapterSource } from '../types';
+import type { ChapterPageEntry, ChapterSource } from '../types';
 
 export function sanitizeBookHtml(rawHtml: string): string {
   return rawHtml
@@ -106,6 +108,78 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
+const DARB_BLOCK_FENCE_RE = /```darb-block[ \t]*\r?\n([\s\S]*?)```/g;
+const DARB_BLOCK_TOKEN_RE = /<!--DARB_BLOCK:(\d+)-->/g;
+
+/**
+ * استخراج كتل ```darb-block ... ``` من نص Markdown وتقسيم الفصل إلى صفحات
+ * متوازنة تحافظ على عدم وجود تمرير رأسي داخل صفحات الكتاب.
+ */
+export function buildChapterPagesFromMarkdown(
+  rawMarkdown: string,
+  renderMarkdownFn: (md: string) => string
+): { html: string; pages: ChapterPageEntry[] } {
+  const blocks: BookBlock[] = [];
+  const markdownWithTokens = rawMarkdown.replace(DARB_BLOCK_FENCE_RE, (_full, jsonBody: string) => {
+    try {
+      const parsedJson = JSON.parse(jsonBody.trim());
+      const checked = BookBlockSchema.safeParse(parsedJson);
+      if (checked.success) {
+        const idx = blocks.length;
+        blocks.push(checked.data);
+        return `\n\n<!--DARB_BLOCK:${idx}-->\n\n`;
+      }
+    } catch {
+      // keep raw text fallback if malformed JSON
+    }
+    return '';
+  });
+
+  const fullHtml = sanitizeBookHtml(renderMarkdownFn(markdownWithTokens));
+  if (blocks.length === 0) {
+    const chunks = splitHtmlIntoPageChunks(fullHtml);
+    return {
+      html: fullHtml,
+      pages: chunks.map((html) => ({ html })),
+    };
+  }
+
+  const pages: ChapterPageEntry[] = [];
+  const parts = fullHtml.split(DARB_BLOCK_TOKEN_RE);
+
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      const proseHtml = parts[i]?.trim();
+      if (proseHtml) {
+        for (const chunk of splitHtmlIntoPageChunks(proseHtml)) {
+          pages.push({ html: chunk });
+        }
+      }
+    } else {
+      const blockIndex = Number(parts[i]);
+      const block = blocks[blockIndex];
+      if (!block) continue;
+
+      // إذا سبقت الكتلة فقرة قصيرة جداً في آخر صفحة ندمجها فوق الكتلة لجمال الصفحة
+      const prev = pages[pages.length - 1];
+      if (prev && !prev.blocks && stripHtmlText(prev.html).length <= 200) {
+        prev.blocks = [block];
+      } else {
+        pages.push({
+          html: `<p class="chapter-hero-desc">تفاعل مباشر مع المكون التالي أو افتحه في المختبر الكامل.</p>`,
+          blocks: [block],
+        });
+      }
+    }
+  }
+
+  if (pages.length === 0) {
+    pages.push({ html: '<p>...</p>' });
+  }
+
+  return { html: fullHtml.replace(DARB_BLOCK_TOKEN_RE, ''), pages };
+}
+
 export function buildCanonicalEditionFromChapters(input: {
   id: string;
   title: string;
@@ -157,7 +231,18 @@ export function buildCanonicalEditionFromChapters(input: {
 
   for (const ch of input.chapters) {
     const startSpreadIdx = spreads.length;
-    const chunks = splitHtmlIntoPageChunks(ch.html);
+    const pageEntries: ChapterPageEntry[] =
+      ch.pages && ch.pages.length > 0
+        ? ch.pages
+        : [
+            ...splitHtmlIntoPageChunks(ch.html).map((html) => ({ html })),
+            ...(ch.blocks && ch.blocks.length > 0
+              ? ch.blocks.map((block) => ({
+                  html: `<p class="chapter-hero-desc">نشاط تفاعلي: ${escapeHtml(block.title || block.type)}</p>`,
+                  blocks: [block],
+                }))
+              : []),
+          ];
 
     chapterMeta.push({
       id: ch.id,
@@ -166,10 +251,10 @@ export function buildCanonicalEditionFromChapters(input: {
       startSpread: startSpreadIdx,
     });
 
-    // Pair chunks two-by-two onto right/left pages
-    for (let i = 0; i < chunks.length; i += 2) {
-      const rightChunk = chunks[i];
-      const leftChunk = chunks[i + 1];
+    // Pair entries two-by-two onto right/left pages
+    for (let i = 0; i < pageEntries.length; i += 2) {
+      const rightEntry = pageEntries[i]!;
+      const leftEntry = pageEntries[i + 1];
       const pRight = pageCounter++;
       const pLeft = pageCounter++;
       const isFirstSpreadOfChapter = i === 0;
@@ -181,14 +266,21 @@ export function buildCanonicalEditionFromChapters(input: {
         right: {
           header: ch.title,
           title: isFirstSpreadOfChapter ? ch.title : undefined,
-          html: isFirstSpreadOfChapter && ch.subtitle
-            ? `<p class="chapter-hero-desc">${escapeHtml(ch.subtitle)}</p>${rightChunk}`
-            : rightChunk,
+          html:
+            isFirstSpreadOfChapter && ch.subtitle
+              ? `<p class="chapter-hero-desc">${escapeHtml(ch.subtitle)}</p>${rightEntry.html}`
+              : rightEntry.html,
+          ...(rightEntry.blocks && rightEntry.blocks.length > 0
+            ? { blocks: rightEntry.blocks }
+            : {}),
         },
-        left: leftChunk
+        left: leftEntry
           ? {
               header: ch.title,
-              html: leftChunk,
+              html: leftEntry.html,
+              ...(leftEntry.blocks && leftEntry.blocks.length > 0
+                ? { blocks: leftEntry.blocks }
+                : {}),
             }
           : {
               isBlank: true,

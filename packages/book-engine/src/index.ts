@@ -12,3 +12,29 @@ export {
 } from './audio/NarratorController';
 export { VideoModal, type VideoModalOptions } from './video/VideoModal';
 export { OfflineManager, type OfflineManagerConfig } from './pwa/OfflineManager';
+export {
+  createDefaultBlockRegistry,
+  InteractiveBlockRegistry,
+  InteractiveLabModal,
+  cleanupWebGLResources,
+  disposeSceneResources,
+  model3dPlugin,
+  simulationPlugin,
+  geoTimelinePlugin,
+  literacyQuranPlugin,
+  codeSandboxPlugin,
+  storyMagazinePlugin,
+  type BlockCleanupFn,
+  type BlockMountContext,
+  type BlockPluginMetadata,
+  type BlockRenderMode,
+  type InteractiveBlockPlugin,
+  type InteractiveLabModalOptions,
+  type SafeWebGLCleanupOptions,
+  type Model3DBlockPayload,
+  type SimulationBlockPayload,
+  type GeoTimelineBlockPayload,
+  type LiteracyQuranBlockPayload,
+  type CodeSandboxBlockPayload,
+  type StoryMagazineBlockPayload,
+} from './blocks/index';

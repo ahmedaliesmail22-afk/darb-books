@@ -17,13 +17,42 @@ describe('Mandatory Age-Gating, Migrated Book Versions & Range 206 Streaming', (
     await ctx.cleanup();
   });
 
-  it('serves migrated epic-v1 and anatomical-book editions with 27 spreads and bookmarks sync', async () => {
+  it('serves migrated epic-v1, anatomical-book, and interactive-showcase editions cleanly', async () => {
     const listRes = await ctx.app.inject({ method: 'GET', url: '/api/v1/books' });
     expect(listRes.statusCode).toBe(200);
     const books = listRes.json().books as Array<{ slug: string; activeVersion: { spreadsCount: number } }>;
-    expect(books.map((b) => b.slug).sort()).toEqual(['anatomical-book', 'epic-v1']);
+    expect(books.map((b) => b.slug).sort()).toEqual([
+      'anatomical-book',
+      'epic-v1',
+      'interactive-showcase',
+    ]);
     expect(books.find((b) => b.slug === 'epic-v1')?.activeVersion.spreadsCount).toBe(27);
     expect(books.find((b) => b.slug === 'anatomical-book')?.activeVersion.spreadsCount).toBe(27);
+    expect(books.find((b) => b.slug === 'interactive-showcase')?.activeVersion.spreadsCount).toBe(7);
+
+    const showcaseDataRes = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/v1/books/interactive-showcase/editions-data',
+    });
+    expect(showcaseDataRes.statusCode).toBe(200);
+    const showcaseSpreads = showcaseDataRes.json().spreads as Array<{
+      right?: { blocks?: Array<{ type: string }> };
+      left?: { blocks?: Array<{ type: string }> };
+    }>;
+    const blockTypes = showcaseSpreads.flatMap((sp) => [
+      ...(sp.right?.blocks?.map((b) => b.type) ?? []),
+      ...(sp.left?.blocks?.map((b) => b.type) ?? []),
+    ]);
+    expect(blockTypes).toEqual(
+      expect.arrayContaining([
+        'model3d',
+        'simulation',
+        'geo_timeline',
+        'literacy_quran',
+        'code_sandbox',
+        'story_magazine',
+      ])
+    );
 
     const epicDataRes = await ctx.app.inject({
       method: 'GET',

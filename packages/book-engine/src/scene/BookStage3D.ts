@@ -12,6 +12,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import type { Stage3DThemeLighting, ThemeMode } from '@darb/book-schema';
+import { disposeSceneResources } from '../blocks/webglHelper';
 
 export interface BookStage3DConfig {
   enabled?: boolean;
@@ -383,7 +384,10 @@ export class BookStage3D {
       window.cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
+    disposeSceneResources(this.scene);
     this.renderer?.dispose();
     this.renderer = null;
+    this.scene = null;
+    this.camera = null;
   }
 }

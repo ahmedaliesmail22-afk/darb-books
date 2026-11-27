@@ -3,6 +3,7 @@ import type { BookDirection } from '@darb/book-schema';
 import { BookParserError } from '../registry';
 import {
   buildCanonicalEditionFromChapters,
+  buildChapterPagesFromMarkdown,
   parseMarkdownFrontmatter,
 } from '../shared/spreadBuilder';
 import type { BookParserAdapter, ChapterSource, ParsedBookPackage, ParserInput } from '../types';
@@ -80,15 +81,15 @@ export class MarkdownBookParser implements BookParserAdapter {
 
     const rawSections = splitMarkdownSections(body, title);
     const chapters: ChapterSource[] = rawSections.map((sec, idx) => {
-      const rendered = marked.parse(sec.markdown || sec.title, {
-        async: false,
-        gfm: true,
-        breaks: false,
+      const { html, pages } = buildChapterPagesFromMarkdown(sec.markdown || sec.title, (md) => {
+        const out = marked.parse(md, { async: false, gfm: true, breaks: false });
+        return typeof out === 'string' ? out : '';
       });
       return {
         id: idx + 1,
         title: sec.title,
-        html: typeof rendered === 'string' ? rendered : '',
+        html,
+        pages,
       };
     });
 

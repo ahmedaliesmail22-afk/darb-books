@@ -1,0 +1,338 @@
+{
+  "id": "interactive-showcase",
+  "title": "مُختَبَرُ دَرْبٍ التَّفاعُلِي: مَوسُوعَةُ الكُتَلِ السِّتّ",
+  "subtitle": "كتاب تجريبي شامل يعرض عملياً قدرات المحرك الغامر وسجل الإضافات عبر كل التخصصات",
+  "direction": "rtl",
+  "chapters": [
+    {
+      "id": 1,
+      "title": "المجسمات ثلاثية الأبعاد (model3d)",
+      "subtitle": "معاينة وتفكيك جزيء الماء في الفضاء ثلاثي الأبعاد",
+      "startSpread": 2
+    },
+    {
+      "id": 2,
+      "title": "مختبر المحاكاة العلمية (simulation)",
+      "subtitle": "تجربة المقذوفات والموجات بمعاملات ديناميكية",
+      "startSpread": 2
+    },
+    {
+      "id": 3,
+      "title": "الخرائط والخطوط الزمنية (geo_timeline)",
+      "subtitle": "رحلة مراكز العلم والحضارة بطبقات تفاعلية",
+      "startSpread": 3
+    },
+    {
+      "id": 4,
+      "title": "التلاوة والإملاء واللغات (literacy_quran)",
+      "subtitle": "الترميز اللوني للتجويد وتمارين الضبط الإملائي",
+      "startSpread": 3
+    },
+    {
+      "id": 5,
+      "title": "محرر الكود الآمن (code_sandbox)",
+      "subtitle": "بيئة Web Worker معزولة لتنفيذ الخوارزميات",
+      "startSpread": 4
+    },
+    {
+      "id": 6,
+      "title": "القصص والمجلات التفاعلية (story_magazine)",
+      "subtitle": "سرد حواري واستطلاعات للقراء في تخطيط صحفي مرن",
+      "startSpread": 4
+    }
+  ],
+  "spreads": [
+    {
+      "isFrontCover": true,
+      "right": {
+        "isCover": true,
+        "html": "<div class=\"cover-frame\"><div class=\"cover-badge\">المختبر التفاعلي الشامل • الإصدار 1.0</div><h1 class=\"cover-title\">مُختَبَرُ دَرْبٍ التَّفاعُلِي<br/><span>موسوعة الكتل التفاعلية الست</span></h1><p class=\"cover-subtitle\">مجسمات 3D • محاكاة علمية • خرائط زمنية • تجويد وإملاء • محرر برمجة • مجلات وقصص</p><div class=\"cover-decoration\">⚗️ • 🧊 • 🗺️ • 🕌 • 💻 • 📰</div></div>"
+      },
+      "left": null
+    },
+    {
+      "pageRightNum": 1,
+      "pageLeftNum": 2,
+      "right": {
+        "header": "الفهرس التفاعلي",
+        "title": "أقسام المختبر التفاعلي",
+        "html": "<div class=\"toc-hint-banner\">💡 انقر على أي فصل للقفز المباشر إلى مختبره التفاعلي، واستخدم زر «🔬 المختبر الكامل» لوضع ملء الشاشة.</div><div class=\"toc-list\"><div class=\"toc-item\" data-spread=\"2\" data-chapter=\"1\"><div class=\"toc-item-main\"><div class=\"toc-item-title\">1. المجسمات ثلاثية الأبعاد (model3d)</div><div class=\"toc-item-sub\">تدوير وتفكيك جزيء الماء ثلاثي الأبعاد</div></div><span class=\"toc-page-tag\">نشرة 2</span></div><div class=\"toc-item\" data-spread=\"2\" data-chapter=\"2\"><div class=\"toc-item-main\"><div class=\"toc-item-title\">2. مختبر المحاكاة الفيزيائية (simulation)</div><div class=\"toc-item-sub\">معادلات المقذوفات والحساب اللحظي</div></div><span class=\"toc-page-tag\">نشرة 2</span></div><div class=\"toc-item\" data-spread=\"3\" data-chapter=\"3\"><div class=\"toc-item-main\"><div class=\"toc-item-title\">3. الخرائط والخطوط الزمنية (geo_timeline)</div><div class=\"toc-item-sub\">مراكز العلم وطرق الترجمة بالطبقات</div></div><span class=\"toc-page-tag\">نشرة 3</span></div><div class=\"toc-item\" data-spread=\"3\" data-chapter=\"4\"><div class=\"toc-item-main\"><div class=\"toc-item-title\">4. التلاوة والإملاء واللغات (literacy_quran)</div><div class=\"toc-item-sub\">تجويد مرمز لونياً وتصحيح إملائي</div></div><span class=\"toc-page-tag\">نشرة 3</span></div><div class=\"toc-item\" data-spread=\"4\" data-chapter=\"5\"><div class=\"toc-item-main\"><div class=\"toc-item-title\">5. محرر الكود الآمن (code_sandbox)</div><div class=\"toc-item-sub\">تشغيل JavaScript في Worker معزول</div></div><span class=\"toc-page-tag\">نشرة 4</span></div><div class=\"toc-item\" data-spread=\"4\" data-chapter=\"6\"><div class=\"toc-item-main\"><div class=\"toc-item-title\">6. القصص والمجلات (story_magazine)</div><div class=\"toc-item-sub\">حوار علمي واستطلاع تفاعلي للقراء</div></div><span class=\"toc-page-tag\">نشرة 4</span></div></div>"
+      },
+      "left": {
+        "header": "معمارية الكتل التفاعلية",
+        "title": "نظام الإضافات المسجّلة (Plugin Registry)",
+        "html": "<p class=\"chapter-hero-desc\">يعمل كل مكون في هذا الكتاب عبر مخطط JSON موثّق بـ <code>Zod</code> وسجل إضافات مستقل <code>InteractiveBlockRegistry</code> دون المساس بنواة التقليب ثلاثي الأبعاد.</p><div class=\"milestone-badge\">🛡️ يحافظ المحرك تلقائياً على صفر شريط تمرير رأسي على الحاسوب والجوال، ويحرر سياقات <code>WebGL</code> وموارد المعالجة فور الانتقال بين الصفحات.</div><p>تصفّح النشرات التالية لاختبار كل كتلة داخل الصفحة أو بملء الشاشة.</p>"
+      }
+    },
+    {
+      "chapterId": 1,
+      "pageRightNum": 3,
+      "pageLeftNum": 4,
+      "right": {
+        "header": "الكيمياء والعلوم ثلاثية الأبعاد",
+        "title": "الكتلة 1: عارض المجسم 3D",
+        "html": "<p>دوّر المجسم واسحب منزلق التفكيك لمعاينة الروابط التساهمية ونقاط الشرح:</p>",
+        "blocks": [
+          {
+            "id": "demo-model3d-water",
+            "type": "model3d",
+            "title": "تركيب جزيء الماء ثلاثي الأبعاد (H₂O)",
+            "fullscreenCapable": true,
+            "payload": {
+              "proceduralPreset": "water_molecule",
+              "explodeFactor": 0,
+              "autoRotate": true,
+              "annotations": [
+                {
+                  "id": "oxygen",
+                  "labelAr": "ذرة الأكسجين (O)",
+                  "descriptionAr": "تقع في المركز بسالبية كهربائية عالية تشكل قطبية الجزيء.",
+                  "position": [0, 0.15, 0]
+                },
+                {
+                  "id": "hydrogen",
+                  "labelAr": "ذرتا الهيدروجين (H)",
+                  "descriptionAr": "ترتبطان بزاوية 104.5° لتكوين الروابط الهيدروجينية.",
+                  "position": [1.1, -0.45, 0]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "left": {
+        "header": "الفيزياء التطبيقية والمحاكاة",
+        "title": "الكتلة 2: مختبر المحاكاة",
+        "html": "<p>عدّل السرعة وزاوية الإطلاق وتسارع الجاذبية لمشاهدة حساب المسار والمدى فوريًا:</p>",
+        "blocks": [
+          {
+            "id": "demo-sim-projectile",
+            "type": "simulation",
+            "title": "مختبر حركة المقذوفات",
+            "fullscreenCapable": true,
+            "payload": {
+              "preset": "projectile",
+              "descriptionAr": "حساب المدى الأقصى وارتفاع القمة لحظياً",
+              "parameters": [
+                { "key": "velocity", "labelAr": "السرعة الابتدائية", "unit": "م/ث", "min": 5, "max": 40, "step": 1, "defaultValue": 24 },
+                { "key": "angle", "labelAr": "زاوية الإطلاق", "unit": "°", "min": 15, "max": 80, "step": 1, "defaultValue": 45 },
+                { "key": "gravity", "labelAr": "الجاذبية", "unit": "م/ث²", "min": 1.6, "max": 15, "step": 0.2, "defaultValue": 9.8 }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "chapterId": 3,
+      "pageRightNum": 5,
+      "pageLeftNum": 6,
+      "right": {
+        "header": "التاريخ والجغرافيا والتنقل الزمني",
+        "title": "الكتلة 3: خريطة وخط زمني",
+        "html": "<p>فعّل الطبقات وتنقل عبر المعالم التاريخية على الخريطة المتجهة والخط الزمني:</p>",
+        "blocks": [
+          {
+            "id": "demo-geo-timeline",
+            "type": "geo_timeline",
+            "title": "حركة العلم والترجمة في العالم العربي والإسلامي",
+            "fullscreenCapable": true,
+            "payload": {
+              "mode": "hybrid",
+              "region": "arab_world",
+              "layers": [
+                { "id": "science", "labelAr": "مراكز العلم", "color": "#38bdf8", "visibleByDefault": true },
+                { "id": "routes", "labelAr": "مسار الرحلات العلمية", "color": "#f59e0b", "visibleByDefault": true }
+              ],
+              "routes": [
+                {
+                  "id": "r1",
+                  "labelAr": "مسار الترجمة",
+                  "color": "#f59e0b",
+                  "layerId": "routes",
+                  "points": [[72, 48], [56, 46], [24, 42]]
+                }
+              ],
+              "events": [
+                {
+                  "id": "baghdad",
+                  "yearLabel": "830 م",
+                  "titleAr": "بيت الحكمة — بغداد",
+                  "summaryAr": "مجمع الترجمة والبحث العلمي في الفلك والبصريات والجبر.",
+                  "xPercent": 72,
+                  "yPercent": 48,
+                  "layerId": "science"
+                },
+                {
+                  "id": "cairo",
+                  "yearLabel": "972 م",
+                  "titleAr": "القاهرة — الجامع الأزهر",
+                  "summaryAr": "منارة علمية متواصلة لعلوم الشريعة واللغة والفلسفة.",
+                  "xPercent": 56,
+                  "yPercent": 46,
+                  "layerId": "science"
+                },
+                {
+                  "id": "cordoba",
+                  "yearLabel": "950 م",
+                  "titleAr": "قرطبة — الأندلس",
+                  "summaryAr": "ازدهار المراصد الفلكية والطب والصناعات الهندسية.",
+                  "xPercent": 24,
+                  "yPercent": 42,
+                  "layerId": "science"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "left": {
+        "header": "اللغة العربية والقرآن الكريم",
+        "title": "الكتلة 4: التلاوة والإملاء",
+        "html": "<p>انقر على المقاطع الملونة لاستعراض أحكام التجويد وأجب عن تدريب الضبط الإملائي:</p>",
+        "blocks": [
+          {
+            "id": "demo-literacy-quran",
+            "type": "literacy_quran",
+            "title": "التلاوة المرمّزة لونياً والتدريب الإملائي",
+            "fullscreenCapable": true,
+            "payload": {
+              "mode": "tajweed_recitation",
+              "topicTitleAr": "التفخيم والقلقلة والهمزات",
+              "ayahOrSentenceAr": "قُلْ هُوَ اللَّهُ أَحَدٌ",
+              "segments": [
+                { "text": "قُلْ هُوَ", "ruleLabelAr": "تفخيم القاف", "explanationAr": "حرف القاف من حروف الاستعلاء المفخمة." },
+                { "text": "اللَّهُ", "color": "#facc15", "ruleLabelAr": "لام لفظ الجلالة المفخمة", "explanationAr": "تفخم لام لفظ الجلالة بعد الفتح والضم." },
+                { "text": "أَحَدٌ", "color": "#38bdf8", "ruleLabelAr": "قلقلة كبرى عند الوقف", "explanationAr": "الدال من حروف (قطب جد) وتظهر بقوة عند الوقف." }
+              ],
+              "exercises": [
+                {
+                  "id": "ex-qiraah",
+                  "promptAr": "اختر الكتابة الصحيحة",
+                  "targetWordAr": "قِرَاءَةٌ",
+                  "choices": ["قِرَاءَةٌ", "قِرَائَةٌ", "قِرَأَةٌ"],
+                  "hintAr": "الهمزة المفتوحة بعد الألف الساكنة تكتب على السطر."
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "chapterId": 5,
+      "pageRightNum": 7,
+      "pageLeftNum": 8,
+      "right": {
+        "header": "هندسة البرمجيات والحوسبة",
+        "title": "الكتلة 5: محرر الكود الآمن",
+        "html": "<p>عدّل الشيفرة البرمجية وشغّلها داخل Web Worker معزول بالكامل عن المتصفح والشبكة:</p>",
+        "blocks": [
+          {
+            "id": "demo-code-sandbox",
+            "type": "code_sandbox",
+            "title": "تطبيق سريع: مجموع الأعداد وخوارزمية التربيع",
+            "fullscreenCapable": true,
+            "payload": {
+              "language": "javascript",
+              "starterCode": "const nums = [2, 4, 6, 8];\nconst squares = nums.map(n => n * n);\nconst sum = squares.reduce((a, b) => a + b, 0);\nconsole.log('Squares:', squares);\nconsole.log('Total Sum =', sum);",
+              "hintAr": "اضغط «تشغيل آمن» لرؤية الناتج أو افتح المختبر الكامل للتحرير الواسع.",
+              "expectedOutputContains": "Total Sum = 120",
+              "readOnly": false
+            }
+          }
+        ]
+      },
+      "left": {
+        "header": "المجلات والقصص التفاعلية",
+        "title": "الكتلة 6: القصة والمجلة",
+        "html": "<p>نموذج تخطيط صحفي وحواري مرن يناسب الروايات والدوريات العلمية:</p>",
+        "blocks": [
+          {
+            "id": "demo-story-magazine",
+            "type": "story_magazine",
+            "title": "حوار في مرصد الفلك المداري",
+            "fullscreenCapable": true,
+            "payload": {
+              "layout": "comic_dialogue",
+              "kickerAr": "مجلة درب العلمية",
+              "headlineAr": "المرايا السداسية وكيف نرى فجر الكون",
+              "bylineAr": "إعداد قسم العلوم والتصميم",
+              "leadParagraphAr": "تجتمع علوم البصريات والميكانيكا الدقيقة لتوجيه تلسكوب مداري بعيداً عن ضوضاء الأرض.",
+              "calloutQuoteAr": "كل قفزة علمية تبدأ بسؤال متقن الصياغة.",
+              "dialogueTurns": [
+                { "speakerAr": "ندى", "avatarEmoji": "🔭", "textAr": "لماذا نصمم المرآة من قطع سداسية متحركة؟" },
+                { "speakerAr": "د. رامي", "avatarEmoji": "🛰️", "textAr": "ليسهل طيّها داخل الصاروخ ثم ضبط انحنائها في الفضاء بالليزر!" },
+                { "speakerAr": "ندى", "avatarEmoji": "✨", "textAr": "وهذا ما يظهر أيضاً في محاكاة الكتل التفاعلية هنا!" }
+              ],
+              "poll": {
+                "questionAr": "اختر موضوع العدد القادم",
+                "options": ["مراصد الفضاء", "الذكاء الهندسي"]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "chapterId": 1,
+      "pageRightNum": 9,
+      "pageLeftNum": 10,
+      "right": {
+        "header": "اختبار تعدد مشاهد 3D وتنظيف WebGL",
+        "title": "مجسم إضافي: القبة المعمارية",
+        "html": "<p>عند تقليب الصفحة من جزيء الماء إلى هذه القبة، يُحرَّر سياق WebGL السابق تلقائياً ويُبنى هذا المشهد بسلاسة:</p>",
+        "blocks": [
+          {
+            "id": "demo-model3d-dome",
+            "type": "model3d",
+            "title": "القبة الهندسية والطبقات الإنشائية",
+            "fullscreenCapable": true,
+            "payload": {
+              "proceduralPreset": "architectural_dome",
+              "explodeFactor": 0,
+              "autoRotate": true,
+              "annotations": [
+                {
+                  "id": "dome",
+                  "labelAr": "القبة السماوية",
+                  "descriptionAr": "توزع الأحمال الإنشائية بانتظام نحو الرقبة والقاعدة.",
+                  "position": [0, 0.7, 0]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "left": {
+        "header": "اختبار الموجات المتداخلة",
+        "title": "محاكاة إضافية: التداخل الموجي",
+        "html": "<p>راقب تراكب موجتين متغيرتي التردد والسعة في الزمن الحقيقي:</p>",
+        "blocks": [
+          {
+            "id": "demo-sim-wave",
+            "type": "simulation",
+            "title": "مختبر التداخل الموجي",
+            "fullscreenCapable": true,
+            "payload": {
+              "preset": "wave_interference",
+              "descriptionAr": "تجربة تراكب الموجات التوافقي",
+              "parameters": [
+                { "key": "amplitude", "labelAr": "سعة الموجة", "unit": "px", "min": 8, "max": 36, "step": 1, "defaultValue": 20 },
+                { "key": "frequency", "labelAr": "التردد", "unit": "Hz", "min": 1, "max": 6, "step": 0.5, "defaultValue": 2.5 }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "isBackCover": true,
+      "right": {
+        "isCover": true,
+        "html": "<div class=\"cover-frame\"><div class=\"cover-badge\">نهاية المختبر الشامل</div><h2 class=\"cover-title\">منصة درب للكتب التفاعلية</h2><p class=\"cover-subtitle\">جميع الكتل التفاعلية الست جاهزة الآن للمؤلفين عبر القالب القياسي</p></div>"
+      },
+      "left": null
+    }
+  ]
+}

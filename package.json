@@ -14,6 +14,7 @@
     "typecheck": "npm run typecheck --workspaces",
     "build": "npm run typecheck --workspaces && npm run build --workspace=@darb/web",
     "preview": "npm run preview --workspace=@darb/web",
+    "test:engine": "npm test --workspace=@darb/book-engine",
     "test:parsers": "npm test --workspace=@darb/parsers",
     "test:api": "npm test --workspace=@darb/api",
     "db:generate": "npm run db:generate --workspace=@darb/api",

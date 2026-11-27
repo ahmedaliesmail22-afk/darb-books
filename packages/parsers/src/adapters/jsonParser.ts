@@ -1,4 +1,4 @@
-import { parseEditionData, type BookDirection } from '@darb/book-schema';
+import { BookBlockSchema, parseEditionData, type BookDirection } from '@darb/book-schema';
 import { z } from 'zod';
 import { BookParserError } from '../registry';
 import {
@@ -23,6 +23,7 @@ const SimplifiedJsonBookSchema = z
           subtitle: z.string().optional(),
           html: z.string().optional(),
           content: z.string().optional(),
+          blocks: z.array(BookBlockSchema).optional(),
         })
       )
       .min(1),
@@ -115,6 +116,7 @@ export class JsonBookParser implements BookParserAdapter {
         title: ch.title,
         subtitle: ch.subtitle,
         html: ch.html ?? `<p>${ch.content ?? ''}</p>`,
+        blocks: ch.blocks,
       })),
     });
 

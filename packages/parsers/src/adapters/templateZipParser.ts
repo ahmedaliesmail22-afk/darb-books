@@ -6,6 +6,7 @@ import { parseEditionData, type BookDirection } from '@darb/book-schema';
 import { BookParserError } from '../registry';
 import {
   buildCanonicalEditionFromChapters,
+  buildChapterPagesFromMarkdown,
   parseMarkdownFrontmatter,
   sanitizeBookHtml,
   slugifyBookId,
@@ -197,6 +198,7 @@ export class TemplateZipParser implements BookParserAdapter {
 
       const rawText = await fileEntry.async('string');
       let html: string;
+      let pages: ChapterSource['pages'];
       let chapterTitle = spec.title;
       let chapterSubtitle = spec.subtitle;
 
@@ -206,8 +208,12 @@ export class TemplateZipParser implements BookParserAdapter {
         const { metadata, body } = parseMarkdownFrontmatter(rawText);
         if (metadata.title) chapterTitle = metadata.title;
         if (metadata.subtitle) chapterSubtitle = metadata.subtitle;
-        const rendered = marked.parse(body, { async: false, gfm: true, breaks: false });
-        html = typeof rendered === 'string' ? rendered : '';
+        const parsedChapter = buildChapterPagesFromMarkdown(body, (md) => {
+          const out = marked.parse(md, { async: false, gfm: true, breaks: false });
+          return typeof out === 'string' ? out : '';
+        });
+        html = parsedChapter.html;
+        pages = parsedChapter.pages;
       }
 
       const chNum = spec.id ?? i + 1;
@@ -220,6 +226,7 @@ export class TemplateZipParser implements BookParserAdapter {
         title: chapterTitle,
         subtitle: chapterSubtitle,
         html,
+        pages,
         hasVideo,
       });
     }

@@ -962,5 +962,12 @@ body.font-scale-lg .chapter-hero-desc { font-size: 16px; }
 }
 
 @media (max-width: 640px) {
-  .book-brand #bookBrandTitle { display: none; }
+  .book-brand #bookBrandTitle,
+  .book-brand .brand-icon {
+    display: none;
+  }
+  .book-brand .btn-action {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
 }

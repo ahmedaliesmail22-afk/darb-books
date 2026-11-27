@@ -1,4 +1,4 @@
-import type { BookDirection, EditionData } from '@darb/book-schema';
+import type { BookBlock, BookDirection, EditionData } from '@darb/book-schema';
 
 export interface ParserInput {
   buffer: Buffer;
@@ -18,11 +18,18 @@ export interface ExtractedAsset {
   assetType: 'AUDIO' | 'VIDEO' | 'IMAGE' | 'MODEL_3D' | 'OTHER';
 }
 
+export interface ChapterPageEntry {
+  html: string;
+  blocks?: BookBlock[];
+}
+
 export interface ChapterSource {
   id: number;
   title: string;
   subtitle?: string;
   html: string;
+  blocks?: BookBlock[];
+  pages?: ChapterPageEntry[];
   hasVideo?: boolean;
 }
 

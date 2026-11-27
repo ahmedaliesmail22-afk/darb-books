@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import '@darb/book-engine/styles/tokens.css';
 import '@darb/book-engine/styles/book.css';
 import '@darb/book-engine/styles/modals.css';
+import '@darb/book-engine/styles/blocks.css';
 import '@darb/book-engine/styles/themes.css';
 import {
   normalizeAssetDir,
@@ -16,7 +17,9 @@ import {
 import {
   applyEngineThemeTokens,
   BookStage3D,
+  createDefaultBlockRegistry,
   FlipEngine,
+  InteractiveLabModal,
   NarratorController,
   OfflineManager,
   resolveEngineConfig,
@@ -189,6 +192,17 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
       onBeforeOpen: () => narrator.pauseNarrator(),
     });
 
+    const blockRegistry = createDefaultBlockRegistry();
+    const labModal = new InteractiveLabModal({
+      modalEl: getReqEl('interactiveLabModal'),
+      titleEl: getReqEl('labModalTitle'),
+      subtitleEl: getReqEl('labModalSubtitle'),
+      bodyEl: getReqEl('labModalBody'),
+      closeBtnEl: getReqEl('btnLabClose'),
+      onBeforeOpen: () => narrator.pauseNarrator(),
+      onToast: showToast,
+    });
+
     flipEngine = new FlipEngine(
       {
         bookEl: getReqEl('book'),
@@ -213,6 +227,10 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
           const vDir = resolveMediaBaseUrl(currentEdition.videoDir, modeRef.current === 'api' ? apiBaseRef.current : null);
           videoModal.open(chapterNum, currentEdition, vDir);
         },
+        blockRegistry,
+        onOpenBlockFullscreen: (block) =>
+          labModal.open(block, blockRegistry, { isMobile: flipEngine.isMobile() }),
+        onToast: showToast,
       },
       engineConfig
     );
@@ -349,7 +367,8 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
     });
 
     // Bind controls with clean teardown
-    const isModalOpen = () => videoModal.isOpen() || libraryPanel.isAnyModalOpen();
+    const isModalOpen = () =>
+      videoModal.isOpen() || labModal.isOpen() || libraryPanel.isAnyModalOpen();
     const onNext = () => flipEngine.nextPage();
     const onPrev = () => flipEngine.prevPage();
     const onToc = () => flipEngine.goToSpread(flipEngine.findTocSpreadIndex());
@@ -390,6 +409,7 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
     const onResize = () => flipEngine.handleResize();
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (labModal.isOpen()) labModal.close();
         if (videoModal.isOpen()) videoModal.close();
         libraryPanel.closeAllModals();
         return;
@@ -573,6 +593,8 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
       if (toastTimer !== null) window.clearTimeout(toastTimer);
       if (syncTimer !== null) window.clearTimeout(syncTimer);
       narrator.stop();
+      labModal.dispose();
+      flipEngine.dispose();
       stage3D.dispose();
       document.body.classList.remove('reader-mode');
 
@@ -820,6 +842,19 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
             <button className="celebration-btn" id="btnRestartBook">🔄 العودة للبداية</button>
             <button className="celebration-btn primary" id="btnOpenLibraryFromCelebration">📚 تصفح الأجزاء</button>
           </div>
+        </div>
+      </div>
+
+      <div className="modal-overlay" id="interactiveLabModal" style={{ display: 'none' }} role="dialog" aria-modal="true" aria-labelledby="labModalTitle">
+        <div className="modal-card lab-card">
+          <div className="modal-header">
+            <div className="modal-title-wrap">
+              <h3 id="labModalTitle">المختبر التفاعلي الكامل</h3>
+              <p id="labModalSubtitle">تجربة تفاعلية موسعة بملء الشاشة</p>
+            </div>
+            <button className="modal-close-btn" id="btnLabClose" title="إغلاق">✕</button>
+          </div>
+          <div id="labModalBody" className="lab-body" />
         </div>
       </div>
 

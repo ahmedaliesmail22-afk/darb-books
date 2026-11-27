@@ -1,0 +1,385 @@
+/* =============================================================
+   مكونات الكتل التفاعلية (Interactive Block Registry UI & Lab)
+   مصممة للحفاظ على صفر شريط تمرير رأسي داخل صفحات الكتاب
+   ============================================================= */
+
+.darb-block-slot {
+  width: 100%;
+  margin: 6px 0;
+}
+
+.darb-block-card {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: rgba(12, 19, 34, 0.92);
+  color: #e2e8f0;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--ui-font);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+body.theme-light .darb-block-card.darb-block-mode-inline {
+  background: rgba(248, 250, 252, 0.96);
+  color: #0f172a;
+  border-color: rgba(180, 130, 25, 0.38);
+}
+
+.darb-block-card.darb-block-mode-inline {
+  max-height: 318px;
+}
+
+.darb-block-card.darb-block-mode-fullscreen {
+  background: rgba(10, 16, 30, 0.95);
+  color: #f1f5f9;
+  padding: 14px 16px;
+  gap: 12px;
+  border-radius: 14px;
+}
+
+.darb-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.22);
+  padding-bottom: 5px;
+}
+
+.darb-block-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.darb-block-title {
+  font-size: 12.2px;
+  font-weight: 800;
+  color: #facc15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.theme-light .darb-block-mode-inline .darb-block-title {
+  color: #92400e;
+}
+
+.darb-block-mode-fullscreen .darb-block-title {
+  font-size: 15px;
+}
+
+.darb-block-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  flex-shrink: 0;
+}
+
+body.theme-light .darb-block-mode-inline .darb-block-badge {
+  color: #0369a1;
+  background: rgba(14, 165, 233, 0.12);
+}
+
+.darb-block-expand-btn {
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  background: rgba(212, 175, 55, 0.18);
+  color: #fde047;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--ui-font);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.darb-block-expand-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(212, 175, 55, 0.34);
+}
+
+body.theme-light .darb-block-expand-btn {
+  color: #78350f;
+}
+
+.darb-block-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+/* النصوص والأزرار التفاعلية المشتركة داخل الكتل */
+.darb-blk-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.darb-blk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.darb-blk-btn {
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-family: var(--ui-font);
+  font-size: 10.8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.darb-blk-btn.active {
+  background: #d4af37;
+  color: #0b111e;
+  border-color: #d4af37;
+}
+
+.darb-blk-viewport-3d {
+  width: 100%;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: radial-gradient(circle at center, #13213d 0%, #070b14 100%);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.darb-block-mode-fullscreen .darb-blk-viewport-3d {
+  height: 360px;
+}
+
+.darb-blk-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.darb-blk-note {
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: rgba(56, 189, 248, 0.1);
+  border-right: 3px solid #38bdf8;
+}
+
+body.theme-light .darb-block-mode-inline .darb-blk-note {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0f172a;
+}
+
+.darb-blk-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.darb-blk-slider-row input[type="range"] {
+  flex: 1;
+  accent-color: #d4af37;
+}
+
+/* المحاكاة */
+.darb-sim-canvas {
+  width: 100%;
+  height: 108px;
+  border-radius: 8px;
+  background: #060b16;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  display: block;
+}
+
+.darb-block-mode-fullscreen .darb-sim-canvas {
+  height: 290px;
+}
+
+.darb-sim-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.darb-sim-metric {
+  font-size: 10.6px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+/* الخريطة والخط الزمني */
+.darb-geo-svg-wrap {
+  width: 100%;
+  height: 130px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(145deg, #0b162a, #08101f);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.darb-block-mode-fullscreen .darb-geo-svg-wrap {
+  height: 280px;
+}
+
+.darb-geo-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* القراءة والتجويد */
+.darb-quran-box {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  font-size: 14.5px;
+  line-height: 1.85;
+  text-align: center;
+}
+
+.darb-block-mode-fullscreen .darb-quran-box {
+  font-size: 20px;
+  padding: 16px;
+}
+
+.darb-tajweed-seg {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0 3px;
+  transition: background 0.15s;
+}
+
+.darb-tajweed-seg:hover,
+.darb-tajweed-seg.selected {
+  background: rgba(212, 175, 55, 0.25);
+  outline: 1px solid rgba(212, 175, 55, 0.55);
+}
+
+/* محرر الكود الآمن */
+.darb-code-editor {
+  width: 100%;
+  height: 76px;
+  border-radius: 7px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: #050a14;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  padding: 6px 8px;
+  resize: none;
+  direction: ltr;
+  text-align: left;
+}
+
+.darb-block-mode-fullscreen .darb-code-editor {
+  height: 190px;
+  font-size: 13px;
+}
+
+.darb-code-output {
+  max-height: 62px;
+  overflow: hidden;
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: #0b1220;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10.5px;
+  direction: ltr;
+  text-align: left;
+  white-space: pre-wrap;
+}
+
+.darb-block-mode-fullscreen .darb-code-output {
+  max-height: 160px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.darb-code-iframe {
+  width: 100%;
+  height: 82px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.darb-block-mode-fullscreen .darb-code-iframe {
+  height: 210px;
+}
+
+/* القصص والمجلات */
+.darb-story-quote {
+  border-right: 3px solid #d4af37;
+  padding: 4px 8px;
+  font-style: italic;
+  font-size: 11.5px;
+  background: rgba(212, 175, 55, 0.08);
+  border-radius: 6px;
+}
+
+.darb-dialogue-turn {
+  font-size: 11.2px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* نافذة المختبر الكامل */
+.lab-card {
+  max-width: 960px !important;
+  width: 95vw !important;
+  max-height: 90vh !important;
+}
+
+.lab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.darb-block-error-msg {
+  font-size: 11.5px;
+  color: #fca5a5;
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .darb-block-card.darb-block-mode-inline {
+    max-height: 245px;
+    padding: 7px 8px;
+  }
+  .darb-blk-viewport-3d {
+    height: 125px;
+  }
+  .darb-sim-canvas,
+  .darb-geo-svg-wrap {
+    height: 110px;
+  }
+  .darb-code-editor {
+    height: 64px;
+  }
+}

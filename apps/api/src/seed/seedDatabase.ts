@@ -506,6 +506,20 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
       'book_type:technical-reference',
       'book_type:interactive-book',
     ],
+    'interactive-showcase': [
+      'age_group:all-ages',
+      'education_level:primary',
+      'education_level:high-school',
+      'education_level:bachelor',
+      'education_level:general-reading',
+      'domain:math-physics',
+      'domain:history-geography',
+      'domain:arabic-quran',
+      'domain:software-engineering',
+      'domain:scientific-magazines',
+      'book_type:interactive-lab',
+      'book_type:interactive-book',
+    ],
   };
 
   const seededBooks: string[] = [];

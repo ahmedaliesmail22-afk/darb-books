@@ -91,6 +91,16 @@ describe('Pluggable BookParserRegistry & Format Adapters', () => {
       sampleTaxonomies: [{ group: 'domain', slug: 'software-engineering', labelAr: 'هندسة البرمجيات' }],
     });
 
+    // Verify guide documenting all 6 interactive blocks is bundled in template ZIP
+    const origZip = await JSZip.loadAsync(templateBuf);
+    const interactiveGuide = await origZip.file('INTERACTIVE_BLOCKS_GUIDE.md')?.async('string');
+    expect(interactiveGuide).toContain('model3d');
+    expect(interactiveGuide).toContain('simulation');
+    expect(interactiveGuide).toContain('geo_timeline');
+    expect(interactiveGuide).toContain('literacy_quran');
+    expect(interactiveGuide).toContain('code_sandbox');
+    expect(interactiveGuide).toContain('story_magazine');
+
     // Inject mock mp3/mp4 assets into the template zip
     const zip = await JSZip.loadAsync(templateBuf);
     zip.file('audio/spread_0.mp3', Buffer.from('FAKE_MP3_BYTES'));
@@ -188,5 +198,46 @@ direction: rtl
       .join('');
     expect(combined).toContain('محتوى إلكتروني منظم');
     expect(combined).not.toContain('<script');
+  });
+
+  it('extracts darb-block interactive JSON blocks cleanly from Markdown manuscripts', async () => {
+    const md = `---
+title: كتاب الفيزياء والبرمجة التفاعلية
+direction: rtl
+---
+# الفصل الأول: محاكاة وتفاعل
+تقديم سريع قبل التجربة.
+
+\`\`\`darb-block
+{
+  "type": "simulation",
+  "title": "محاكاة المقذوفات",
+  "payload": {
+    "preset": "projectile"
+  }
+}
+\`\`\`
+
+\`\`\`darb-block
+{
+  "type": "code_sandbox",
+  "title": "مختبر الكود",
+  "payload": {
+    "language": "javascript",
+    "starterCode": "console.log(42);"
+  }
+}
+\`\`\`
+`;
+    const parsed = await registry.parse({
+      buffer: Buffer.from(md, 'utf8'),
+      filename: 'interactive-md.md',
+    });
+
+    const allBlocks = parsed.editionData.spreads.flatMap((sp) => [
+      ...(sp.right?.blocks ?? []),
+      ...(sp.left?.blocks ?? []),
+    ]);
+    expect(allBlocks.map((b) => b.type)).toEqual(['simulation', 'code_sandbox']);
   });
 });
