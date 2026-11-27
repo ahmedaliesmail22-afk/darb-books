@@ -1,90 +1,132 @@
-# 📚 بوابة درب للكتب والروايات التفاعلية ثلاثية الأبعاد (DARB Books Portal)
+# 📚 منصة وبوابة درب للكتب التفاعلية ثلاثية الأبعاد (DARB Books Portal)
 
-> **المستودع العام الرسمي لبوابة الكتب والقصص والروايات التفاعلية ثلاثية الأبعاد لمنظومة درب التعليمية الذكية.**  
-> **الرابط المباشر للبوابة (GitHub Pages):** [https://ahmedaliesmail22-afk.github.io/darb-books/](https://ahmedaliesmail22-afk.github.io/darb-books/)  
-> **المحرك التفاعلي المباشر:** [https://ahmedaliesmail22-afk.github.io/darb-books/engine/](https://ahmedaliesmail22-afk.github.io/darb-books/engine/)
-
----
-
-## 🌟 نظرة عامة (Overview)
-
-تُقدم بوابة **درب بوكس** تجربة قراءة رقمية استثنائية تحاكي تصفح كتاب ورقي فاخر مجسم ثلاثي الأبعاد، مستعرضة السيرة التقنية والمعمارية الكاملة لبناء منصة «درب» عبر نصوص أدبية رفيعة ومؤثرات صوتية ومرئية مدمجة.
-
-تم بناء المحرك بالكامل بالاعتماد على **Pure CSS 3D Transformations** و **Vanilla JavaScript** النقي دون استخدام أي أطر عمل أو مكتبات خارجية ثقيلة، مما يحقق أداءً فائقاً وزمن تحميل شبه لحظي وسلاسة بمعدل 60 إطاراً في الثانية عبر المتصفحات والهواتف الذكية.
+> **منصة سحابية متكاملة للكتب التعليمية التفاعلية، والقصص والروايات، والمجلات العلمية، والمختبرات الافتراضية ثلاثية الأبعاد — ببنية `Monorepo` قابلة للتمديد وخالية من القيم الجامدة (`No Hardcoding`).**  
+> **البوابة الحية على GitHub Pages (الوضع الثابت):** [https://ahmedaliesmail22-afk.github.io/darb-books/](https://ahmedaliesmail22-afk.github.io/darb-books/)
 
 ---
 
-## 🏛️ هيكل المستودع (Repository Structure)
+## 🌟 نظرة عامة ومبادئ التصميم
+
+تجمع منصة **درب** بين محرك قراءة ورقي مجسم ثلاثي الأبعاد (`Three.js` + تقليب `180°` للغة العربية `RTL` والإنجليزية `LTR`) وبين بنية سحابية مرنة تدار مركزياً من قاعدة البيانات دون الحاجة لتعديل الشيفرة أو إعادة بناء التطبيق:
+
+1. **لا قيم جامدة (`No Hardcoding`):** الفئات العمرية، المستويات التعليمية (من التمهيدي إلى البروفيسوراه)، التخصصات، أنواع الكتب، أقسام الصفحة الرئيسية، الأخبار، قوائم التحقق، القالب القياسي، وإعدادات المنصة والهوية البصرية تُدار ديناميكياً من قاعدة البيانات (`PostgreSQL` + `Prisma ORM`).
+2. **صلاحيات مرنة (`Dynamic RBAC`):** 5 أدوار نظامية افتراضية و12 صلاحية دقيقة مع إمكانية إنشاء أدوار مخصصة وربطها بصلاحيات انتقائية، وتوثيق التعديلات في `audit_logs`.
+3. **حماية عمرية إلزامية وتخصيص ذكي:** تفرض المكتبة التصفية العمرية حسب `catalog.age_policy`، وتبرز الكتب المطابقة لمستوى المستخدم وتفضيلاته مع بحث عربي مطبّع.
+4. **بوابة تأليف متعددة الصيغ وإصدارات غير هدامة:** سجل محولات مرن (`@darb/parsers`) يستوعب `Template ZIP` و`JSON` و`Markdown` و`DOCX` و`EPUB`، مع رفع إصدارات جديدة (`v2`, `v3`) ومعاينتها ثلاثياً دون المساس بالإصدار المنشور (`activeVersionId`) وإلزامية إقرار الملكية الفكرية وبوابة مراجعة للمحتوى.
+5. **محرك غامر بـ 6 كتل تفاعلية مسجّلة (`InteractiveBlockRegistry`):** تُحقن داخل الصفحات بصفر شريط تمرير رأسي على الحاسوب والجوال أو تُفتح في **المختبر الكامل (`Fullscreen Lab`)** مع تنظيف صارم لموارد `WebGL`.
+6. **دعم الوضعين الحي والثابت (`Hybrid API + Static Fallback`):** يعمل التطبيق بكامل قدراته السحابية عند توفر `@darb/api`، ويعمل تلقائياً في وضع العرض الثابت على `GitHub Pages` قارئاً من `public/editions/`.
+
+---
+
+## 🧩 الكتل التفاعلية الست (`InteractiveBlockRegistry`)
+
+| الكتلة | الوصف التقني | الموقع في الكود |
+| :--- | :--- | :--- |
+| **`model3d`** | عارض `Three.js` لملفات `GLB/GLTF` ونماذج إجرائية احتياطية مع `OrbitControls`، تفكيك الطبقات (`Explode`)، نقاط شرح تفاعلية، وتحرير صارم لـ `WebGLRenderer` | [`model3dPlugin.ts`](packages/book-engine/src/blocks/plugins/model3dPlugin.ts) |
+| **`simulation`** | مختبر محاكاة على `Canvas 2D` بمعاملات قابلة للتعديل (`projectile`, `pendulum`, `ideal_gas`, `wave_interference`, `function_plotter`) | [`simulationPlugin.ts`](packages/book-engine/src/blocks/plugins/simulationPlugin.ts) |
+| **`geo_timeline`** | خرائط متجهة `SVG` بطبقات ومسارات قابلة للتبديل ومربوطة بخط زمني تاريخي/جغرافي | [`geoTimelinePlugin.ts`](packages/book-engine/src/blocks/plugins/geoTimelinePlugin.ts) |
+| **`literacy_quran`** | عرض الآيات والنصوص بترميز لوني لأحكام التجويد والقواعد مع تمارين إملاء وضبط تفاعلية | [`literacyQuranPlugin.ts`](packages/book-engine/src/blocks/plugins/literacyQuranPlugin.ts) |
+| **`code_sandbox`** | محرر وتشغيل آمن لـ JavaScript داخل `Web Worker` معزول بمهلة `1500ms` ومنع الشبكة، ومعاينة `html_css` عبر `iframe sandbox` | [`codeSandboxPlugin.ts`](packages/book-engine/src/blocks/plugins/codeSandboxPlugin.ts) |
+| **`story_magazine`** | تخطيط مرن للقصص والروايات والمجلات يتضمن اقتباسات، حوارات متسلسلة، واستطلاعات للقراء | [`storyMagazinePlugin.ts`](packages/book-engine/src/blocks/plugins/storyMagazinePlugin.ts) |
+
+---
+
+## 🏛️ هيكل المستودع الفعلي (`Monorepo Structure`)
 
 ```text
 darb-books/
-├── index.html                     # بوابة التحويل الذكية المباشرة لـ GitHub Pages
-├── README.md                      # دليل توثيق البوابة والمحرك وأدوات التطوير
-├── docs/                          # الأصول النصية والأدبية المرجعية الثابتة
-│   ├── 01_DARB_ANATOMICAL_BOOK.md # الكتاب التشريحي الهندسي الشامل لمنظومة درب
-│   └── 02_DARB_EPIC_STORY.md      # الرواية الملحمية الكاملة لكواليس وتحديات البناء
-├── engine/                        # محرك العرض ثلاثي الأبعاد والبيانات
-│   ├── index.html                 # واجهة المحرك ثلاثي الأبعاد (تقليب 180°، الراوي، الفيديو)
-│   ├── book.html                  # واجهة الكتاب التشريحي الرقمي الموازي
-│   └── editions/                  # كتالوج الإصدارات وبيانات الأجزاء
-│       ├── catalog.json           # فهرس الأجزاء والإصدارات المتاحة
-│       └── epic-v1.json           # بيانات صفحات ونصوص وتراكيب الإصدار الأول (27 نشرة)
-├── audio/                         # مكتبة الصوتيات الفصيحة الموزعة حسب الإصدار
-│   └── epic-v1/                   # 27 مقطعاً صوتياً فصيحاً مسجلاً بنبرة طبيعية احترافية
-│       ├── spread_0.mp3 ... spread_26.mp3
-├── videos/                        # مكتبة الفيديوهات السينمائية والملخصات
-│   └── epic-v1/                   # 7 مقاطع فيديو عالية الدقة تلخص كواليس الفصول السبعة
-│       ├── ch1.mp4 ... ch7.mp4
-└── tools/                         # سكربتات التطوير والمعالجة الآلية للملتيميديا
-    ├── build_engine.py            # مولد بيانات الكتالوج وتقطيع النشرات من المخطوطة
-    ├── generate_audio_assets.py   # توليد المؤثرات الصوتية والموسيقى التصويرية محلياً
-    ├── mix_all_audio.py           # دمج وهندسة الصوتيات الفصيحة مع المؤثرات بـ FFmpeg
-    └── generate_chapter_video.py  # تصيير وإنتاج فيديوهات الفصول التعليمية بدقة 720p
+├── .github/
+│   └── workflows/
+│       └── deploy-pages.yml           # مسار CI/CD لنشر الواجهة تلقائياً إلى GitHub Pages
+├── apps/
+│   ├── web/                           # تطبيق React + Vite + TypeScript (الرئيسية، المكتبة، القارئ 3D، المؤلف، المراجعة، الإدارة)
+│   │   ├── src/pages/                 # HomePage, LibraryPage, ReaderPage, AuthPages, OnboardingPage, ProfileSettingsPage, GuideAndNewsPage, AuthorPortalPage, ModerationPortalPage
+│   │   ├── src/admin/                 # AdminLayout, CmsAndNewsManager, TaxonomiesManager, SystemConfigsManager, RbacAndUsersManager, AuditLogsViewer
+│   │   ├── src/components/            # PortalHeader, BookReaderShell
+│   │   └── vite.config.ts
+│   └── api/                           # الخادم الخلفي Node.js + Fastify + Prisma ORM + PGlite للوضع الاختباري
+│       ├── .env.example               # نموذج متغيرات البيئة (PostgreSQL, JWT, Seed, Cloudflare R2 / Local Storage)
+│       ├── prisma/                    # schema.prisma, migrations/0001_init/, seed.ts
+│       ├── src/routes/                # health, auth, systemConfigs, taxonomies, rbac, cms, books, media, templates, author, moderation, audit
+│       ├── src/services/              # security, configService, ageGating, storage (Local & S3/R2 + Range 206)
+│       ├── src/seed/seedDatabase.ts   # بذر الصلاحيات الـ 12 والأدوار الـ 5 والتصنيفات والتهيئة والكتب الثلاثة
+│       └── tests/                     # اختبارات تكامل عبر PGlite المدمج
+├── packages/
+│   ├── book-schema/                   # مخططات TypeScript و Zod المشتركة (Book, Block, Catalog, Theme, Storage)
+│   ├── book-engine/                   # نواة القارئ 3D (BookStage3D, FlipEngine, NarratorController, VideoModal, OfflineManager, InteractiveBlockRegistry)
+│   └── parsers/                       # سجل محولات الصيغ (Template ZIP, JSON, Markdown, DOCX, EPUB) ومولد القالب القياسي
+├── public/
+│   ├── editions/                      # catalog.json, epic-v1.json, anatomical-v1.json, interactive-showcase.json
+│   ├── audio/ & videos/               # المقاطع الصوتية والفيديوهات المتزامنة مع الكتب المرجعية
+│   ├── engine/                        # ملفات التحويل المتوافقة مع الروابط القديمة
+│   ├── icons/, manifest.webmanifest, sw.js
+├── infra/
+│   └── docker-compose.yml             # بيئة التطوير المحلية (PostgreSQL 16 + MinIO متوافق مع R2/S3)
+├── tools/                             # سكربتات Python مساعدة لتوليد الوسائط وإعداد الإصدارات المرجعية
+├── docs/                              # الوثائق المرجعية والتوثيق التشغيلي والتقني للمنصة
+└── package.json                       # تعريف مساحات العمل وسكربتات البناء والتشغيل والاختبار الموحدة
 ```
 
 ---
 
-## ✨ المميزات والقدرات التقنية (Core Capabilities)
+## 🚀 أوامر التشغيل والبناء والاختبار
 
-1. **تقليب ثلاثي الأبعاد فيزيائي (180° Flip)**:
-   - تقليب حقيقي للأوراق بزاوية 180 درجة مع تظليل تفاعلي للعمود الفقري وصفحات الكتاب.
-   - دعم التصفح عبر الأزرار، اختصارات لوحة المفاتيح (الأسهم و Space)، والسحب باللمس.
-2. **محرك الراوي الصوتي المتزامن (Synchronized Narrator)**:
-   - تشغيل 27 مقطعاً صوتياً مسجلاً باللغة العربية الفصحى عبر تقنية Neural TTS المتقدمة.
-   - دمج خلفية موسيقية هادئة مع صوت تقليب الورق عند نهاية كل نشرة.
-   - تقليب تلقائي متزامن مع نهاية قراءة كل صفحة وعرض نافذة الاحتفال عند إتمام الكتاب.
-3. **فيديوهات ملخصات الفصول المدمجة (Chapter Video Summaries)**:
-   - نافذة سينمائية تعرض ملخص فيديو لكل فصل بدقة عالية تدعم التشغيل المباشر داخل المتصفح.
-4. **دعم الأجزاء والإصدارات المتعددة (Multi-Edition Support)**:
-   - كتالوج إصدارات مرن (`catalog.json`) يدعم التبديل السلس بين الأجزاء عبر واجهة اختيار أو معاملات الرابط (`?edition=epic-v1`).
-5. **استقلالية تامة وخفة استثنائية (Standalone & Zero-Dependency)**:
-   - يعمل مباشرة كـ Static Site على GitHub Pages دون الحاجة إلى خوادم خلفية أو بيئات تشغيل معقدة.
+### 1. التثبيت الأولي
+```powershell
+npm install
+```
+
+### 2. التشغيل في الوضع الثابت (`Static Mode`)
+```powershell
+npm run build
+npm run preview
+```
+تعمل الواجهة محلياً على `http://127.0.0.1:4173` مع تفعيل الوضع الثابت تلقائياً عند غياب خادم API.
+
+### 3. التشغيل في الوضع الحي الكامل (`API + PostgreSQL + Web`)
+```powershell
+# 1. تشغيل PostgreSQL و MinIO (R2 محلي)
+docker compose -f infra/docker-compose.yml up -d
+
+# 2. تهيئة apps/api/.env من المثال وتعبئة أسرار JWT و SEED_ADMIN_PASSWORD
+Copy-Item apps/api/.env.example apps/api/.env
+
+# 3. توليد Prisma Client وتطبيق الهجرات وبذر قاعدة البيانات
+npm run db:generate
+npm run db:migrate:deploy --workspace=@darb/api
+npm run db:seed
+
+# 4. تشغيل الخادم الخلفي (المنفذ 3000) والواجهة (المنفذ 4173) في نافذتين
+npm run dev:api
+npm run dev
+```
+
+### 4. أوامر الاختبارات وفحص الأنواع والبناء
+| الأمر | الوظيفة |
+| :--- | :--- |
+| `npm run test:engine` | اختبارات سجل الكتل التفاعلية وتنظيف `WebGL` في `@darb/book-engine` |
+| `npm run test:parsers` | اختبارات المحولات الخمس واستخراج `darb-block` وتوليد القالب في `@darb/parsers` |
+| `npm run test:api` | اختبارات التكامل الكاملة لـ `@darb/api` عبر `PGlite` (لا تحتاج PostgreSQL حياً) |
+| `npm run typecheck` | تشغيل `tsc --noEmit` عبر جميع مساحات العمل (`--workspaces`) |
+| `npm run build` | فحص الأنواع لكل الحزم + بناء الواجهة الإنتاجية في `dist/` |
+| `npm run build --workspace=@darb/api` | فحص الأنواع وتجميع الخادم الخلفي عبر `esbuild` إلى `apps/api/dist/index.js` |
 
 ---
 
-## 🛠️ أدوات التطوير وتوليد الوسائط (Developer Tools)
+## 📖 فهرس وثائق المشروع (`docs/`)
 
-تتيح السكربتات الموجودة في مجلد `tools/` إعادة إنتاج أو توسيع الأصول الملتيميديا لأي إصدار مستقبلي جديد:
-
-- **توليد بيانات الرواية من المخطوطة:**
-  ```bash
-  python tools/build_engine.py
-  ```
-- **توليد الخلفيات والمؤثرات الصوتية:**
-  ```bash
-  python tools/generate_audio_assets.py
-  ```
-- **دمج وهندسة الصوتيات الفصيحة عبر FFmpeg:**
-  ```bash
-  python tools/mix_all_audio.py
-  ```
-- **تصيير فيديوهات الفصول:**
-  ```bash
-  python tools/generate_chapter_video.py
-  ```
+| الوثيقة | المحتوى والغرض |
+| :--- | :--- |
+| [`docs/01_DARB_ANATOMICAL_BOOK.md`](docs/01_DARB_ANATOMICAL_BOOK.md) | المرجع التاريخي والهندسي للكتاب التشريحي *(مخطوطة ثابتة محمية)* |
+| [`docs/02_DARB_EPIC_STORY.md`](docs/02_DARB_EPIC_STORY.md) | المرجع الأدبي والتوثيقي للملحمة السردية *(مخطوطة ثابتة محمية)* |
+| [`docs/03_PLATFORM_ARCHITECTURE_AND_SCHEMA.md`](docs/03_PLATFORM_ARCHITECTURE_AND_SCHEMA.md) | المعمارية الموحدة، مبادئ المرونة، وتصميم قاعدة البيانات |
+| [`docs/04_PHASED_ACTION_PLAN.md`](docs/04_PHASED_ACTION_PLAN.md) | خطة التنفيذ المرحلية ومعايير القبول للمراحل 0–4 |
+| [`docs/05_OPERATIONS_AND_DEPLOYMENT_GUIDE.md`](docs/05_OPERATIONS_AND_DEPLOYMENT_GUIDE.md) | **دليل التشغيل والنشر الإنتاجي:** الوضع الثابت، Docker، المتغيرات، R2/CORS، والنسخ الاحتياطي |
+| [`docs/06_API_AND_RBAC_REFERENCE.md`](docs/06_API_AND_RBAC_REFERENCE.md) | **مرجع واجهات البرمجة والصلاحيات:** جرد جميع مسارات `/api/v1/`، مصفوفة الـ RBAC، والآليات |
+| [`docs/07_AUTHOR_AND_BLOCKS_MANUAL.md`](docs/07_AUTHOR_AND_BLOCKS_MANUAL.md) | **دليل المؤلفين والمراجعين والكتل التفاعلية:** دورة النشر، الصيغ، وأمثلة الكتل الست |
 
 ---
 
 ## 📜 الترخيص والملكية الفكرية
 
-جميع الحقوق محفوظة لمنظومة **درب التعليمية الذكية**. تُعتبر المخطوطات والكتب في مجلد `docs/` أصولاً تاريخية ثابتة ومحمية لا يجوز التعديل عليها بعد الاعتماد، ويتم التوسع من خلال إصدارات وأجزاء تكميلية جديدة.
+جميع الحقوق محفوظة لمنظومة **درب التعليمية الذكية**. تخضع المخطوطات في `docs/01_DARB_ANATOMICAL_BOOK.md` و`docs/02_DARB_EPIC_STORY.md` للحماية كمصادر مرجعية ثابتة لا يجوز تعديلها، كما يتطلب نشر أي كتاب أو تحديث عبر بوابة المؤلف توقيع إقرار الملكية الفكرية والمصادقة الإدارية.
