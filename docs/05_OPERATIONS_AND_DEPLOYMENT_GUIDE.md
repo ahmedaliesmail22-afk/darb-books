@@ -36,7 +36,22 @@
 
 ## 2. التشغيل الحي محلياً (`Local Full-Stack Setup`)
 
-### الخيار أ: عبر Docker Compose (PostgreSQL + MinIO)
+### الخيار أ (الموصى به على ويندوز ودون Docker): الوضع الحي المحلي المتكامل (`npm run dev:local`)
+يتيح هذا الوضع تشغيل المنصة الحية الكاملة (**React/Vite + Fastify API + PostgreSQL المدمجة عبر PGlite + التخزين المحلي**) بأمر واحد دون تثبيت Docker أو إعداد قاعدة بيانات خارجية، مع حفظ كافة التعديلات على القرص:
+
+```powershell
+npm run dev:local
+```
+
+**كيف يعمل [`apps/api/src/local.ts`](../apps/api/src/local.ts) و[`tools/dev-local.mjs`](../tools/dev-local.mjs)؟**
+1. تُحفظ بيانات قاعدة `PGlite` باستمرار داخل مجلد `apps/api/.pglite-data/`، وتُحفظ الملفات والكتب المرفوعة داخل `apps/api/.storage/` (كلاهما مستثنى في [`.gitignore`](../.gitignore)).
+2. عند غياب `apps/api/.env`، يهيئ الخادم قيماً محلية افتراضية آمنة مع توليد أسرار JWT محلية تُحفظ داخل `apps/api/.pglite-data/.local-secrets.json` لاستمرار الجلسات بين عمليات إعادة التشغيل.
+3. في التشغيل الأول فقط: يطبّق الخادم الهجرة [`0001_init/migration.sql`](../apps/api/prisma/migrations/0001_init/migration.sql) ويبذر البيانات الأولية عبر [`seedDatabase.ts`](../apps/api/src/seed/seedDatabase.ts)، ويطبع بريد المدير وكلمة المرور المحلية في الطرفية (`admin@darb-books.local` / `DarbLocal!2026` ما لم تحدد `SEED_ADMIN_*`).
+4. في أي تشغيل لاحق: يستأنف القاعدة المحفوظة تلقائياً دون إعادة بذر فوق تعديلاتك (المستخدمين، التصنيفات، الـ CMS، الكتب المرفوعة، المراجعات، وسجل التدقيق).
+5. ينتظر المشغّل جاهزية `http://127.0.0.1:3000/api/v1/health` ثم يفتح الواجهة على `http://127.0.0.1:4173`؛ وعند الضغط على `Ctrl+C` يغلق العمليتين ويغلق `PGlite` بأمان.
+6. لتشغيل الخادم الخلفي المحلي منفرداً: `npm run dev:api:local`.
+
+### الخيار ب: عبر Docker Compose (PostgreSQL + MinIO)
 يوفر ملف [`infra/docker-compose.yml`](../infra/docker-compose.yml) خدمتين جاهزتين للتطوير المحلي:
 - **`darb-books-postgres`:** صورة `postgres:16-alpine` على المنفذ `5432` (المستخدم الافتراضي `darb`، كلمة المرور `darb_dev_password`، قاعدة البيانات `darb_books`).
 - **`darb-books-r2-local`:** صورة `minio/minio:latest` متوافقة مع واجهة S3/R2 على المنفذ `9000` (API) والمنفذ `9001` (لوحة التحكم، المستخدم `darbminio`، كلمة المرور `darbminio_dev_secret`).
@@ -45,7 +60,7 @@
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-### الخيار ب: استخدام PostgreSQL خارجية
+### الخيار ج: استخدام PostgreSQL خارجية
 مرّر رابط الاتصال القياسي في `DATABASE_URL` داخل `apps/api/.env` دون الحاجة لتشغيل Docker Compose.
 
 ---

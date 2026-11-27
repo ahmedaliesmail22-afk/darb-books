@@ -44,13 +44,14 @@ darb-books/
 │   │   ├── src/admin/                 # AdminLayout, CmsAndNewsManager, TaxonomiesManager, SystemConfigsManager, RbacAndUsersManager, AuditLogsViewer
 │   │   ├── src/components/            # PortalHeader, BookReaderShell
 │   │   └── vite.config.ts
-│   └── api/                           # الخادم الخلفي Node.js + Fastify + Prisma ORM + PGlite للوضع الاختباري
+│   └── api/                           # الخادم الخلفي Node.js + Fastify + Prisma ORM + وضع PGlite المحلي المستمر
 │       ├── .env.example               # نموذج متغيرات البيئة (PostgreSQL, JWT, Seed, Cloudflare R2 / Local Storage)
 │       ├── prisma/                    # schema.prisma, migrations/0001_init/, seed.ts
+│       ├── src/local.ts               # نقطة التشغيل المحلية المستمرة على .pglite-data/ (دون Docker)
 │       ├── src/routes/                # health, auth, systemConfigs, taxonomies, rbac, cms, books, media, templates, author, moderation, audit
 │       ├── src/services/              # security, configService, ageGating, storage (Local & S3/R2 + Range 206)
 │       ├── src/seed/seedDatabase.ts   # بذر الصلاحيات الـ 12 والأدوار الـ 5 والتصنيفات والتهيئة والكتب الثلاثة
-│       └── tests/                     # اختبارات تكامل عبر PGlite المدمج
+│       └── tests/                     # اختبارات تكامل عبر PGlite المدمج (بما فيها استمرارية التشغيل المحلي)
 ├── packages/
 │   ├── book-schema/                   # مخططات TypeScript و Zod المشتركة (Book, Block, Catalog, Theme, Storage)
 │   ├── book-engine/                   # نواة القارئ 3D (BookStage3D, FlipEngine, NarratorController, VideoModal, OfflineManager, InteractiveBlockRegistry)
@@ -62,7 +63,7 @@ darb-books/
 │   ├── icons/, manifest.webmanifest, sw.js
 ├── infra/
 │   └── docker-compose.yml             # بيئة التطوير المحلية (PostgreSQL 16 + MinIO متوافق مع R2/S3)
-├── tools/                             # سكربتات Python مساعدة لتوليد الوسائط وإعداد الإصدارات المرجعية
+├── tools/                             # مشغّل الوضع المحلي (dev-local.mjs) وسكربتات توليد الوسائط والمحتوى المرجعي
 ├── docs/                              # الوثائق المرجعية والتوثيق التشغيلي والتقني للمنصة
 └── package.json                       # تعريف مساحات العمل وسكربتات البناء والتشغيل والاختبار الموحدة
 ```
@@ -76,14 +77,23 @@ darb-books/
 npm install
 ```
 
-### 2. التشغيل في الوضع الثابت (`Static Mode`)
+### 2. التشغيل الحي الفوري محلياً بدون Docker (`Full Live Local Mode` — موصى به للتجربة السريعة)
+```powershell
+npm run dev:local
+```
+- يشغّل **الخادم الخلفي (`http://127.0.0.1:3000`)** و**الواجهة الأمامية (`http://127.0.0.1:4173`)** بأمر واحد على ويندوز دون الحاجة إلى Docker أو خادم PostgreSQL خارجي.
+- يحفظ قاعدة البيانات المحلية في `apps/api/.pglite-data/` والملفات المرفوعة في `apps/api/.storage/` باستمرارية كاملة بين جلسات التشغيل.
+- في التشغيل الأول تلقائياً: يطبّق الهجرات، يبذر التصنيفات و`CMS` والكتب الثلاثة، ويطبع بيانات دخول المدير المحلي في الطرفية، وعند الإغلاق بـ `Ctrl+C` يغلق العمليتين ويحفظ البيانات بأمان.
+- لتشغيل الخادم الخلفي المحلي وحده: `npm run dev:api:local`.
+
+### 3. التشغيل في الوضع الثابت (`Static Mode`)
 ```powershell
 npm run build
 npm run preview
 ```
 تعمل الواجهة محلياً على `http://127.0.0.1:4173` مع تفعيل الوضع الثابت تلقائياً عند غياب خادم API.
 
-### 3. التشغيل في الوضع الحي الكامل (`API + PostgreSQL + Web`)
+### 4. التشغيل الحي عبر PostgreSQL / Docker (`Production-like Setup`)
 ```powershell
 # 1. تشغيل PostgreSQL و MinIO (R2 محلي)
 docker compose -f infra/docker-compose.yml up -d
@@ -101,9 +111,11 @@ npm run dev:api
 npm run dev
 ```
 
-### 4. أوامر الاختبارات وفحص الأنواع والبناء
+### 5. أوامر الاختبارات وفحص الأنواع والبناء
 | الأمر | الوظيفة |
 | :--- | :--- |
+| `npm run dev:local` | تشغيل الوضع الحي المحلي الكامل (PGlite مستمر + API + Vite) بأمر واحد |
+| `npm run dev:api:local` | تشغيل الخادم الخلفي المحلي وحده بقاعدة `PGlite` المستمرة |
 | `npm run test:engine` | اختبارات سجل الكتل التفاعلية وتنظيف `WebGL` في `@darb/book-engine` |
 | `npm run test:parsers` | اختبارات المحولات الخمس واستخراج `darb-block` وتوليد القالب في `@darb/parsers` |
 | `npm run test:api` | اختبارات التكامل الكاملة لـ `@darb/api` عبر `PGlite` (لا تحتاج PostgreSQL حياً) |

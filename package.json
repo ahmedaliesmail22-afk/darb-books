@@ -11,6 +11,8 @@
   "scripts": {
     "dev": "npm run dev --workspace=@darb/web",
     "dev:api": "npm run dev --workspace=@darb/api",
+    "dev:api:local": "npm run dev:api:local --workspace=@darb/api",
+    "dev:local": "node tools/dev-local.mjs",
     "typecheck": "npm run typecheck --workspaces",
     "build": "npm run typecheck --workspaces && npm run build --workspace=@darb/web",
     "preview": "npm run preview --workspace=@darb/web",

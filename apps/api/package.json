@@ -6,6 +6,7 @@
   "description": "الخادم الخلفي لمنصة درب للكتب التفاعلية (Fastify + Prisma + PostgreSQL + Dynamic RBAC + R2 Storage)",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:api:local": "tsx src/local.ts",
     "build": "npm run typecheck && esbuild src/index.ts --bundle --platform=node --format=esm --packages=external --alias:@darb/parsers=../../packages/parsers/src/index.ts --alias:@darb/book-schema=../../packages/book-schema/src/index.ts --outfile=dist/index.js",
     "start": "node dist/index.js",
     "typecheck": "prisma generate && tsc --noEmit",
