@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,7 +9,8 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const API_DIR = path.join(REPO_ROOT, 'apps', 'api');
 const WEB_DIR = path.join(REPO_ROOT, 'apps', 'web');
 
-const TSX_CLI = path.join(REPO_ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+const TSX_LOADER_PATH = path.join(REPO_ROOT, 'node_modules', 'tsx', 'dist', 'loader.mjs');
+const TSX_LOADER_URL = pathToFileURL(TSX_LOADER_PATH).href;
 const VITE_CLI = path.join(REPO_ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
 const PRISMA_CLIENT_ENTRY = path.join(
   REPO_ROOT,
@@ -51,7 +52,7 @@ async function waitForHealth(getHealthUrl, apiProc, timeoutMs = 60000) {
 }
 
 async function main() {
-  if (!fs.existsSync(TSX_CLI) || !fs.existsSync(VITE_CLI)) {
+  if (!fs.existsSync(TSX_LOADER_PATH) || !fs.existsSync(VITE_CLI)) {
     console.error('[dev:local] يرجى تشغيل npm install في جذر المشروع أولاً.');
     process.exit(1);
   }
@@ -62,7 +63,7 @@ async function main() {
   const apiHost = process.env.HOST || '127.0.0.1';
   let healthUrl = `http://${apiHost}:${apiPort}/api/v1/health`;
 
-  const apiProc = spawn(process.execPath, [TSX_CLI, 'src/local.ts'], {
+  const apiProc = spawn(process.execPath, ['--import', TSX_LOADER_URL, 'src/local.ts'], {
     cwd: API_DIR,
     stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     env: process.env,

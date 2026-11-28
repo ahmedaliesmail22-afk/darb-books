@@ -108,7 +108,7 @@ export const PortalHeader: React.FC = () => {
         </button>
 
         <span className="portal-mode-pill" title="حالة الاتصال بالخادم">
-          {mode === 'api' ? '🟢 API حي' : '📦 عرض ثابت'}
+          {mode === 'api' ? '🟢 متصل بالخادم' : '📦 عرض ثابت'}
         </span>
       </nav>
     </header>

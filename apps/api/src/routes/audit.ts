@@ -22,7 +22,7 @@ export function registerAuditRoutes(
         actorId?: string;
         limit?: string;
       };
-      const limit = Math.min(200, Math.max(1, parseInt(q.limit || '50', 10) || 50));
+      const limit = Math.min(500, Math.max(1, parseInt(q.limit || '50', 10) || 50));
 
       const logs = await prisma.auditLog.findMany({
         where: {

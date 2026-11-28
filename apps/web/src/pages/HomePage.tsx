@@ -203,6 +203,9 @@ export const HomePage: React.FC = () => {
           }
 
           // دعم أي أقسام مخصصة جديدة تضيفها الإدارة من لوحة التحكم
+          const customCards = Array.isArray(content.cards)
+            ? (content.cards as Array<{ icon?: string; title?: string; desc?: string }>)
+            : [];
           return (
             <section
               key={sec.id}
@@ -212,6 +215,28 @@ export const HomePage: React.FC = () => {
               <h2 className="portal-section-title">{sec.titleAr}</h2>
               {typeof content.subtitle === 'string' && <p>{content.subtitle}</p>}
               {typeof content.body === 'string' && <p>{content.body}</p>}
+              {customCards.length > 0 && (
+                <div className="portal-grid">
+                  {customCards.map((card, idx) => (
+                    <article key={idx} className="portal-card">
+                      <h3>
+                        {card.icon ? `${card.icon} ` : ''}
+                        {card.title}
+                      </h3>
+                      {card.desc && <p>{card.desc}</p>}
+                    </article>
+                  ))}
+                </div>
+              )}
+              {typeof content.ctaText === 'string' && content.ctaText.trim() && (
+                <div className="portal-nav">
+                  {renderSectionLink(
+                    typeof content.ctaHref === 'string' ? content.ctaHref : '/library',
+                    content.ctaText,
+                    true
+                  )}
+                </div>
+              )}
             </section>
           );
         })}

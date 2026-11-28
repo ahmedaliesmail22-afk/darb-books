@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ADMIN_TAB_LABELS } from '../lib/arabicLabels';
 import { usePortal } from '../lib/portalContext';
 import { CmsAndNewsManager } from './CmsAndNewsManager';
 import { TaxonomiesManager } from './TaxonomiesManager';
@@ -15,19 +16,19 @@ export const AdminLayout: React.FC = () => {
   const availableTabs = useMemo(() => {
     const tabs: Array<{ key: AdminTabKey; label: string }> = [];
     if (hasPermission('cms.manage') || hasPermission('news.manage')) {
-      tabs.push({ key: 'cms', label: '📝 الرئيسية والأخبار (CMS)' });
+      tabs.push({ key: 'cms', label: ADMIN_TAB_LABELS.cms });
     }
     if (hasPermission('taxonomies.manage')) {
-      tabs.push({ key: 'taxonomies', label: '🏷️ التصنيفات والمستويات' });
+      tabs.push({ key: 'taxonomies', label: ADMIN_TAB_LABELS.taxonomies });
     }
     if (hasPermission('configs.manage')) {
-      tabs.push({ key: 'configs', label: '🎨 الهوية والتهيئة' });
+      tabs.push({ key: 'configs', label: ADMIN_TAB_LABELS.configs });
     }
     if (hasPermission('roles.manage') || hasPermission('users.manage')) {
-      tabs.push({ key: 'rbac', label: '🛡️ الأدوار والمستخدمون' });
+      tabs.push({ key: 'rbac', label: ADMIN_TAB_LABELS.rbac });
     }
     if (hasPermission('audit.read')) {
-      tabs.push({ key: 'audit', label: '📋 سجل التدقيق' });
+      tabs.push({ key: 'audit', label: ADMIN_TAB_LABELS.audit });
     }
     return tabs;
   }, [hasPermission]);
@@ -43,7 +44,7 @@ export const AdminLayout: React.FC = () => {
       <main className="portal-main">
         <div className="portal-card">
           <h2>⚙️ لوحة التحكم المركزية</h2>
-          <p>تتطلب لوحة التحكم الاتصال بخادم الـ API الحي وقاعدة PostgreSQL.</p>
+          <p>تتطلب لوحة التحكم الاتصال بالخادم الحي وقاعدة البيانات.</p>
           <Link to="/" className="portal-btn primary">
             العودة للرئيسية
           </Link>
@@ -57,7 +58,7 @@ export const AdminLayout: React.FC = () => {
       <main className="portal-main">
         <div className="portal-card">
           <h2>🚫 لا تملك صلاحية دخول لوحة التحكم</h2>
-          <p>يتم إظهار وحدات الإدارة ديناميكياً وفق صلاحيات دورك في قاعدة البيانات.</p>
+          <p>تظهر أقسام الإدارة ديناميكياً وفق صلاحيات دورك في النظام.</p>
           <div className="portal-nav">
             {!user && (
               <Link to="/login" className="portal-btn primary">

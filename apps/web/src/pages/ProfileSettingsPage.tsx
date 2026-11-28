@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { FontScale, ThemeMode } from '@darb/book-schema';
 import { ApiError, apiRequest } from '../lib/apiClient';
+import { getRoleDisplayName, THEME_LABELS } from '../lib/arabicLabels';
 import { usePortal } from '../lib/portalContext';
 
 export const ProfileSettingsPage: React.FC = () => {
@@ -38,7 +39,7 @@ export const ProfileSettingsPage: React.FC = () => {
       <main className="portal-main">
         <div className="portal-card" style={{ maxWidth: 520, margin: '24px auto' }}>
           <h2>⚙️ إعدادات الحساب</h2>
-          <p>يرجى تسجيل الدخول مع توفر خادم API لتخصيص ملفك وحفظ التفضيلات سحابياً.</p>
+          <p>يرجى تسجيل الدخول مع الاتصال بالخادم الحي لتخصيص ملفك وحفظ التفضيلات سحابياً.</p>
           <Link to="/login" className="portal-btn primary">
             تسجيل الدخول
           </Link>
@@ -85,7 +86,7 @@ export const ProfileSettingsPage: React.FC = () => {
         <h1>⚙️ إعدادات المستخدم وتفضيلات القراءة</h1>
         <p>
           الحساب: <strong>{user.fullName}</strong> ({user.email}) — الأدوار:{' '}
-          {user.roles.join('، ')}
+          {user.roles.map((r) => getRoleDisplayName(r)).join('، ')}
         </p>
 
         {error && <div className="portal-error-box">{error}</div>}
@@ -154,9 +155,9 @@ export const ProfileSettingsPage: React.FC = () => {
                 value={uiTheme}
                 onChange={(e) => setUiTheme(e.target.value as ThemeMode)}
               >
-                <option value="sepia">مخطوطة كلاسيكية (Sepia)</option>
-                <option value="dark">الوضع الليلي (Dark)</option>
-                <option value="light">الوضع النهاري (Light)</option>
+                <option value="sepia">{THEME_LABELS.sepia}</option>
+                <option value="dark">{THEME_LABELS.dark}</option>
+                <option value="light">{THEME_LABELS.light}</option>
               </select>
             </div>
 

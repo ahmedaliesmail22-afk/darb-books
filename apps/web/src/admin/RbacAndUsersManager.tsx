@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ApiError, apiRequest } from '../lib/apiClient';
+import {
+  getPermissionLabelAr,
+  getRoleDisplayName,
+  slugifyArabicToRoleCode,
+  USER_STATUS_LABELS,
+} from '../lib/arabicLabels';
 import { usePortal } from '../lib/portalContext';
 import type { AdminUserDto, PermissionDto, RoleDto } from '../lib/types';
 
@@ -12,8 +18,10 @@ export const RbacAndUsersManager: React.FC = () => {
   const [roles, setRoles] = useState<RoleDto[]>([]);
   const [users, setUsers] = useState<AdminUserDto[]>([]);
 
-  const [newRoleCode, setNewRoleCode] = useState('');
   const [newRoleNameAr, setNewRoleNameAr] = useState('');
+  const [newRoleDescription, setNewRoleDescription] = useState('');
+  const [newRoleCodeOverride, setNewRoleCodeOverride] = useState('');
+  const [newRoleCodeTouched, setNewRoleCodeTouched] = useState(false);
   const [newRolePerms, setNewRolePerms] = useState<string[]>(['books.read']);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,22 +54,36 @@ export const RbacAndUsersManager: React.FC = () => {
     );
   };
 
+  const resolvedRoleCode = (
+    newRoleCodeTouched ? newRoleCodeOverride : slugifyArabicToRoleCode(newRoleNameAr)
+  )
+    .trim()
+    .toUpperCase();
+
   const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const codeToUse = resolvedRoleCode || slugifyArabicToRoleCode(newRoleNameAr);
+    if (!codeToUse || codeToUse.length < 2) {
+      setError('يرجى كتابة اسم الدور بالعربية ليتم توليد رمزه تلقائياً.');
+      return;
+    }
     try {
       await apiRequest('/api/v1/rbac/roles', {
         method: 'POST',
         apiBase,
         body: {
-          code: newRoleCode.trim().toUpperCase(),
+          code: codeToUse,
           nameAr: newRoleNameAr.trim(),
+          description: newRoleDescription.trim() || null,
           permissionCodes: newRolePerms,
         },
       });
       showToast('تم إنشاء الدور المخصص بنجاح');
-      setNewRoleCode('');
       setNewRoleNameAr('');
+      setNewRoleDescription('');
+      setNewRoleCodeOverride('');
+      setNewRoleCodeTouched(false);
       setNewRolePerms(['books.read']);
       await loadAll();
     } catch (err) {
@@ -109,34 +131,32 @@ export const RbacAndUsersManager: React.FC = () => {
       {canRoles && (
         <>
           <div className="portal-card">
-            <h3>➕ إنشاء دور مخصص جديد (`Dynamic RBAC`)</h3>
+            <h3>➕ إنشاء دور وظيفي مخصص</h3>
             <form className="portal-form" onSubmit={(e) => void handleCreateRole(e)}>
               <div className="portal-grid">
-                <div className="portal-field">
-                  <label>رمز الدور (حروف إنجليزية كبيرة و _)</label>
-                  <input
-                    className="portal-input"
-                    dir="ltr"
-                    placeholder="SCHOOL_CURATOR"
-                    value={newRoleCode}
-                    onChange={(e) => setNewRoleCode(e.target.value)}
-                    required
-                  />
-                </div>
                 <div className="portal-field">
                   <label>اسم الدور بالعربية</label>
                   <input
                     className="portal-input"
-                    placeholder="مشرف المحتوى المدرسي"
+                    placeholder="مثال: مشرف المحتوى المدرسي"
                     value={newRoleNameAr}
                     onChange={(e) => setNewRoleNameAr(e.target.value)}
                     required
                   />
                 </div>
+                <div className="portal-field">
+                  <label>وصف الدور (اختياري)</label>
+                  <input
+                    className="portal-input"
+                    placeholder="وصف مختصر لمسؤوليات هذا الدور..."
+                    value={newRoleDescription}
+                    onChange={(e) => setNewRoleDescription(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="portal-field">
-                <label>الصلاحيات الدقيقة المرتبطة</label>
+                <label>الصلاحيات المرتبطة بالدور</label>
                 <div className="portal-chips">
                   {permissions.map((p) => {
                     const selected = newRolePerms.includes(p.code);
@@ -148,12 +168,28 @@ export const RbacAndUsersManager: React.FC = () => {
                         onClick={() => toggleNewPerm(p.code)}
                       >
                         {selected ? '✓ ' : ''}
-                        {p.labelAr} ({p.code})
+                        {getPermissionLabelAr(p.code, p.labelAr)}
                       </button>
                     );
                   })}
                 </div>
               </div>
+
+              <details className="portal-advanced-details">
+                <summary>إعدادات تقنية متقدمة (توليد رمز الدور تلقائياً)</summary>
+                <div className="portal-field">
+                  <label>الرمز البرمجي للدور (أحرف إنجليزية كبيرة وشرطة سفلية)</label>
+                  <input
+                    className="portal-input"
+                    dir="ltr"
+                    value={resolvedRoleCode}
+                    onChange={(e) => {
+                      setNewRoleCodeTouched(true);
+                      setNewRoleCodeOverride(e.target.value);
+                    }}
+                  />
+                </div>
+              </details>
 
               <button type="submit" className="portal-btn primary">
                 إنشاء الدور المخصص
@@ -167,9 +203,8 @@ export const RbacAndUsersManager: React.FC = () => {
               <table className="portal-table">
                 <thead>
                   <tr>
-                    <th>الرمز</th>
-                    <th>الاسم</th>
-                    <th>الصلاحيات</th>
+                    <th>الدور الوظيفي</th>
+                    <th>الصلاحيات الممنوحة</th>
                     <th>النوع</th>
                     <th>إجراء</th>
                   </tr>
@@ -177,10 +212,24 @@ export const RbacAndUsersManager: React.FC = () => {
                 <tbody>
                   {roles.map((r) => (
                     <tr key={r.id}>
-                      <td><code>{r.code}</code></td>
-                      <td>{r.nameAr}</td>
-                      <td>{r.permissions.map((p) => p.code).join('، ')}</td>
-                      <td>{r.isSystem ? 'نظامي' : 'مخصص'}</td>
+                      <td>
+                        <strong>{getRoleDisplayName(r.code, r.nameAr)}</strong>
+                        {r.description && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>
+                            {r.description}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div className="portal-chips">
+                          {r.permissions.map((p) => (
+                            <span key={p.id} className="portal-mode-pill">
+                              {getPermissionLabelAr(p.code, p.labelAr)}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td>{r.isSystem ? 'نظامي أساسي' : 'دور مخصص'}</td>
                       <td>
                         {!r.isSystem && (
                           <button
@@ -208,9 +257,9 @@ export const RbacAndUsersManager: React.FC = () => {
             <table className="portal-table">
               <thead>
                 <tr>
-                  <th>الاسم والبريد</th>
+                  <th>الاسم والبريد الإلكتروني</th>
                   <th>الحالة</th>
-                  <th>الدور</th>
+                  <th>الدور الوظيفي</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,13 +278,17 @@ export const RbacAndUsersManager: React.FC = () => {
                             void handleUpdateUserStatus(u.id, e.target.value as AdminUserDto['status'])
                           }
                         >
-                          <option value="ACTIVE">ACTIVE</option>
-                          <option value="PENDING_APPROVAL">PENDING_APPROVAL</option>
-                          <option value="PENDING_VERIFICATION">PENDING_VERIFICATION</option>
-                          <option value="SUSPENDED">SUSPENDED</option>
+                          <option value="ACTIVE">{USER_STATUS_LABELS.ACTIVE}</option>
+                          <option value="PENDING_APPROVAL">
+                            {USER_STATUS_LABELS.PENDING_APPROVAL}
+                          </option>
+                          <option value="PENDING_VERIFICATION">
+                            {USER_STATUS_LABELS.PENDING_VERIFICATION}
+                          </option>
+                          <option value="SUSPENDED">{USER_STATUS_LABELS.SUSPENDED}</option>
                         </select>
                       ) : (
-                        u.status
+                        USER_STATUS_LABELS[u.status] ?? u.status
                       )}
                     </td>
                     <td>
@@ -247,12 +300,12 @@ export const RbacAndUsersManager: React.FC = () => {
                         >
                           {roles.map((r) => (
                             <option key={r.id} value={r.code}>
-                              {r.nameAr} ({r.code})
+                              {getRoleDisplayName(r.code, r.nameAr)}
                             </option>
                           ))}
                         </select>
                       ) : (
-                        u.roles.map((r) => r.nameAr).join('، ')
+                        u.roles.map((r) => getRoleDisplayName(r.code, r.nameAr)).join('، ')
                       )}
                     </td>
                   </tr>

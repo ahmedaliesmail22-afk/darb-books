@@ -26,6 +26,7 @@ import {
   VideoModal,
 } from '@darb/book-engine';
 import { ApiError, apiRequest, resolveMediaBaseUrl } from '../lib/apiClient';
+import { getPublicationStatusLabelAr } from '../lib/arabicLabels';
 import { usePortal } from '../lib/portalContext';
 import type { PortalBookItem } from '../lib/types';
 import { LibraryPanel } from '../library/LibraryPanel';
@@ -632,7 +633,7 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
                 borderColor: 'rgba(56, 189, 248, 0.45)',
               }}
             >
-              👁️ معاينة {previewInfo.label} ({previewInfo.status})
+              👁️ معاينة {previewInfo.label} ({getPublicationStatusLabelAr(previewInfo.status)})
             </span>
           )}
         </div>

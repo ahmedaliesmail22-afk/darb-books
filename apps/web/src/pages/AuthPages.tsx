@@ -16,7 +16,7 @@ export const LoginPage: React.FC = () => {
     return (
       <main className="portal-main">
         <div className="portal-card" style={{ maxWidth: 520, margin: '24px auto' }}>
-          <h2>🔐 تسجيل الدخول يتطلب خادم API</h2>
+          <h2>🔐 تسجيل الدخول يتطلب الاتصال بالخادم الحي</h2>
           <p>تعمل البوابة حالياً في وضع العرض الثابت. يمكنك تصفح الكتب في المكتبة مباشرةً دون تسجيل.</p>
           <Link to="/library" className="portal-btn primary">
             📚 الانتقال إلى المكتبة

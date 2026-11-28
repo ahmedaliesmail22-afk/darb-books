@@ -7,7 +7,13 @@ import {
   resolveApiAssetUrl,
 } from '../lib/apiClient';
 import { usePortal } from '../lib/portalContext';
-import { PUBLICATION_STATUS_META, TAXONOMY_GROUP_LABELS } from '../lib/statusLabels';
+import {
+  getFormatLabelAr,
+  getReviewDecisionLabelAr,
+  getTaxonomyGroupLabelAr,
+  slugifyArabicToSlug,
+} from '../lib/arabicLabels';
+import { PUBLICATION_STATUS_META } from '../lib/statusLabels';
 import type {
   AuthorBookDto,
   OfficialTemplateInfoDto,
@@ -26,6 +32,7 @@ export const AuthorPortalPage: React.FC = () => {
   const [uploadMode, setUploadMode] = useState<'new' | 'version'>('new');
   const [targetSlug, setTargetSlug] = useState('');
   const [slugInput, setSlugInput] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
   const [titleInput, setTitleInput] = useState('');
   const [subtitleInput, setSubtitleInput] = useState('');
   const [descriptionInput, setDescriptionInput] = useState('');
@@ -94,10 +101,14 @@ export const AuthorPortalPage: React.FC = () => {
     );
   };
 
+  const effectiveAuthorSlug = slugTouched
+    ? slugInput.trim()
+    : slugifyArabicToSlug(titleInput, 'book');
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      setErrorMsg('يرجى اختيار ملف الكتاب (ZIP, Markdown, JSON, DOCX, EPUB)');
+      setErrorMsg('يرجى اختيار ملف الكتاب بإحدى الصيغ المعتمدة');
       return;
     }
     if (uploadMode === 'version' && !targetSlug) {
@@ -115,7 +126,7 @@ export const AuthorPortalPage: React.FC = () => {
       if (subtitleInput.trim()) form.append('subtitle', subtitleInput.trim());
 
       if (uploadMode === 'new') {
-        if (slugInput.trim()) form.append('slug', slugInput.trim());
+        if (effectiveAuthorSlug) form.append('slug', effectiveAuthorSlug);
         if (descriptionInput.trim()) form.append('description', descriptionInput.trim());
         form.append('direction', directionInput);
         if (selectedTaxIds.length > 0) {
@@ -145,6 +156,7 @@ export const AuthorPortalPage: React.FC = () => {
       setSubtitleInput('');
       setDescriptionInput('');
       setSlugInput('');
+      setSlugTouched(false);
       const fileEl = document.getElementById('authorBookFileInput') as HTMLInputElement | null;
       if (fileEl) fileEl.value = '';
       await loadData();
@@ -191,7 +203,7 @@ export const AuthorPortalPage: React.FC = () => {
       <main className="portal-main">
         <div className="portal-card">
           <h2>✍️ بوابة المؤلف</h2>
-          <p>تتطلب بوابة المؤلف ورفع الكتب وإدارة الإصدارات الاتصال بالخادم الحي (API Mode).</p>
+          <p>تتطلب بوابة المؤلف ورفع الكتب وإدارة الإصدارات الاتصال بالخادم الحي للمنصة.</p>
         </div>
       </main>
     );
@@ -218,7 +230,7 @@ export const AuthorPortalPage: React.FC = () => {
       <main className="portal-main">
         <div className="portal-error-box">
           <h3>⛔ صلاحيات غير كافية</h3>
-          <p>حسابك الحالي لا يملك صلاحية `books.create` المخصصة للمؤلفين ومنشئي المحتوى.</p>
+          <p>حسابك الحالي لا يملك صلاحية إنشاء الكتب ورفع الإصدارات المخصصة للمؤلفين ومنشئي المحتوى.</p>
         </div>
       </main>
     );
@@ -236,8 +248,8 @@ export const AuthorPortalPage: React.FC = () => {
           تأليف الكتب التفاعلية ورفع الإصدارات غير الهدامة
         </h1>
         <p style={{ marginBottom: 14 }}>
-          حمّل القالب القياسي المحدّث من إدارة المنصة، أو ارفع كتابك بصيغة ZIP / Markdown / JSON /
-          DOCX / EPUB لتحويله آلياً ومعاينته داخل المحرك ثلاثي الأبعاد قبل إرساله للمراجعة.
+          حمّل القالب القياسي المحدّث من إدارة المنصة، أو ارفع كتابك بالصيغ المعتمدة لتحويله
+          آلياً ومعاينته داخل المحرك ثلاثي الأبعاد قبل إرساله للمراجعة.
         </p>
 
         {templateInfo && (
@@ -256,11 +268,14 @@ export const AuthorPortalPage: React.FC = () => {
               className="portal-btn primary"
               data-testid="downloadOfficialTemplateBtn"
             >
-              ⬇️ تحميل القالب القياسي الرسمي (v{templateInfo.template.version})
+              ⬇️ تحميل القالب القياسي الرسمي (الإصدار {templateInfo.template.version})
             </a>
             <span className="portal-mode-pill">
-              الصيغ المسموحة: {templateInfo.uploadsPolicy.allowedFormats.join(' • ')} | الحد الأقصى:{' '}
-              {templateInfo.uploadsPolicy.maxFileSizeMb} MB
+              الصيغ المسموحة:{' '}
+              {templateInfo.uploadsPolicy.allowedFormats
+                .map((f) => getFormatLabelAr(f))
+                .join(' • ')}{' '}
+              | الحد الأقصى: {templateInfo.uploadsPolicy.maxFileSizeMb} ميجابايت
             </span>
           </div>
         )}
@@ -280,7 +295,7 @@ export const AuthorPortalPage: React.FC = () => {
             <div className="portal-chips">
               {templateInfo.formats.map((fmt) => (
                 <span key={fmt.formatId} className="portal-mode-pill" title={fmt.descriptionAr}>
-                  {fmt.labelAr} ({fmt.extensions.join(', ')})
+                  {fmt.labelAr}
                 </span>
               ))}
             </div>
@@ -336,7 +351,7 @@ export const AuthorPortalPage: React.FC = () => {
                 >
                   {books.map((b) => (
                     <option key={b.id} value={b.slug}>
-                      {b.title} ({b.slug}) — {b.activeVersion ? `المنشور حالياً: ${b.activeVersion.versionLabel}` : 'غير منشور بعد'}
+                      {b.title} — {b.activeVersion ? `المنشور حالياً: ${b.activeVersion.versionLabel}` : 'غير منشور بعد'}
                     </option>
                   ))}
                 </select>
@@ -345,36 +360,17 @@ export const AuthorPortalPage: React.FC = () => {
                 </small>
               </div>
             ) : (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: 12,
-                }}
-              >
-                <div className="portal-field">
-                  <label htmlFor="bookSlugInput">المعرف اللاتيني (Slug - اختياري):</label>
-                  <input
-                    id="bookSlugInput"
-                    className="portal-input"
-                    value={slugInput}
-                    onChange={(e) => setSlugInput(e.target.value)}
-                    placeholder="my-interactive-science-book"
-                    dir="ltr"
-                  />
-                </div>
-                <div className="portal-field">
-                  <label htmlFor="bookDirectionSelect">اتجاه القراءة الافتراضي:</label>
-                  <select
-                    id="bookDirectionSelect"
-                    className="portal-select"
-                    value={directionInput}
-                    onChange={(e) => setDirectionInput(e.target.value as 'rtl' | 'ltr')}
-                  >
-                    <option value="rtl">عربي من اليمين لليسار (RTL)</option>
-                    <option value="ltr">إنجليزي من اليسار لليمين (LTR)</option>
-                  </select>
-                </div>
+              <div className="portal-field" style={{ maxWidth: 320 }}>
+                <label htmlFor="bookDirectionSelect">اتجاه القراءة الافتراضي:</label>
+                <select
+                  id="bookDirectionSelect"
+                  className="portal-select"
+                  value={directionInput}
+                  onChange={(e) => setDirectionInput(e.target.value as 'rtl' | 'ltr')}
+                >
+                  <option value="rtl">عربي من اليمين لليسار</option>
+                  <option value="ltr">لاتيني من اليسار لليمين</option>
+                </select>
               </div>
             )}
 
@@ -407,7 +403,7 @@ export const AuthorPortalPage: React.FC = () => {
                 />
               </div>
               <div className="portal-field">
-                <label htmlFor="bookFormatSelect">محوّل الصيغة (Parser Registry):</label>
+                <label htmlFor="bookFormatSelect">تحديد نوع الملف المحوَّل:</label>
                 <select
                   id="bookFormatSelect"
                   className="portal-select"
@@ -440,7 +436,7 @@ export const AuthorPortalPage: React.FC = () => {
                 </div>
 
                 <div className="portal-field">
-                  <label>التصنيفات المرتبطة (من قاعدة البيانات الديناميكية):</label>
+                  <label>التصنيفات والمجالات المرتبطة:</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {Object.entries(groupedTaxonomies).map(([group, items]) => (
                       <div key={group}>
@@ -451,7 +447,7 @@ export const AuthorPortalPage: React.FC = () => {
                             marginBottom: 4,
                           }}
                         >
-                          {TAXONOMY_GROUP_LABELS[group] ?? group}
+                          {getTaxonomyGroupLabelAr(group)}
                         </div>
                         <div className="portal-chips">
                           {items
@@ -473,12 +469,30 @@ export const AuthorPortalPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
+
+                <details className="portal-advanced-details">
+                  <summary>إعدادات تقنية متقدمة (توليد رابط الكتاب تلقائياً)</summary>
+                  <div className="portal-field">
+                    <label htmlFor="bookSlugInput">المعرف اللاتيني للكتاب (اختياري):</label>
+                    <input
+                      id="bookSlugInput"
+                      className="portal-input"
+                      value={effectiveAuthorSlug}
+                      onChange={(e) => {
+                        setSlugTouched(true);
+                        setSlugInput(e.target.value);
+                      }}
+                      placeholder="my-interactive-science-book"
+                      dir="ltr"
+                    />
+                  </div>
+                </details>
               </>
             )}
 
             <div className="portal-field">
               <label htmlFor="authorBookFileInput">
-                ملف الكتاب ({acceptedExtensions}):
+                ملف الكتاب المطلوب تحويله:
               </label>
               <input
                 id="authorBookFileInput"
@@ -520,7 +534,7 @@ export const AuthorPortalPage: React.FC = () => {
           <div className="portal-card">جاري تحميل أعمال المؤلف...</div>
         ) : books.length === 0 ? (
           <div className="portal-card">
-            <p>لم ترفع أي كتاب بعد. حمّل القالب القياسي أعلاه أو ارفع ملف Markdown / ZIP / DOCX / EPUB للبدء.</p>
+            <p>لم ترفع أي كتاب بعد. حمّل القالب القياسي أعلاه أو ارفع ملف كتابك للبدء.</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -560,10 +574,7 @@ export const AuthorPortalPage: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <p style={{ marginTop: 4 }}>
-                        المعرف: <code dir="ltr">{book.slug}</code>
-                        {book.subtitle ? ` — ${book.subtitle}` : ''}
-                      </p>
+                      {book.subtitle && <p style={{ marginTop: 4 }}>{book.subtitle}</p>}
                       <div className="portal-chips" style={{ marginTop: 6 }}>
                         {book.taxonomies.map((t) => (
                           <span key={t.id} className="portal-mode-pill">
@@ -640,7 +651,7 @@ export const AuthorPortalPage: React.FC = () => {
                                 {verStatus.labelAr}
                               </span>
                               <span className="portal-mode-pill">
-                                الصيغة: {ver.sourceFormat} • {ver.chaptersCount} فصول • {ver.spreadsCount}{' '}
+                                الصيغة: {getFormatLabelAr(ver.sourceFormat)} • {ver.chaptersCount} فصول • {ver.spreadsCount}{' '}
                                 نشرات
                                 {ver.audioTracksCount > 0 ? ` • 🎙️ ${ver.audioTracksCount}` : ''}
                                 {ver.videosCount > 0 ? ` • 🎬 ${ver.videosCount}` : ''}
@@ -671,7 +682,7 @@ export const AuthorPortalPage: React.FC = () => {
                                 fontSize: '0.88rem',
                               }}
                             >
-                              <strong>ملاحظات المراجعة ({ver.latestTicket.decision ?? 'ملاحظة'}):</strong>{' '}
+                              <strong>ملاحظات المراجعة ({getReviewDecisionLabelAr(ver.latestTicket.decision)}):</strong>{' '}
                               {ver.latestTicket.notes}
                             </div>
                           )}

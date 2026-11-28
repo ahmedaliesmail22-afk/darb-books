@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError, apiRequest } from '../lib/apiClient';
+import { getFormatLabelAr } from '../lib/arabicLabels';
 import { usePortal } from '../lib/portalContext';
 import { PUBLICATION_STATUS_META } from '../lib/statusLabels';
 import type {
@@ -122,7 +123,7 @@ export const ModerationPortalPage: React.FC = () => {
       <main className="portal-main">
         <div className="portal-card">
           <h2>🧑‍⚖️ بوابة المراجعة والاعتماد</h2>
-          <p>تتطلب بوابة المراجعة الاتصال بالخادم الحي (API Mode).</p>
+          <p>تتطلب بوابة المراجعة الاتصال بالخادم الحي للمنصة.</p>
         </div>
       </main>
     );
@@ -147,7 +148,7 @@ export const ModerationPortalPage: React.FC = () => {
       <main className="portal-main">
         <div className="portal-error-box">
           <h3>⛔ صلاحيات غير كافية</h3>
-          <p>حسابك لا يملك صلاحية `books.review` المخصصة للجنة المراجعة والمصادقة.</p>
+          <p>حسابك لا يملك صلاحية مراجعة الكتب والمصادقة العلمية على النشر.</p>
         </div>
       </main>
     );
@@ -250,9 +251,9 @@ export const ModerationPortalPage: React.FC = () => {
 
                     <p style={{ marginTop: 4 }}>
                       المؤلف: {item.book.author?.fullName ?? 'غير محدد'} (
-                      {item.book.author?.email ?? '-'}) • المعرف:{' '}
-                      <code dir="ltr">{item.book.slug}</code> • الصيغة: {item.sourceFormat} •{' '}
-                      {item.chaptersCount} فصول / {item.spreadsCount} نشرات
+                      {item.book.author?.email ?? '-'}) • الصيغة:{' '}
+                      {getFormatLabelAr(item.sourceFormat)} • {item.chaptersCount} فصول /{' '}
+                      {item.spreadsCount} نشرات
                     </p>
 
                     {item.book.activeVersion && (

@@ -136,6 +136,13 @@ npm run dev
 | [`docs/05_OPERATIONS_AND_DEPLOYMENT_GUIDE.md`](docs/05_OPERATIONS_AND_DEPLOYMENT_GUIDE.md) | **دليل التشغيل والنشر الإنتاجي:** الوضع الثابت، Docker، المتغيرات، R2/CORS، والنسخ الاحتياطي |
 | [`docs/06_API_AND_RBAC_REFERENCE.md`](docs/06_API_AND_RBAC_REFERENCE.md) | **مرجع واجهات البرمجة والصلاحيات:** جرد جميع مسارات `/api/v1/`، مصفوفة الـ RBAC، والآليات |
 | [`docs/07_AUTHOR_AND_BLOCKS_MANUAL.md`](docs/07_AUTHOR_AND_BLOCKS_MANUAL.md) | **دليل المؤلفين والمراجعين والكتل التفاعلية:** دورة النشر، الصيغ، وأمثلة الكتل الست |
+| [`docs/08_ADMIN_PANEL_USER_MANUAL.md`](docs/08_ADMIN_PANEL_USER_MANUAL.md) | **الدليل المرجعي للوحة التحكم:** شرح تفصيلي لكل تبويب وزر وحقل وقائمة وجدول وتصدير |
+| [`docs/09_PLATFORM_USAGE_GUIDE.md`](docs/09_PLATFORM_USAGE_GUIDE.md) | **دليل الاستخدام الشامل للمنصة:** الأدوار، أوضاع التشغيل، وخريطة الصفحات الكاملة |
+| [`docs/10_PLATFORM_HOW_TO_USE_GUIDE.md`](docs/10_PLATFORM_HOW_TO_USE_GUIDE.md) | **دليل طريقة الاستخدام الشامل:** كيف تستخدم القارئ 3D وبوابة المؤلف والمراجعة والبحث |
+| [`docs/11_PLATFORM_STEP_BY_STEP_GUIDE.md`](docs/11_PLATFORM_STEP_BY_STEP_GUIDE.md) | **دليل خطوات الاستخدام الشامل:** خطوات مرقّمة لكل رحلة عمل من التشغيل حتى النشر |
+| [`docs/12_PRIVACY_POLICY.md`](docs/12_PRIVACY_POLICY.md) | **سياسة الخصوصية:** معالجة بيانات الحسابات والأعمار وتقدم القراءة وسجل التدقيق |
+| [`docs/13_ACCEPTABLE_USE_POLICY.md`](docs/13_ACCEPTABLE_USE_POLICY.md) | **سياسة الاستخدام المقبول:** حماية القاصرين، ضوابط النشر، وسلامة المختبرات البرمجية |
+| [`docs/14_TERMS_OF_USE.md`](docs/14_TERMS_OF_USE.md) | **شروط الاستخدام:** الحسابات، إقرارات الملكية الفكرية، المراجعة، وإخلاء المسؤولية |
 
 ---
 
