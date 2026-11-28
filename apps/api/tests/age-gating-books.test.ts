@@ -17,7 +17,7 @@ describe.skipIf(!sqlServerAvailable)(
   });
 
   afterEach(async () => {
-    await ctx.cleanup();
+    if (ctx) await ctx.cleanup();
   });
 
   it('serves migrated epic-v1, anatomical-book, and interactive-showcase editions cleanly', async () => {

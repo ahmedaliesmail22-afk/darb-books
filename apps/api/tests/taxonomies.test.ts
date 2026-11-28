@@ -15,7 +15,7 @@ describe.skipIf(!sqlServerAvailable)('Dynamic Taxonomies & CMS Sections', () => 
   });
 
   afterEach(async () => {
-    await ctx.cleanup();
+    if (ctx) await ctx.cleanup();
   });
 
   it('creates, edits, reorders, and deactivates taxonomies dynamically across custom groups', async () => {

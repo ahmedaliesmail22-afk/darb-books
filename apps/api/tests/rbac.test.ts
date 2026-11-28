@@ -15,7 +15,7 @@ describe.skipIf(!sqlServerAvailable)('Dynamic RBAC, Custom Roles & Audit Logs', 
   });
 
   afterEach(async () => {
-    await ctx.cleanup();
+    if (ctx) await ctx.cleanup();
   });
 
   it('allows creating a custom role, attaching granular permissions, assigning it, and auditing changes', async () => {

@@ -598,8 +598,15 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
       },
     });
 
-    const audioDir = normalizeAssetDir(meta.audioDir).replace(/^\.\//, '');
-    const videoDir = normalizeAssetDir(meta.videoDir).replace(/^\.\//, '');
+    const cleanRelAssetDir = (raw?: string): string => {
+      const trimmed = raw?.trim();
+      if (!trimmed) return '';
+      return normalizeAssetDir(trimmed)
+        .replace(/^[./]+/, '')
+        .replace(/\/+$/, '');
+    };
+    const audioDir = cleanRelAssetDir(meta.audioDir);
+    const videoDir = cleanRelAssetDir(meta.videoDir);
 
     const version = await prisma.bookVersion.upsert({
       where: { bookId_versionNumber: { bookId: book.id, versionNumber: 1 } },
@@ -666,8 +673,8 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
     }> = [];
 
     for (const entry of dirsToScan) {
-      if (!entry.dir) continue;
-      const cleanRelDir = entry.dir.replace(/\/$/, '');
+      const cleanRelDir = entry.dir.replace(/^[./]+/, '').replace(/\/+$/, '');
+      if (!cleanRelDir) continue;
       const fullDir = path.join(publicDir, cleanRelDir);
       if (!fs.existsSync(fullDir)) continue;
 
@@ -697,11 +704,15 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
 
     if (mediaRows.length > 0) {
       const existingAssets = await prisma.mediaAsset.findMany({
-        where: { bookVersionId: version.id },
         select: { r2Key: true },
       });
-      const existingR2Keys = new Set(existingAssets.map((a) => a.r2Key));
-      const newMediaRows = mediaRows.filter((row) => !existingR2Keys.has(row.r2Key));
+      const seenR2Keys = new Set(existingAssets.map((a) => a.r2Key));
+      const newMediaRows: typeof mediaRows = [];
+      for (const row of mediaRows) {
+        if (seenR2Keys.has(row.r2Key)) continue;
+        seenR2Keys.add(row.r2Key);
+        newMediaRows.push(row);
+      }
       if (newMediaRows.length > 0) {
         await prisma.mediaAsset.createMany({ data: newMediaRows });
         mediaAssetsCount += newMediaRows.length;

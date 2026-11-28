@@ -17,7 +17,7 @@ describe.skipIf(!sqlServerAvailable)(
   });
 
   afterEach(async () => {
-    await ctx.cleanup();
+    if (ctx) await ctx.cleanup();
   });
 
   it('registers instantly, completes onboarding from active taxonomies, and rotates refresh tokens securely', async () => {
