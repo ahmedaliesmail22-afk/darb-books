@@ -1,4 +1,5 @@
 import type { Taxonomy } from '@prisma/client';
+import { parseJson } from '../lib/jsonCodec';
 import type { AgePolicy } from './configService';
 
 export interface AgeRuleShape {
@@ -8,10 +9,11 @@ export interface AgeRuleShape {
 }
 
 function readAgeRule(rulesJson: unknown): AgeRuleShape {
-  if (!rulesJson || typeof rulesJson !== 'object' || Array.isArray(rulesJson)) {
+  const parsed = typeof rulesJson === 'string' ? parseJson<unknown>(rulesJson, {}) : rulesJson;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return {};
   }
-  const obj = rulesJson as Record<string, unknown>;
+  const obj = parsed as Record<string, unknown>;
   return {
     minAge: typeof obj.minAge === 'number' ? obj.minAge : undefined,
     maxAge: typeof obj.maxAge === 'number' ? obj.maxAge : obj.maxAge === null ? null : undefined,

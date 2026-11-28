@@ -3,45 +3,19 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-}
-
-enum UserStatus {
-  ACTIVE
-  PENDING_VERIFICATION
-  PENDING_APPROVAL
-  SUSPENDED
-}
-
-enum PublicationStatus {
-  DRAFT
-  SUBMITTED
-  UNDER_REVIEW
-  CHANGES_REQUESTED
-  PUBLISHED
-  REJECTED
-  ARCHIVED
-}
-
-enum MediaAssetType {
-  AUDIO
-  VIDEO
-  IMAGE
-  MODEL_3D
-  SOURCE_DOC
-  OTHER
+  provider = "sqlserver"
 }
 
 model User {
-  id              String     @id @default(uuid())
-  email           String     @unique
-  passwordHash    String     @map("password_hash")
-  fullName        String     @map("full_name")
-  status          UserStatus @default(ACTIVE)
-  emailVerifiedAt DateTime?  @map("email_verified_at")
-  lastLoginAt     DateTime?  @map("last_login_at")
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
+  id              String    @id @default(uuid()) @db.NVarChar(64)
+  email           String    @unique @db.NVarChar(255)
+  passwordHash    String    @map("password_hash") @db.NVarChar(255)
+  fullName        String    @map("full_name") @db.NVarChar(200)
+  status          String    @default("ACTIVE") @db.NVarChar(40)
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   profile            UserProfile?
   userRoles          UserRole[]          @relation("UserRoleMember")
@@ -60,72 +34,72 @@ model User {
 }
 
 model UserProfile {
-  userId              String   @id @map("user_id")
-  ageGroupId          String?  @map("age_group_id")
-  educationLevelId    String?  @map("education_level_id")
+  userId              String   @id @map("user_id") @db.NVarChar(64)
+  ageGroupId          String?  @map("age_group_id") @db.NVarChar(64)
+  educationLevelId    String?  @map("education_level_id") @db.NVarChar(64)
   onboardingCompleted Boolean  @default(false) @map("onboarding_completed")
-  uiPrefsJson         Json     @default("{}") @map("ui_prefs_json")
-  metadataJson        Json     @default("{}") @map("metadata_json")
+  uiPrefsJson         String   @default("{}") @map("ui_prefs_json") @db.NVarChar(Max)
+  metadataJson        String   @default("{}") @map("metadata_json") @db.NVarChar(Max)
   updatedAt           DateTime @updatedAt @map("updated_at")
 
-  user                User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ageGroup            Taxonomy?               @relation("UserAgeGroup", fields: [ageGroupId], references: [id], onDelete: SetNull)
-  educationLevel      Taxonomy?               @relation("UserEducationLevel", fields: [educationLevelId], references: [id], onDelete: SetNull)
+  user                User                    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ageGroup            Taxonomy?               @relation("UserAgeGroup", fields: [ageGroupId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  educationLevel      Taxonomy?               @relation("UserEducationLevel", fields: [educationLevelId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   preferredTaxonomies UserPreferredTaxonomy[]
 
   @@map("user_profiles")
 }
 
 model UserPreferredTaxonomy {
-  userId     String @map("user_id")
-  taxonomyId String @map("taxonomy_id")
+  userId     String @map("user_id") @db.NVarChar(64)
+  taxonomyId String @map("taxonomy_id") @db.NVarChar(64)
 
-  profile  UserProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  taxonomy Taxonomy    @relation(fields: [taxonomyId], references: [id], onDelete: Cascade)
+  profile  UserProfile @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction)
+  taxonomy Taxonomy    @relation(fields: [taxonomyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([userId, taxonomyId])
   @@map("user_preferred_taxonomies")
 }
 
 model RefreshToken {
-  id           String    @id @default(uuid())
-  userId       String    @map("user_id")
-  tokenHash    String    @unique @map("token_hash")
-  userAgent    String?   @map("user_agent")
-  ipAddress    String?   @map("ip_address")
+  id           String    @id @default(uuid()) @db.NVarChar(64)
+  userId       String    @map("user_id") @db.NVarChar(64)
+  tokenHash    String    @unique @map("token_hash") @db.NVarChar(191)
+  userAgent    String?   @map("user_agent") @db.NVarChar(500)
+  ipAddress    String?   @map("ip_address") @db.NVarChar(120)
   expiresAt    DateTime  @map("expires_at")
   revokedAt    DateTime? @map("revoked_at")
-  replacedById String?   @map("replaced_by_id")
+  replacedById String?   @map("replaced_by_id") @db.NVarChar(64)
   createdAt    DateTime  @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([userId, expiresAt])
   @@map("refresh_tokens")
 }
 
 model VerificationToken {
-  id        String    @id @default(uuid())
-  userId    String    @map("user_id")
-  purpose   String
-  tokenHash String    @unique @map("token_hash")
+  id        String    @id @default(uuid()) @db.NVarChar(64)
+  userId    String    @map("user_id") @db.NVarChar(64)
+  purpose   String    @db.NVarChar(64)
+  tokenHash String    @unique @map("token_hash") @db.NVarChar(191)
   expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([userId, purpose])
   @@map("verification_tokens")
 }
 
 model Permission {
-  id          String   @id @default(uuid())
-  code        String   @unique
-  module      String
-  labelAr     String   @map("label_ar")
-  labelEn     String?  @map("label_en")
-  description String?
+  id          String   @id @default(uuid()) @db.NVarChar(64)
+  code        String   @unique @db.NVarChar(120)
+  module      String   @db.NVarChar(64)
+  labelAr     String   @map("label_ar") @db.NVarChar(255)
+  labelEn     String?  @map("label_en") @db.NVarChar(255)
+  description String?  @db.NVarChar(500)
   createdAt   DateTime @default(now()) @map("created_at")
 
   rolePermissions RolePermission[]
@@ -135,11 +109,11 @@ model Permission {
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  code        String   @unique
-  nameAr      String   @map("name_ar")
-  nameEn      String?  @map("name_en")
-  description String?
+  id          String   @id @default(uuid()) @db.NVarChar(64)
+  code        String   @unique @db.NVarChar(120)
+  nameAr      String   @map("name_ar") @db.NVarChar(200)
+  nameEn      String?  @map("name_en") @db.NVarChar(200)
+  description String?  @db.NVarChar(500)
   isSystem    Boolean  @default(false) @map("is_system")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -152,50 +126,50 @@ model Role {
 }
 
 model RolePermission {
-  roleId       String @map("role_id")
-  permissionId String @map("permission_id")
+  roleId       String @map("role_id") @db.NVarChar(64)
+  permissionId String @map("permission_id") @db.NVarChar(64)
 
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
 }
 
 model UserRole {
-  userId       String   @map("user_id")
-  roleId       String   @map("role_id")
-  assignedById String?  @map("assigned_by_id")
+  userId       String   @map("user_id") @db.NVarChar(64)
+  roleId       String   @map("role_id") @db.NVarChar(64)
+  assignedById String?  @map("assigned_by_id") @db.NVarChar(64)
   assignedAt   DateTime @default(now()) @map("assigned_at")
 
-  user       User  @relation("UserRoleMember", fields: [userId], references: [id], onDelete: Cascade)
-  role       Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  assignedBy User? @relation("UserRoleAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+  user       User  @relation("UserRoleMember", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  role       Role  @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assignedBy User? @relation("UserRoleAssigner", fields: [assignedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([userId, roleId])
   @@map("user_roles")
 }
 
 model Taxonomy {
-  id          String   @id @default(uuid())
-  group       String
-  slug        String
-  labelAr     String   @map("label_ar")
-  labelEn     String?  @map("label_en")
-  description String?
-  parentId    String?  @map("parent_id")
+  id          String   @id @default(uuid()) @db.NVarChar(64)
+  group       String   @db.NVarChar(64)
+  slug        String   @db.NVarChar(120)
+  labelAr     String   @map("label_ar") @db.NVarChar(200)
+  labelEn     String?  @map("label_en") @db.NVarChar(200)
+  description String?  @db.NVarChar(500)
+  parentId    String?  @map("parent_id") @db.NVarChar(64)
   sortOrder   Int      @default(0) @map("sort_order")
   isActive    Boolean  @default(true) @map("is_active")
-  rulesJson   Json     @default("{}") @map("rules_json")
+  rulesJson   String   @default("{}") @map("rules_json") @db.NVarChar(Max)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  parent                 Taxonomy?               @relation("TaxonomyHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children               Taxonomy[]              @relation("TaxonomyHierarchy")
-  ageGroupUsers          UserProfile[]           @relation("UserAgeGroup")
-  educationLevelUsers    UserProfile[]           @relation("UserEducationLevel")
-  preferredByUsers       UserPreferredTaxonomy[]
-  books                  BookTaxonomy[]
+  parent              Taxonomy?               @relation("TaxonomyHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children            Taxonomy[]              @relation("TaxonomyHierarchy")
+  ageGroupUsers       UserProfile[]           @relation("UserAgeGroup")
+  educationLevelUsers UserProfile[]           @relation("UserEducationLevel")
+  preferredByUsers    UserPreferredTaxonomy[]
+  books               BookTaxonomy[]
 
   @@unique([group, slug])
   @@index([group, isActive, sortOrder])
@@ -203,27 +177,27 @@ model Taxonomy {
 }
 
 model SystemConfig {
-  id          String   @id @default(uuid())
-  key         String   @unique
-  category    String
-  valueJson   Json     @map("value_json")
-  description String?
+  id          String   @id @default(uuid()) @db.NVarChar(64)
+  key         String   @unique @db.NVarChar(120)
+  category    String   @db.NVarChar(64)
+  valueJson   String   @map("value_json") @db.NVarChar(Max)
+  description String?  @db.NVarChar(500)
   isPublic    Boolean  @default(false) @map("is_public")
-  updatedById String?  @map("updated_by_id")
+  updatedById String?  @map("updated_by_id") @db.NVarChar(64)
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  updatedBy User? @relation("ConfigUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("ConfigUpdater", fields: [updatedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([category, isPublic])
   @@map("system_configs")
 }
 
 model CmsPage {
-  id          String   @id @default(uuid())
-  slug        String   @unique
-  titleAr     String   @map("title_ar")
-  titleEn     String?  @map("title_en")
-  seoJson     Json     @default("{}") @map("seo_json")
+  id          String   @id @default(uuid()) @db.NVarChar(64)
+  slug        String   @unique @db.NVarChar(120)
+  titleAr     String   @map("title_ar") @db.NVarChar(255)
+  titleEn     String?  @map("title_en") @db.NVarChar(255)
+  seoJson     String   @default("{}") @map("seo_json") @db.NVarChar(Max)
   isPublished Boolean  @default(true) @map("is_published")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -233,19 +207,19 @@ model CmsPage {
 }
 
 model CmsSection {
-  id          String   @id @default(uuid())
-  pageId      String   @map("page_id")
-  sectionKey  String   @map("section_key")
-  titleAr     String   @map("title_ar")
-  titleEn     String?  @map("title_en")
-  contentJson Json     @default("{}") @map("content_json")
+  id          String   @id @default(uuid()) @db.NVarChar(64)
+  pageId      String   @map("page_id") @db.NVarChar(64)
+  sectionKey  String   @map("section_key") @db.NVarChar(120)
+  titleAr     String   @map("title_ar") @db.NVarChar(255)
+  titleEn     String?  @map("title_en") @db.NVarChar(255)
+  contentJson String   @default("{}") @map("content_json") @db.NVarChar(Max)
   sortOrder   Int      @default(0) @map("sort_order")
   isVisible   Boolean  @default(true) @map("is_visible")
-  updatedById String?  @map("updated_by_id")
+  updatedById String?  @map("updated_by_id") @db.NVarChar(64)
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  page      CmsPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  updatedBy User?   @relation("CmsSectionUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  page      CmsPage @relation(fields: [pageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  updatedBy User?   @relation("CmsSectionUpdater", fields: [updatedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([pageId, sectionKey])
   @@index([pageId, isVisible, sortOrder])
@@ -253,45 +227,45 @@ model CmsSection {
 }
 
 model NewsPost {
-  id          String            @id @default(uuid())
-  slug        String            @unique
-  title       String
-  summary     String?
-  bodyMd      String            @map("body_md")
-  coverUrl    String?           @map("cover_url")
-  status      PublicationStatus @default(DRAFT)
-  publishedAt DateTime?         @map("published_at")
-  authorId    String?           @map("author_id")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+  id          String    @id @default(uuid()) @db.NVarChar(64)
+  slug        String    @unique @db.NVarChar(160)
+  title       String    @db.NVarChar(255)
+  summary     String?   @db.NVarChar(500)
+  bodyMd      String    @map("body_md") @db.NVarChar(Max)
+  coverUrl    String?   @map("cover_url") @db.NVarChar(500)
+  status      String    @default("DRAFT") @db.NVarChar(40)
+  publishedAt DateTime? @map("published_at")
+  authorId    String?   @map("author_id") @db.NVarChar(64)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  author User? @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  author User? @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([status, publishedAt])
   @@map("news_posts")
 }
 
 model Book {
-  id              String            @id @default(uuid())
-  slug            String            @unique
-  title           String
-  subtitle        String?
-  description     String?
-  badge           String?
-  badgeColor      String?           @map("badge_color")
-  theme           String            @default("royal-gold")
-  direction       String            @default("rtl")
-  coverUrl        String?           @map("cover_url")
-  status          PublicationStatus @default(DRAFT)
-  activeVersionId String?           @unique @map("active_version_id")
-  authorId        String?           @map("author_id")
-  metadataJson    Json              @default("{}") @map("metadata_json")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
+  id              String   @id @default(uuid()) @db.NVarChar(64)
+  slug            String   @unique @db.NVarChar(160)
+  title           String   @db.NVarChar(255)
+  subtitle        String?  @db.NVarChar(350)
+  description     String?  @db.NVarChar(Max)
+  badge           String?  @db.NVarChar(120)
+  badgeColor      String?  @map("badge_color") @db.NVarChar(64)
+  theme           String   @default("royal-gold") @db.NVarChar(64)
+  direction       String   @default("rtl") @db.NVarChar(16)
+  coverUrl        String?  @map("cover_url") @db.NVarChar(500)
+  status          String   @default("DRAFT") @db.NVarChar(40)
+  activeVersionId String?  @map("active_version_id") @db.NVarChar(64)
+  authorId        String?  @map("author_id") @db.NVarChar(64)
+  metadataJson    String   @default("{}") @map("metadata_json") @db.NVarChar(Max)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  author          User?             @relation("BookAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  author          User?             @relation("BookAuthor", fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   versions        BookVersion[]     @relation("BookVersions")
-  activeVersion   BookVersion?      @relation("BookActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  activeVersion   BookVersion?      @relation("BookActiveVersion", fields: [activeVersionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   taxonomies      BookTaxonomy[]
   readingProgress ReadingProgress[]
 
@@ -300,41 +274,41 @@ model Book {
 }
 
 model BookTaxonomy {
-  bookId     String @map("book_id")
-  taxonomyId String @map("taxonomy_id")
+  bookId     String @map("book_id") @db.NVarChar(64)
+  taxonomyId String @map("taxonomy_id") @db.NVarChar(64)
 
-  book     Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  taxonomy Taxonomy @relation(fields: [taxonomyId], references: [id], onDelete: Cascade)
+  book     Book     @relation(fields: [bookId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  taxonomy Taxonomy @relation(fields: [taxonomyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([bookId, taxonomyId])
   @@map("book_taxonomies")
 }
 
 model BookVersion {
-  id                  String            @id @default(uuid())
-  bookId              String            @map("book_id")
-  versionNumber       Int               @map("version_number")
-  versionLabel        String            @map("version_label")
-  sourceFormat        String            @default("json") @map("source_format")
-  sourceFileUrl       String?           @map("source_file_url")
-  canonicalJsonUrl    String?           @map("canonical_json_url")
-  canonicalDataJson   Json?             @map("canonical_data_json")
-  audioDir            String?           @map("audio_dir")
-  videoDir            String?           @map("video_dir")
-  chaptersCount       Int               @default(0) @map("chapters_count")
-  spreadsCount        Int               @default(0) @map("spreads_count")
-  audioTracksCount    Int               @default(0) @map("audio_tracks_count")
-  videosCount         Int               @default(0) @map("videos_count")
-  ipDeclarationSigned Boolean           @default(false) @map("ip_declaration_signed")
-  status              PublicationStatus @default(DRAFT)
-  submittedAt         DateTime?         @map("submitted_at")
-  publishedAt         DateTime?         @map("published_at")
-  createdAt           DateTime          @default(now()) @map("created_at")
+  id                  String    @id @default(uuid()) @db.NVarChar(64)
+  bookId              String    @map("book_id") @db.NVarChar(64)
+  versionNumber       Int       @map("version_number")
+  versionLabel        String    @map("version_label") @db.NVarChar(64)
+  sourceFormat        String    @default("json") @map("source_format") @db.NVarChar(40)
+  sourceFileUrl       String?   @map("source_file_url") @db.NVarChar(500)
+  canonicalJsonUrl    String?   @map("canonical_json_url") @db.NVarChar(500)
+  canonicalDataJson   String?   @map("canonical_data_json") @db.NVarChar(Max)
+  audioDir            String?   @map("audio_dir") @db.NVarChar(500)
+  videoDir            String?   @map("video_dir") @db.NVarChar(500)
+  chaptersCount       Int       @default(0) @map("chapters_count")
+  spreadsCount        Int       @default(0) @map("spreads_count")
+  audioTracksCount    Int       @default(0) @map("audio_tracks_count")
+  videosCount         Int       @default(0) @map("videos_count")
+  ipDeclarationSigned Boolean   @default(false) @map("ip_declaration_signed")
+  status              String    @default("DRAFT") @db.NVarChar(40)
+  submittedAt         DateTime? @map("submitted_at")
+  publishedAt         DateTime? @map("published_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
 
-  book          Book           @relation("BookVersions", fields: [bookId], references: [id], onDelete: Cascade)
-  activeForBook Book?          @relation("BookActiveVersion")
-  reviewTickets ReviewTicket[]
-  mediaAssets   MediaAsset[]
+  book           Book           @relation("BookVersions", fields: [bookId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  activeForBooks Book[]         @relation("BookActiveVersion")
+  reviewTickets  ReviewTicket[]
+  mediaAssets    MediaAsset[]
 
   @@unique([bookId, versionNumber])
   @@index([bookId, status])
@@ -342,69 +316,69 @@ model BookVersion {
 }
 
 model ReviewTicket {
-  id              String   @id @default(uuid())
-  bookVersionId   String   @map("book_version_id")
-  reviewerId      String?  @map("reviewer_id")
-  checklistJson   Json     @default("{}") @map("checklist_json")
+  id              String   @id @default(uuid()) @db.NVarChar(64)
+  bookVersionId   String   @map("book_version_id") @db.NVarChar(64)
+  reviewerId      String?  @map("reviewer_id") @db.NVarChar(64)
+  checklistJson   String   @default("{}") @map("checklist_json") @db.NVarChar(Max)
   contentVerified Boolean  @default(false) @map("content_verified")
   ipVerified      Boolean  @default(false) @map("ip_verified")
-  decision        String?
-  notes           String?
+  decision        String?  @db.NVarChar(64)
+  notes           String?  @db.NVarChar(Max)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  bookVersion BookVersion @relation(fields: [bookVersionId], references: [id], onDelete: Cascade)
-  reviewer    User?       @relation("TicketReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  bookVersion BookVersion @relation(fields: [bookVersionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reviewer    User?       @relation("TicketReviewer", fields: [reviewerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([bookVersionId])
   @@map("review_tickets")
 }
 
 model MediaAsset {
-  id             String         @id @default(uuid())
-  bookVersionId  String         @map("book_version_id")
-  assetType      MediaAssetType @map("asset_type")
-  r2Key          String         @unique @map("r2_key")
-  mimeType       String         @map("mime_type")
-  sizeBytes      Int            @map("size_bytes")
-  checksumSha256 String?        @map("checksum_sha256")
-  metadataJson   Json           @default("{}") @map("metadata_json")
-  createdAt      DateTime       @default(now()) @map("created_at")
+  id             String   @id @default(uuid()) @db.NVarChar(64)
+  bookVersionId  String   @map("book_version_id") @db.NVarChar(64)
+  assetType      String   @map("asset_type") @db.NVarChar(40)
+  r2Key          String   @unique @map("r2_key") @db.NVarChar(255)
+  mimeType       String   @map("mime_type") @db.NVarChar(120)
+  sizeBytes      Int      @map("size_bytes")
+  checksumSha256 String?  @map("checksum_sha256") @db.NVarChar(128)
+  metadataJson   String   @default("{}") @map("metadata_json") @db.NVarChar(Max)
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  bookVersion BookVersion @relation(fields: [bookVersionId], references: [id], onDelete: Cascade)
+  bookVersion BookVersion @relation(fields: [bookVersionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([bookVersionId, assetType])
   @@map("media_assets")
 }
 
 model ReadingProgress {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  bookId        String   @map("book_id")
+  id            String   @id @default(uuid()) @db.NVarChar(64)
+  userId        String   @map("user_id") @db.NVarChar(64)
+  bookId        String   @map("book_id") @db.NVarChar(64)
   currentSpread Int      @default(0) @map("current_spread")
   percent       Float    @default(0)
-  bookmarksJson Json     @default("[]") @map("bookmarks_json")
+  bookmarksJson String   @default("[]") @map("bookmarks_json") @db.NVarChar(Max)
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([userId, bookId])
   @@map("reading_progress")
 }
 
 model AuditLog {
-  id           String   @id @default(uuid())
-  actorId      String?  @map("actor_id")
-  action       String
-  targetType   String   @map("target_type")
-  targetId     String   @map("target_id")
-  metadataJson Json     @default("{}") @map("metadata_json")
-  ipAddress    String?  @map("ip_address")
-  userAgent    String?  @map("user_agent")
+  id           String   @id @default(uuid()) @db.NVarChar(64)
+  actorId      String?  @map("actor_id") @db.NVarChar(64)
+  action       String   @db.NVarChar(120)
+  targetType   String   @map("target_type") @db.NVarChar(80)
+  targetId     String   @map("target_id") @db.NVarChar(160)
+  metadataJson String   @default("{}") @map("metadata_json") @db.NVarChar(Max)
+  ipAddress    String?  @map("ip_address") @db.NVarChar(120)
+  userAgent    String?  @map("user_agent") @db.NVarChar(500)
   createdAt    DateTime @default(now()) @map("created_at")
 
-  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([targetType, targetId])
   @@index([actorId, createdAt])

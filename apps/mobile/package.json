@@ -1,0 +1,25 @@
+{
+  "name": "@darb/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "تطبيق أندرويد لمنصة درب للكتب التفاعلية ثلاثية الأبعاد (Capacitor 8 Offline-First + SQLite + Central Sync)",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:web": "npm run build --workspace=@darb/web",
+    "cap:sync": "npm run build:web && cap sync android",
+    "cap:copy": "cap copy android",
+    "cap:open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.1",
+    "@capacitor/android": "^8.6.3",
+    "@capacitor/core": "^8.6.3",
+    "@capacitor/filesystem": "^8.1.6",
+    "@capacitor/network": "^8.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.3",
+    "typescript": "^5.7.3"
+  }
+}

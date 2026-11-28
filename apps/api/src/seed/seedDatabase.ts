@@ -1,15 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { MediaAssetType, Prisma, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import {
   normalizeAssetDir,
   normalizeDataFile,
   parseCatalogData,
   parseEditionData,
 } from '@darb/book-schema';
+import { stringifyJson } from '../lib/jsonCodec';
 import { hashPassword } from '../services/security';
 import { inferMimeType, type StorageService } from '../services/storage';
 import { recordAuditLog } from '../plugins/audit';
+
+type MediaAssetType = 'SOURCE_DOC' | 'AUDIO' | 'VIDEO' | 'IMAGE' | 'MODEL_3D' | 'OTHER';
 
 export interface SeedOptions {
   publicDir?: string;
@@ -313,6 +316,9 @@ const HOME_SECTIONS_SEED = [
         { label: 'المكتبة', href: '/library' },
         { label: 'دليل الاستخدام', href: '/guide' },
         { label: 'بوابة المؤلف', href: '/author' },
+        { label: 'سياسة الخصوصية', href: '/privacy' },
+        { label: 'سياسة الاستخدام', href: '/usage' },
+        { label: 'الشروط والأحكام', href: '/terms' },
       ],
     },
   },
@@ -339,43 +345,61 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
   const publicDir = options.publicDir ?? resolveDefaultPublicDir();
 
   // 1. الصلاحيات الدقيقة
-  await prisma.permission.createMany({
-    data: PERMISSIONS_SEED.map((p) => ({
-      code: p.code,
-      module: p.module,
-      labelAr: p.labelAr,
-      labelEn: p.labelEn,
-    })),
-    skipDuplicates: true,
-  });
+  const existingPerms = await prisma.permission.findMany({ select: { code: true } });
+  const existingPermCodes = new Set(existingPerms.map((p) => p.code));
+  const missingPerms = PERMISSIONS_SEED.filter((p) => !existingPermCodes.has(p.code));
+  if (missingPerms.length > 0) {
+    await prisma.permission.createMany({
+      data: missingPerms.map((p) => ({
+        code: p.code,
+        module: p.module,
+        labelAr: p.labelAr,
+        labelEn: p.labelEn,
+      })),
+    });
+  }
   const allPerms = await prisma.permission.findMany();
   const permByCode = new Map<string, string>(allPerms.map((p) => [p.code, p.id]));
 
   // 2. الأدوار الافتراضية وربط صلاحياتها
-  await prisma.role.createMany({
-    data: ROLES_SEED.map((r) => ({
-      code: r.code,
-      nameAr: r.nameAr,
-      nameEn: r.nameEn,
-      description: r.description,
-      isSystem: r.isSystem,
-      isActive: true,
-    })),
-    skipDuplicates: true,
-  });
+  const existingRoles = await prisma.role.findMany({ select: { code: true } });
+  const existingRoleCodes = new Set(existingRoles.map((r) => r.code));
+  const missingRoles = ROLES_SEED.filter((r) => !existingRoleCodes.has(r.code));
+  if (missingRoles.length > 0) {
+    await prisma.role.createMany({
+      data: missingRoles.map((r) => ({
+        code: r.code,
+        nameAr: r.nameAr,
+        nameEn: r.nameEn,
+        description: r.description,
+        isSystem: r.isSystem,
+        isActive: true,
+      })),
+    });
+  }
   const allRoles = await prisma.role.findMany();
   const roleByCode = new Map<string, string>(allRoles.map((r) => [r.code, r.id]));
 
+  const existingRolePerms = await prisma.rolePermission.findMany({
+    select: { roleId: true, permissionId: true },
+  });
+  const existingRolePermSet = new Set(
+    existingRolePerms.map((rp) => `${rp.roleId}:${rp.permissionId}`)
+  );
   const rolePermRows: Array<{ roleId: string; permissionId: string }> = [];
   for (const roleSeed of ROLES_SEED) {
     const roleId = roleByCode.get(roleSeed.code);
     if (!roleId) continue;
     for (const pCode of roleSeed.permissions) {
       const permissionId = permByCode.get(pCode);
-      if (permissionId) rolePermRows.push({ roleId, permissionId });
+      if (permissionId && !existingRolePermSet.has(`${roleId}:${permissionId}`)) {
+        rolePermRows.push({ roleId, permissionId });
+      }
     }
   }
-  await prisma.rolePermission.createMany({ data: rolePermRows, skipDuplicates: true });
+  if (rolePermRows.length > 0) {
+    await prisma.rolePermission.createMany({ data: rolePermRows });
+  }
 
   // 3. المدير الأعلى الأولي (من متغيرات البيئة أو معاملات التشغيل)
   const adminEmail = options.adminEmail.trim().toLowerCase();
@@ -409,35 +433,43 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
   });
 
   // 4. التصنيفات الديناميكية
-  await prisma.taxonomy.createMany({
-    data: TAXONOMIES_SEED.map((tax) => ({
-      group: tax.group,
-      slug: tax.slug,
-      labelAr: tax.labelAr,
-      labelEn: tax.labelEn,
-      sortOrder: tax.sortOrder,
-      isActive: true,
-      rulesJson: tax.rulesJson as Prisma.InputJsonValue,
-    })),
-    skipDuplicates: true,
-  });
+  const existingTaxes = await prisma.taxonomy.findMany({ select: { group: true, slug: true } });
+  const existingTaxKeys = new Set(existingTaxes.map((t) => `${t.group}:${t.slug}`));
+  const missingTaxes = TAXONOMIES_SEED.filter((t) => !existingTaxKeys.has(`${t.group}:${t.slug}`));
+  if (missingTaxes.length > 0) {
+    await prisma.taxonomy.createMany({
+      data: missingTaxes.map((tax) => ({
+        group: tax.group,
+        slug: tax.slug,
+        labelAr: tax.labelAr,
+        labelEn: tax.labelEn,
+        sortOrder: tax.sortOrder,
+        isActive: true,
+        rulesJson: stringifyJson(tax.rulesJson, '{}'),
+      })),
+    });
+  }
   const allTaxonomies = await prisma.taxonomy.findMany();
   const taxonomyByKey = new Map<string, string>(
     allTaxonomies.map((row) => [`${row.group}:${row.slug}`, row.id])
   );
 
   // 5. الإعدادات المركزية (system_configs)
-  await prisma.systemConfig.createMany({
-    data: SYSTEM_CONFIGS_SEED.map((cfg) => ({
-      key: cfg.key,
-      category: cfg.category,
-      valueJson: cfg.valueJson as Prisma.InputJsonValue,
-      description: cfg.description,
-      isPublic: cfg.isPublic,
-      updatedById: adminUser.id,
-    })),
-    skipDuplicates: true,
-  });
+  const existingConfigs = await prisma.systemConfig.findMany({ select: { key: true } });
+  const existingConfigKeys = new Set(existingConfigs.map((c) => c.key));
+  const missingConfigs = SYSTEM_CONFIGS_SEED.filter((cfg) => !existingConfigKeys.has(cfg.key));
+  if (missingConfigs.length > 0) {
+    await prisma.systemConfig.createMany({
+      data: missingConfigs.map((cfg) => ({
+        key: cfg.key,
+        category: cfg.category,
+        valueJson: stringifyJson(cfg.valueJson, 'null'),
+        description: cfg.description,
+        isPublic: cfg.isPublic,
+        updatedById: adminUser.id,
+      })),
+    });
+  }
 
   // 6. صفحة الرئيسية (cms_pages + cms_sections) والخبر الترحيبي
   const homePage = await prisma.cmsPage.upsert({
@@ -451,19 +483,26 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
     update: {},
   });
 
-  await prisma.cmsSection.createMany({
-    data: HOME_SECTIONS_SEED.map((sec) => ({
-      pageId: homePage.id,
-      sectionKey: sec.sectionKey,
-      titleAr: sec.titleAr,
-      titleEn: sec.titleEn,
-      contentJson: sec.contentJson as Prisma.InputJsonValue,
-      sortOrder: sec.sortOrder,
-      isVisible: true,
-      updatedById: adminUser.id,
-    })),
-    skipDuplicates: true,
+  const existingSections = await prisma.cmsSection.findMany({
+    where: { pageId: homePage.id },
+    select: { sectionKey: true },
   });
+  const existingSectionKeys = new Set(existingSections.map((s) => s.sectionKey));
+  const missingSections = HOME_SECTIONS_SEED.filter((s) => !existingSectionKeys.has(s.sectionKey));
+  if (missingSections.length > 0) {
+    await prisma.cmsSection.createMany({
+      data: missingSections.map((sec) => ({
+        pageId: homePage.id,
+        sectionKey: sec.sectionKey,
+        titleAr: sec.titleAr,
+        titleEn: sec.titleEn,
+        contentJson: stringifyJson(sec.contentJson, '{}'),
+        sortOrder: sec.sortOrder,
+        isVisible: true,
+        updatedById: adminUser.id,
+      })),
+    });
+  }
 
   await prisma.newsPost.upsert({
     where: { slug: 'welcome-darb-platform' },
@@ -543,10 +582,10 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
         direction: editionData.direction || 'rtl',
         status: 'PUBLISHED',
         authorId: adminUser.id,
-        metadataJson: {
+        metadataJson: stringifyJson({
           releaseDate: meta.releaseDate,
           legacyStatus: meta.status,
-        } as Prisma.InputJsonValue,
+        }),
       },
       update: {
         title: editionData.title || meta.title,
@@ -570,7 +609,7 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
         versionLabel: 'v1',
         sourceFormat: 'json',
         canonicalJsonUrl: relDataFile,
-        canonicalDataJson: editionRaw as Prisma.InputJsonValue,
+        canonicalDataJson: stringifyJson(editionRaw, '{}'),
         audioDir: audioDir || null,
         videoDir: videoDir || null,
         chaptersCount: meta.chaptersCount,
@@ -583,7 +622,7 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
         publishedAt: new Date(),
       },
       update: {
-        canonicalDataJson: editionRaw as Prisma.InputJsonValue,
+        canonicalDataJson: stringifyJson(editionRaw, '{}'),
         chaptersCount: meta.chaptersCount,
         spreadsCount: meta.spreadsCount,
         audioTracksCount: meta.audioTracksCount,
@@ -598,12 +637,18 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
     });
 
     const taxKeys = editionTaxonomyMap[meta.id] ?? ['age_group:all-ages', 'book_type:interactive-book'];
+    const existingBookTaxes = await prisma.bookTaxonomy.findMany({
+      where: { bookId: book.id },
+      select: { taxonomyId: true },
+    });
+    const existingBookTaxIds = new Set(existingBookTaxes.map((bt) => bt.taxonomyId));
     const bookTaxRows = taxKeys
       .map((key) => taxonomyByKey.get(key))
       .filter((tid): tid is string => Boolean(tid))
+      .filter((tid) => !existingBookTaxIds.has(tid))
       .map((taxonomyId) => ({ bookId: book.id, taxonomyId }));
     if (bookTaxRows.length > 0) {
-      await prisma.bookTaxonomy.createMany({ data: bookTaxRows, skipDuplicates: true });
+      await prisma.bookTaxonomy.createMany({ data: bookTaxRows });
     }
 
     // فهرسة ملفات الصوت والفيديو الموجودة لهذا الإصدار دفعة واحدة
@@ -651,8 +696,16 @@ export async function seedDatabase(prisma: PrismaClient, options: SeedOptions): 
     }
 
     if (mediaRows.length > 0) {
-      await prisma.mediaAsset.createMany({ data: mediaRows, skipDuplicates: true });
-      mediaAssetsCount += mediaRows.length;
+      const existingAssets = await prisma.mediaAsset.findMany({
+        where: { bookVersionId: version.id },
+        select: { r2Key: true },
+      });
+      const existingR2Keys = new Set(existingAssets.map((a) => a.r2Key));
+      const newMediaRows = mediaRows.filter((row) => !existingR2Keys.has(row.r2Key));
+      if (newMediaRows.length > 0) {
+        await prisma.mediaAsset.createMany({ data: newMediaRows });
+        mediaAssetsCount += newMediaRows.length;
+      }
     }
 
     seededBooks.push(meta.id);

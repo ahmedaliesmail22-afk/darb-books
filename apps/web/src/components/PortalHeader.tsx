@@ -23,6 +23,8 @@ export const PortalHeader: React.FC = () => {
     logout,
     hasPermission,
     showToast,
+    syncStatus,
+    triggerManualSync,
   } = usePortal();
   const navigate = useNavigate();
 
@@ -107,9 +109,27 @@ export const PortalHeader: React.FC = () => {
           {themeIcon}
         </button>
 
-        <span className="portal-mode-pill" title="حالة الاتصال بالخادم">
-          {mode === 'api' ? '🟢 متصل بالخادم' : '📦 عرض ثابت'}
+        <span className="portal-mode-pill" data-testid="networkStatusPill" title="حالة الاتصال بالشبكة والخادم">
+          {!syncStatus.online
+            ? '📴 دون اتصال (أوفلاين)'
+            : mode === 'api'
+              ? '🟢 متصل بالخادم'
+              : '📦 وضع محلي'}
         </span>
+
+        {(syncStatus.syncing || syncStatus.pendingCount > 0) && (
+          <button
+            type="button"
+            className="portal-btn"
+            data-testid="syncStatusBtn"
+            onClick={() => void triggerManualSync()}
+            title="اضغط للمزامنة الفورية مع الخادم"
+          >
+            {syncStatus.syncing
+              ? '🔄 جاري المزامنة...'
+              : `⏳ بانتظار المزامنة (${syncStatus.pendingCount})`}
+          </button>
+        )}
       </nav>
     </header>
   );

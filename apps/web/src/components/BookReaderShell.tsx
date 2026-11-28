@@ -27,6 +27,9 @@ import {
 } from '@darb/book-engine';
 import { ApiError, apiRequest, resolveMediaBaseUrl } from '../lib/apiClient';
 import { getPublicationStatusLabelAr } from '../lib/arabicLabels';
+import { localDatabase } from '../lib/offline/localDatabase';
+import { resolveNativeAudioDirUri } from '../lib/offline/offlineBookAssets';
+import { syncManager } from '../lib/offline/syncManager';
 import { usePortal } from '../lib/portalContext';
 import type { PortalBookItem } from '../lib/types';
 import { LibraryPanel } from '../library/LibraryPanel';
@@ -139,18 +142,19 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
 
     let syncTimer: number | null = null;
     const scheduleCloudSync = (editionId: string, spreadIdx: number) => {
-      if (modeRef.current !== 'api' || !userRef.current || initialVersionId) return;
+      if (initialVersionId) return;
       if (syncTimer !== null) window.clearTimeout(syncTimer);
       syncTimer = window.setTimeout(() => {
         const total = Math.max(1, flipEngine.getTotalSpreads() - 1);
         const percent = Math.round((spreadIdx / total) * 100);
         const bookmarksJson = libraryPanel.getBookmarksForEdition(editionId);
-        void apiRequest(`/api/v1/books/${encodeURIComponent(editionId)}/progress`, {
-          method: 'PUT',
+        void syncManager.syncProgress({
+          slug: editionId,
+          currentSpread: spreadIdx,
+          percent,
+          bookmarksJson,
           apiBase: apiBaseRef.current,
-          body: { currentSpread: spreadIdx, percent, bookmarksJson },
-        }).catch(() => {
-          // keep local progress silently if offline
+          isAuthenticated: Boolean(apiBaseRef.current !== null && userRef.current),
         });
       }, 250);
     };
@@ -245,10 +249,12 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
       currentEdition = ed;
       setLoadError(null);
 
+      const nativeAudioBase = await resolveNativeAudioDirUri(ed.id);
       const audioBase =
-        modeRef.current === 'api'
+        nativeAudioBase ??
+        (modeRef.current === 'api'
           ? resolveMediaBaseUrl(ed.audioDir, apiBaseRef.current)
-          : normalizeAssetDir(ed.audioDir);
+          : normalizeAssetDir(ed.audioDir));
       narrator.setAudioDir(audioBase);
       stage3D.setEditionAccent(ed.theme);
 
@@ -266,20 +272,23 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
               setLoadError(err.message);
               return;
             }
-            const res = await fetch(normalizeDataFile(ed.dataFile));
-            if (!res.ok) {
-              setLoadError(`تعذر تحميل بيانات ${ed.title}`);
-              return;
-            }
+          }
+        }
+        if (!data) {
+          const res = await fetch(normalizeDataFile(ed.dataFile)).catch(() => null);
+          if (res && res.ok) {
             data = parseEditionData(await res.json());
           }
-        } else {
-          const res = await fetch(normalizeDataFile(ed.dataFile));
-          if (!res.ok) {
-            setLoadError(`تعذر تحميل بيانات ${ed.title}`);
-            return;
+        }
+        if (!data) {
+          const cached = await localDatabase.getBook(ed.id);
+          if (cached?.editionData) {
+            data = parseEditionData(cached.editionData);
           }
-          data = parseEditionData(await res.json());
+        }
+        if (!data) {
+          setLoadError(`تعذر تحميل بيانات ${ed.title}`);
+          return;
         }
         editionCache.set(ed.id, data);
       }
@@ -303,7 +312,15 @@ export const BookReaderShell: React.FC<BookReaderShellProps> = ({
             }
           }
         } catch {
-          // ignore if progress endpoint fails
+          const localProg = await localDatabase.getProgress(ed.id);
+          if (localProg && startSpread === 0 && localProg.currentSpread > 0) {
+            resolvedSpread = localProg.currentSpread;
+          }
+        }
+      } else if (!initialVersionId && startSpread === 0) {
+        const localProg = await localDatabase.getProgress(ed.id);
+        if (localProg && localProg.currentSpread > 0) {
+          resolvedSpread = localProg.currentSpread;
         }
       }
 

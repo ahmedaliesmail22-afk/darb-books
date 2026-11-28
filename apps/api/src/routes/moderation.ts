@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import type { Prisma, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { parseJson, stringifyJson } from '../lib/jsonCodec';
 import { recordAuditLog } from '../plugins/audit';
 import { requirePermission } from '../plugins/rbac';
 import { getModerationChecklistConfig } from '../services/configService';
@@ -95,9 +96,17 @@ export function registerModerationRoutes(
             activeVersionId: v.book.activeVersionId,
             activeVersion: v.book.activeVersion,
             author: v.book.author,
-            taxonomies: v.book.taxonomies.map((t) => t.taxonomy),
+            taxonomies: v.book.taxonomies.map((t) => ({
+              ...t.taxonomy,
+              rulesJson: parseJson(t.taxonomy.rulesJson, {}),
+            })),
           },
-          latestTicket: v.reviewTickets[0] ?? null,
+          latestTicket: v.reviewTickets[0]
+            ? {
+                ...v.reviewTickets[0],
+                checklistJson: parseJson(v.reviewTickets[0].checklistJson, {}),
+              }
+            : null,
         })),
       });
     }
@@ -150,7 +159,7 @@ export function registerModerationRoutes(
               data: {
                 bookVersionId: version.id,
                 reviewerId: request.authUser!.userId,
-                checklistJson: {},
+                checklistJson: '{}',
                 contentVerified: false,
                 ipVerified: false,
               },
@@ -170,7 +179,13 @@ export function registerModerationRoutes(
           request,
         });
 
-        return { version: updatedVersion, ticket };
+        return {
+          version: updatedVersion,
+          ticket: {
+            ...ticket,
+            checklistJson: parseJson(ticket.checklistJson, {}),
+          },
+        };
       });
 
       return reply.send(result);
@@ -253,7 +268,7 @@ export function registerModerationRoutes(
             },
           });
 
-          const canonical = (version.canonicalDataJson ?? {}) as Record<string, unknown>;
+          const canonical = parseJson<Record<string, unknown>>(version.canonicalDataJson, {});
           const updatedBook = await tx.book.update({
             where: { id: version.book.id },
             data: {
@@ -275,7 +290,7 @@ export function registerModerationRoutes(
                 where: { id: existingTicket.id },
                 data: {
                   reviewerId: request.authUser!.userId,
-                  checklistJson: checklist as Prisma.InputJsonValue,
+                  checklistJson: stringifyJson(checklist, '{}'),
                   contentVerified: true,
                   ipVerified: true,
                   decision,
@@ -286,7 +301,7 @@ export function registerModerationRoutes(
                 data: {
                   bookVersionId: version.id,
                   reviewerId: request.authUser!.userId,
-                  checklistJson: checklist as Prisma.InputJsonValue,
+                  checklistJson: stringifyJson(checklist, '{}'),
                   contentVerified: true,
                   ipVerified: true,
                   decision,
@@ -309,7 +324,14 @@ export function registerModerationRoutes(
             request,
           });
 
-          return { book: updatedBook, version: updatedVersion, ticket };
+          return {
+            book: updatedBook,
+            version: updatedVersion,
+            ticket: {
+              ...ticket,
+              checklistJson: parseJson(ticket.checklistJson, {}),
+            },
+          };
         });
 
         return reply.send(result);
@@ -346,7 +368,7 @@ export function registerModerationRoutes(
               where: { id: existingTicket.id },
               data: {
                 reviewerId: request.authUser!.userId,
-                checklistJson: checklist as Prisma.InputJsonValue,
+                checklistJson: stringifyJson(checklist, '{}'),
                 contentVerified,
                 ipVerified,
                 decision,
@@ -357,7 +379,7 @@ export function registerModerationRoutes(
               data: {
                 bookVersionId: version.id,
                 reviewerId: request.authUser!.userId,
-                checklistJson: checklist as Prisma.InputJsonValue,
+                checklistJson: stringifyJson(checklist, '{}'),
                 contentVerified,
                 ipVerified,
                 decision,
@@ -380,7 +402,14 @@ export function registerModerationRoutes(
           request,
         });
 
-        return { book: updatedBook, version: updatedVersion, ticket };
+        return {
+          book: updatedBook,
+          version: updatedVersion,
+          ticket: {
+            ...ticket,
+            checklistJson: parseJson(ticket.checklistJson, {}),
+          },
+        };
       });
 
       return reply.send(result);

@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   createTestContext,
+  sqlServerAvailable,
   TEST_ADMIN_EMAIL,
   TEST_ADMIN_PASSWORD,
   type TestContext,
 } from './helpers/testHarness';
 
-describe('Mandatory Age-Gating, Migrated Book Versions & Range 206 Streaming', () => {
+describe.skipIf(!sqlServerAvailable)(
+  'Mandatory Age-Gating, Migrated Book Versions & Range 206 Streaming',
+  () => {
   let ctx: TestContext;
 
   beforeEach(async () => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ApiError, apiRequest } from '../lib/apiClient';
+import { ApiError } from '../lib/apiClient';
+import { syncManager } from '../lib/offline/syncManager';
 import { usePortal } from '../lib/portalContext';
 
 export const OnboardingPage: React.FC = () => {
@@ -42,8 +43,7 @@ export const OnboardingPage: React.FC = () => {
     setError(null);
     setSaving(true);
     try {
-      await apiRequest('/api/v1/auth/onboarding', {
-        method: 'PUT',
+      const res = await syncManager.syncProfileSettings({
         apiBase,
         body: {
           ageGroupId: ageGroupId || null,
@@ -51,8 +51,12 @@ export const OnboardingPage: React.FC = () => {
           preferredTaxonomyIds: preferredIds,
         },
       });
-      await refreshUser();
-      showToast('تم حفظ تفضيلاتك وتخصيص المكتبة بنجاح');
+      if (!res.queued) {
+        await refreshUser();
+        showToast('تم حفظ تفضيلاتك وتخصيص المكتبة بنجاح');
+      } else {
+        showToast('تم حفظ التفضيلات محلياً وستتم مزامنتها تلقائياً عند عودة الاتصال');
+      }
       navigate('/library');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'تعذر حفظ التهيئة');

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import type { Prisma, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { parseJson, parseNullableJson, stringifyJson } from '../lib/jsonCodec';
 import { recordAuditLog } from '../plugins/audit';
 import { requirePermission } from '../plugins/rbac';
 
@@ -44,12 +45,20 @@ export function registerCmsRoutes(
     '/api/v1/cms/pages',
     { preHandler: [authenticate, requirePermission('cms.manage')] },
     async (_request, reply) => {
-      const pages = await prisma.cmsPage.findMany({
+      const rows = await prisma.cmsPage.findMany({
         include: {
           sections: { orderBy: { sortOrder: 'asc' } },
         },
         orderBy: { slug: 'asc' },
       });
+      const pages = rows.map((p) => ({
+        ...p,
+        seoJson: parseNullableJson(p.seoJson),
+        sections: p.sections.map((s) => ({
+          ...s,
+          contentJson: parseJson(s.contentJson, {}),
+        })),
+      }));
       return reply.send({ pages });
     }
   );
@@ -58,7 +67,7 @@ export function registerCmsRoutes(
     const { slug } = request.params as { slug: string };
     const canManage = request.authUser?.permissions.has('cms.manage') ?? false;
 
-    const page = await prisma.cmsPage.findUnique({
+    const row = await prisma.cmsPage.findUnique({
       where: { slug },
       include: {
         sections: {
@@ -68,11 +77,20 @@ export function registerCmsRoutes(
       },
     });
 
-    if (!page || (!page.isPublished && !canManage)) {
+    if (!row || (!row.isPublished && !canManage)) {
       return reply.code(404).send({ error: 'CMS_PAGE_NOT_FOUND' });
     }
 
-    return reply.send({ page });
+    return reply.send({
+      page: {
+        ...row,
+        seoJson: parseNullableJson(row.seoJson),
+        sections: row.sections.map((s) => ({
+          ...s,
+          contentJson: parseJson(s.contentJson, {}),
+        })),
+      },
+    });
   });
 
   app.put(
@@ -107,7 +125,7 @@ export function registerCmsRoutes(
             sectionKey,
             titleAr: parsed.data.titleAr,
             titleEn: parsed.data.titleEn ?? null,
-            contentJson: parsed.data.contentJson as Prisma.InputJsonValue,
+            contentJson: stringifyJson(parsed.data.contentJson, '{}'),
             sortOrder: parsed.data.sortOrder,
             isVisible: parsed.data.isVisible,
             updatedById: request.authUser!.userId,
@@ -115,7 +133,7 @@ export function registerCmsRoutes(
           update: {
             titleAr: parsed.data.titleAr,
             ...(parsed.data.titleEn !== undefined ? { titleEn: parsed.data.titleEn } : {}),
-            contentJson: parsed.data.contentJson as Prisma.InputJsonValue,
+            contentJson: stringifyJson(parsed.data.contentJson, '{}'),
             sortOrder: parsed.data.sortOrder,
             isVisible: parsed.data.isVisible,
             updatedById: request.authUser!.userId,
@@ -130,13 +148,15 @@ export function registerCmsRoutes(
           metadata: {
             pageSlug: slug,
             sectionKey,
-            before: existing ?? null,
-            after: row,
+            before: existing
+              ? { ...existing, contentJson: parseJson(existing.contentJson, {}) }
+              : null,
+            after: { ...row, contentJson: parseJson(row.contentJson, {}) },
           },
           request,
         });
 
-        return row;
+        return { ...row, contentJson: parseJson(row.contentJson, {}) };
       });
 
       return reply.send({ section: updated });

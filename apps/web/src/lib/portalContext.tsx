@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   normalizeAssetDir,
   parseCatalogData,
@@ -11,6 +11,10 @@ import {
   resolveApiBaseUrl,
   setStoredTokens,
 } from './apiClient';
+import { localDatabase } from './offline/localDatabase';
+import { isOnline } from './offline/networkMonitor';
+import { getOfflineCachedSlugs } from './offline/offlineBookAssets';
+import { syncManager, type SyncStatusSnapshot } from './offline/syncManager';
 import type {
   BootstrapPayload,
   CmsSectionItem,
@@ -33,12 +37,16 @@ interface PortalContextValue {
   theme: ThemeMode;
   fontScale: FontScale;
   staticCatalogBooks: PortalBookItem[];
+  syncStatus: SyncStatusSnapshot;
+  offlineBookSlugs: string[];
   toastMessage: string | null;
   showToast: (msg: string) => void;
   setTheme: (next: ThemeMode) => void;
   setFontScale: (next: FontScale) => void;
   refreshPortal: () => Promise<void>;
   refreshUser: () => Promise<PortalUser | null>;
+  refreshOfflineBooks: () => Promise<void>;
+  triggerManualSync: () => Promise<void>;
   logout: () => Promise<void>;
   connectApiServer: (url: string) => Promise<boolean>;
   hasPermission: (permCode: string) => boolean;
@@ -115,7 +123,11 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [latestNews, setLatestNews] = useState<NewsPostItem[]>([]);
   const [user, setUser] = useState<PortalUser | null>(null);
   const [staticCatalogBooks, setStaticCatalogBooks] = useState<PortalBookItem[]>([]);
+  const [syncStatus, setSyncStatus] = useState<SyncStatusSnapshot>(() => syncManager.getSnapshot());
+  const [offlineBookSlugs, setOfflineBookSlugs] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const apiBaseRef = useRef<string | null>(apiBase);
+  apiBaseRef.current = apiBase;
 
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
@@ -171,45 +183,73 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     document.body.classList.add(`font-scale-${fontScale}`);
   }, [theme, fontScale]);
 
-  const loadStaticFallback = useCallback(async () => {
+  const refreshOfflineBooks = useCallback(async () => {
+    const slugs = await getOfflineCachedSlugs();
+    setOfflineBookSlugs(Array.from(slugs));
+  }, []);
+
+  const triggerManualSync = useCallback(async () => {
+    const res = await syncManager.flushSyncQueue(apiBaseRef.current);
+    await refreshOfflineBooks();
+    if (res.synced > 0) {
+      showToast(`تمت مزامنة ${res.synced} تعديل مع الخادم بنجاح`);
+    } else if (!isOnline()) {
+      showToast('لا يوجد اتصال حالياً — ستتم المزامنة تلقائياً عند عودة الشبكة');
+    } else {
+      showToast('لا توجد تعديلات معلقة للمزامنة');
+    }
+  }, [refreshOfflineBooks, showToast]);
+
+  const loadStaticFallback = useCallback(async (restoreOfflineUser = false) => {
     setMode('static');
-    setUser(null);
+    if (!restoreOfflineUser) {
+      setUser(null);
+    } else {
+      const snap = await localDatabase.getUserSnapshot();
+      setUser(snap);
+    }
     setHomeSections(DEFAULT_STATIC_SECTIONS);
     try {
       const res = await fetch('./editions/catalog.json');
-      if (!res.ok) return;
-      const catalog = parseCatalogData(await res.json());
-      const mapped: PortalBookItem[] = catalog.editions.map((ed) => ({
-        id: ed.id,
-        slug: ed.id,
-        title: ed.title,
-        subtitle: ed.subtitle,
-        description: ed.description,
-        badge: ed.badge,
-        badgeColor: ed.badgeColor,
-        theme: ed.theme,
-        direction: 'rtl',
-        coverUrl: ed.coverUrl ?? null,
-        minAge: 0,
-        isRecommended: false,
-        matchScore: 0,
-        taxonomies: [],
-        activeVersion: {
+      if (res.ok) {
+        const catalog = parseCatalogData(await res.json());
+        const mapped: PortalBookItem[] = catalog.editions.map((ed) => ({
           id: ed.id,
-          versionNumber: 1,
-          versionLabel: 'v1',
-          audioDir: normalizeAssetDir(ed.audioDir),
-          videoDir: normalizeAssetDir(ed.videoDir),
-          chaptersCount: ed.chaptersCount,
-          spreadsCount: ed.spreadsCount,
-          audioTracksCount: ed.audioTracksCount,
-          videosCount: ed.videosCount,
-        },
-        legacyMeta: ed,
-      }));
-      setStaticCatalogBooks(mapped);
+          slug: ed.id,
+          title: ed.title,
+          subtitle: ed.subtitle,
+          description: ed.description,
+          badge: ed.badge,
+          badgeColor: ed.badgeColor,
+          theme: ed.theme,
+          direction: 'rtl',
+          coverUrl: ed.coverUrl ?? null,
+          minAge: 0,
+          isRecommended: false,
+          matchScore: 0,
+          taxonomies: [],
+          activeVersion: {
+            id: ed.id,
+            versionNumber: 1,
+            versionLabel: 'v1',
+            audioDir: normalizeAssetDir(ed.audioDir),
+            videoDir: normalizeAssetDir(ed.videoDir),
+            chaptersCount: ed.chaptersCount,
+            spreadsCount: ed.spreadsCount,
+            audioTracksCount: ed.audioTracksCount,
+            videosCount: ed.videosCount,
+          },
+          legacyMeta: ed,
+        }));
+        setStaticCatalogBooks(mapped);
+        return;
+      }
     } catch {
-      // ignore offline error
+      // fall through to local SQLite/IndexedDB
+    }
+    const localRows = await localDatabase.listBooks();
+    if (localRows.length > 0) {
+      setStaticCatalogBooks(localRows.map((row) => row.metadata));
     }
   }, []);
 
@@ -231,6 +271,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       const me = await apiRequest<{ user: PortalUser }>('/api/v1/auth/me', { apiBase });
       setUser(me.user);
+      void localDatabase.saveUserSnapshot(me.user);
       if (me.user.profile?.uiPrefsJson?.theme) {
         setTheme(me.user.profile.uiPrefsJson.theme);
       }
@@ -246,11 +287,16 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const refreshPortal = useCallback(async () => {
     setLoading(true);
+    void localDatabase
+      .init()
+      .then(() => localDatabase.seedBundledEditionsIfNeeded())
+      .then(() => refreshOfflineBooks());
+
     const currentBase = resolveApiBaseUrl();
     setApiBase(currentBase);
 
     if (currentBase === null) {
-      await loadStaticFallback();
+      await loadStaticFallback(false);
       setLoading(false);
       return;
     }
@@ -278,6 +324,8 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             apiBase: currentBase,
           });
           setUser(me.user);
+          void localDatabase.saveUserSnapshot(me.user);
+          void syncManager.flushSyncQueue(currentBase);
           if (me.user.profile?.uiPrefsJson?.theme) {
             setTheme(me.user.profile.uiPrefsJson.theme);
           }
@@ -285,17 +333,27 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setFontScale(me.user.profile.uiPrefsJson.fontScale);
           }
         } catch {
-          setUser(null);
+          const snap = !isOnline() ? await localDatabase.getUserSnapshot() : null;
+          setUser(snap);
         }
       } else {
         setUser(null);
       }
     } catch {
-      await loadStaticFallback();
+      await loadStaticFallback(Boolean(getStoredTokens()));
     } finally {
       setLoading(false);
     }
-  }, [loadStaticFallback, setFontScale, setTheme]);
+  }, [loadStaticFallback, refreshOfflineBooks, setFontScale, setTheme]);
+
+  useEffect(() => {
+    const unsubSync = syncManager.subscribe(setSyncStatus);
+    const unsubNet = syncManager.init(() => apiBaseRef.current);
+    return () => {
+      unsubSync();
+      unsubNet();
+    };
+  }, []);
 
   useEffect(() => {
     void refreshPortal();
@@ -317,6 +375,8 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     setStoredTokens(null);
     setUser(null);
+    await localDatabase.clearAllAccountState();
+    await syncManager.refreshPendingCount();
   }, [apiBase]);
 
   const connectApiServer = useCallback(
@@ -353,12 +413,16 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         theme,
         fontScale,
         staticCatalogBooks,
+        syncStatus,
+        offlineBookSlugs,
         toastMessage,
         showToast,
         setTheme,
         setFontScale,
         refreshPortal,
         refreshUser,
+        refreshOfflineBooks,
+        triggerManualSync,
         logout,
         connectApiServer,
         hasPermission,

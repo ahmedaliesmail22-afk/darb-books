@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { parseJson } from '../lib/jsonCodec';
 
 export const RegistrationPolicySchema = z.object({
   mode: z.enum(['instant', 'email_verification', 'admin_approval']).default('instant'),
@@ -73,7 +74,7 @@ export async function getSystemConfigValue<T>(
 ): Promise<T> {
   const row = await prisma.systemConfig.findUnique({ where: { key } });
   if (!row) return fallback;
-  return row.valueJson as T;
+  return parseJson<T>(row.valueJson, fallback);
 }
 
 export async function getRegistrationPolicy(prisma: PrismaClient): Promise<RegistrationPolicy> {
@@ -117,7 +118,7 @@ export async function getPublicConfigsMap(prisma: PrismaClient): Promise<Record<
   });
   const result: Record<string, unknown> = {};
   for (const row of rows) {
-    result[row.key] = row.valueJson;
+    result[row.key] = parseJson(row.valueJson, null);
   }
   return result;
 }

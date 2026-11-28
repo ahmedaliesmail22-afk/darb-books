@@ -272,8 +272,16 @@ export const HomePage: React.FC = () => {
               ? branding.cloudLabel
               : 'منظومة درب التعليمية السحابية')}
         </div>
+        <div
+          className="portal-nav"
+          style={{ justifyContent: 'center', marginTop: 10, gap: 16 }}
+        >
+          <Link to="/privacy">🔒 سياسة الخصوصية</Link>
+          <Link to="/usage">📘 سياسة الاستخدام</Link>
+          <Link to="/terms">⚖️ الشروط والأحكام</Link>
+        </div>
         {typeof footerSection?.contentJson?.copyright === 'string' && (
-          <div style={{ marginTop: 6 }}>{footerSection.contentJson.copyright}</div>
+          <div style={{ marginTop: 8 }}>{footerSection.contentJson.copyright}</div>
         )}
       </footer>
     </>

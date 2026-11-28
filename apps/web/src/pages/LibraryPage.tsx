@@ -2,11 +2,26 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { normalizeArabic } from '@darb/book-schema';
 import { apiRequest } from '../lib/apiClient';
+import { localDatabase } from '../lib/offline/localDatabase';
+import {
+  downloadBookForOffline,
+  type OfflineDownloadProgress,
+} from '../lib/offline/offlineBookAssets';
+import { syncManager } from '../lib/offline/syncManager';
 import { usePortal } from '../lib/portalContext';
 import type { PortalBookItem } from '../lib/types';
 
 export const LibraryPage: React.FC = () => {
-  const { mode, apiBase, taxonomies, user, staticCatalogBooks } = usePortal();
+  const {
+    mode,
+    apiBase,
+    taxonomies,
+    user,
+    staticCatalogBooks,
+    offlineBookSlugs,
+    refreshOfflineBooks,
+    showToast,
+  } = usePortal();
 
   const [books, setBooks] = useState<PortalBookItem[]>([]);
   const [query, setQuery] = useState('');
@@ -14,12 +29,18 @@ export const LibraryPage: React.FC = () => {
   const [progressBySlug, setProgressBySlug] = useState<
     Record<string, { currentSpread: number; percent: number }>
   >({});
+  const [downloadProgress, setDownloadProgress] = useState<
+    Record<string, OfflineDownloadProgress | null>
+  >({});
   const [loading, setLoading] = useState(true);
+
+  const offlineSet = useMemo(() => new Set(offlineBookSlugs), [offlineBookSlugs]);
 
   useEffect(() => {
     let active = true;
     const loadBooks = async () => {
       setLoading(true);
+      const localProgress = await localDatabase.getAllProgressMap();
       if (mode === 'api') {
         try {
           const params = new URLSearchParams();
@@ -30,21 +51,40 @@ export const LibraryPage: React.FC = () => {
             apiBase,
           });
           if (active) setBooks(res.books);
+          void syncManager.cacheCatalogBooks(res.books);
 
           if (user) {
-            const prog = await apiRequest<{
-              progressBySlug: Record<string, { currentSpread: number; percent: number }>;
-            }>('/api/v1/books/progress/mine', { apiBase });
-            if (active) setProgressBySlug(prog.progressBySlug);
+            try {
+              const prog = await apiRequest<{
+                progressBySlug: Record<string, { currentSpread: number; percent: number }>;
+              }>('/api/v1/books/progress/mine', { apiBase });
+              if (active) setProgressBySlug({ ...localProgress, ...prog.progressBySlug });
+            } catch {
+              if (active) setProgressBySlug(localProgress);
+            }
+          } else if (active) {
+            setProgressBySlug(localProgress);
           }
         } catch {
-          if (active) setBooks(staticCatalogBooks);
+          const cachedBooks = await localDatabase.listBooks();
+          if (active) {
+            setBooks(cachedBooks.length > 0 ? cachedBooks.map((b) => b.metadata) : staticCatalogBooks);
+            setProgressBySlug(localProgress);
+          }
         } finally {
           if (active) setLoading(false);
         }
       } else {
-        setBooks(staticCatalogBooks);
-        setLoading(false);
+        const cachedBooks = await localDatabase.listBooks();
+        const fallbackList =
+          staticCatalogBooks.length > 0
+            ? staticCatalogBooks
+            : cachedBooks.map((b) => b.metadata);
+        if (active) {
+          setBooks(fallbackList);
+          setProgressBySlug(localProgress);
+          setLoading(false);
+        }
       }
     };
     void loadBooks();
@@ -52,6 +92,21 @@ export const LibraryPage: React.FC = () => {
       active = false;
     };
   }, [mode, apiBase, query, selectedTaxSlug, user, staticCatalogBooks]);
+
+  const handleSaveOffline = async (book: PortalBookItem) => {
+    setDownloadProgress((prev) => ({ ...prev, [book.slug]: { done: 0, total: 1 } }));
+    try {
+      await downloadBookForOffline(book, mode === 'api' ? apiBase : null, (p) => {
+        setDownloadProgress((prev) => ({ ...prev, [book.slug]: p }));
+      });
+      await refreshOfflineBooks();
+      showToast(`تم حفظ «${book.title}» للقراءة بدون إنترنت بنجاح`);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'تعذر حفظ الكتاب للقراءة بدون إنترنت');
+    } finally {
+      setDownloadProgress((prev) => ({ ...prev, [book.slug]: null }));
+    }
+  };
 
   const filterTaxonomies = useMemo(() => {
     return [...(taxonomies.domain ?? []), ...(taxonomies.book_type ?? []), ...(taxonomies.education_level ?? [])].filter(
@@ -123,6 +178,8 @@ export const LibraryPage: React.FC = () => {
         <div className="portal-grid">
           {visibleBooks.map((book) => {
             const cloudProg = progressBySlug[book.slug];
+            const isSavedOffline = offlineSet.has(book.slug);
+            const prog = downloadProgress[book.slug];
             return (
               <article
                 key={book.slug}
@@ -131,7 +188,14 @@ export const LibraryPage: React.FC = () => {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                   <span className="portal-badge">{book.badge || 'إصدار تفاعلي'}</span>
-                  {book.isRecommended && <span className="portal-badge">مناسب لتفضيلاتك ⭐</span>}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {isSavedOffline && (
+                      <span className="portal-badge" data-testid={`offlineBadge-${book.slug}`}>
+                        ✅ محفوظ أوفلاين
+                      </span>
+                    )}
+                    {book.isRecommended && <span className="portal-badge">مناسب لتفضيلاتك ⭐</span>}
+                  </div>
                 </div>
 
                 <h3>{book.title}</h3>
@@ -150,12 +214,19 @@ export const LibraryPage: React.FC = () => {
 
                 {cloudProg && (
                   <div className="portal-mode-pill">
-                    التقدم السحابي المحفوظ: {Math.round(cloudProg.percent)}% (النشرة{' '}
-                    {cloudProg.currentSpread})
+                    التقدم المحفوظ: {Math.round(cloudProg.percent)}% (النشرة {cloudProg.currentSpread})
                   </div>
                 )}
 
-                <div style={{ marginTop: 'auto', paddingTop: 8 }}>
+                <div
+                  style={{
+                    marginTop: 'auto',
+                    paddingTop: 8,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                  }}
+                >
                   <Link
                     to={`/read/${book.slug}${cloudProg ? `?spread=${cloudProg.currentSpread}` : ''}`}
                     className="portal-btn primary"
@@ -164,6 +235,20 @@ export const LibraryPage: React.FC = () => {
                       ? '▶ استئناف القراءة ثلاثية الأبعاد'
                       : '📖 ابدأ القراءة ثلاثية الأبعاد'}
                   </Link>
+
+                  <button
+                    type="button"
+                    className="portal-btn"
+                    data-testid={`saveOfflineBtn-${book.slug}`}
+                    disabled={Boolean(prog)}
+                    onClick={() => void handleSaveOffline(book)}
+                  >
+                    {prog
+                      ? `⏳ جاري الحفظ (${prog.done}/${prog.total})`
+                      : isSavedOffline
+                        ? '🔄 تحديث النسخة المحفوظة'
+                        : '📥 حفظ للقراءة بدون إنترنت'}
+                  </button>
                 </div>
               </article>
             );

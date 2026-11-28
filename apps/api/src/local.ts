@@ -2,11 +2,11 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PGlite } from '@electric-sql/pglite';
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
-import { PrismaPGlite } from 'pglite-prisma-adapter';
+import sql from 'mssql';
 import { loadEnv, type AppEnv } from './env';
+import { parseSqlServerConfig } from './lib/sqlServerConfig';
 import { createPrismaClient } from './prismaClient';
 import { seedDatabase } from './seed/seedDatabase';
 import { buildServer } from './server';
@@ -17,11 +17,15 @@ const __dirname = path.dirname(__filename);
 const API_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(API_ROOT, '../..');
 
+const DEFAULT_LOCAL_SQLSERVER_URL =
+  'sqlserver://127.0.0.1:1433;database=darb_books;user=darb;password=darb_dev_password;encrypt=false;trustServerCertificate=true';
+
 export interface LocalApiBootOptions {
   dataDir?: string;
   storageDir?: string;
   publicDir?: string;
   envFilePath?: string;
+  databaseUrl?: string;
   port?: number;
   host?: string;
   corsOrigin?: string;
@@ -34,9 +38,9 @@ export interface LocalApiBootOptions {
 export interface LocalApiRuntime {
   app: FastifyInstance;
   prisma: PrismaClient;
-  pglite: PGlite;
   storage: StorageService;
   env: AppEnv;
+  databaseUrl: string;
   dataDir: string;
   storageDir: string;
   seededOnBoot: boolean;
@@ -118,65 +122,156 @@ function ensureLocalSecrets(
   return next;
 }
 
-async function applyLocalMigrations(pglite: PGlite): Promise<boolean> {
+function assertSafeIdentifier(name: string): string {
+  if (!/^[a-zA-Z0-9_]+$/.test(name)) {
+    throw new Error(`Unsafe SQL Server database name: "${name}". Use alphanumeric/underscore only.`);
+  }
+  return name;
+}
+
+export async function isSqlServerReachable(
+  databaseUrl: string,
+  timeoutMs = 2000
+): Promise<boolean> {
+  const masterConfig = parseSqlServerConfig(databaseUrl, 'master');
+  masterConfig.connectionTimeout = timeoutMs;
+  masterConfig.requestTimeout = timeoutMs;
+  const pool = new sql.ConnectionPool(masterConfig);
+  try {
+    await pool.connect();
+    await pool.request().query('SELECT 1 AS ok');
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await pool.close().catch(() => {});
+  }
+}
+
+export async function ensureSqlServerDatabaseAndMigrations(
+  databaseUrl: string,
+  options: { resetSchema?: boolean } = {}
+): Promise<boolean> {
+  const targetConfig = parseSqlServerConfig(databaseUrl);
+  const dbName = assertSafeIdentifier(targetConfig.database || 'darb_books');
+
+  const masterConfig = parseSqlServerConfig(databaseUrl, 'master');
+  masterConfig.connectionTimeout = 8000;
+  masterConfig.requestTimeout = 15000;
+
+  const masterPool = new sql.ConnectionPool(masterConfig);
+  try {
+    await masterPool.connect();
+  } catch (err) {
+    const details = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `[darb-local] تعذّر الاتصال بخادم Microsoft SQL Server (${masterConfig.server}:${masterConfig.port ?? 'dynamic'}).\n` +
+        `تفاصيل الخطأ: ${details}\n` +
+        `للتشغيل المحلي على ويندوز عبر SQLEXPRESS: شغّل PowerShell كمسؤول ونفّذ:\n` +
+        `  powershell -ExecutionPolicy Bypass -File infra/setup-sqlexpress.ps1\n` +
+        `أو شغّل حاوية Docker لـ SQL Server:\n` +
+        `  docker compose -f infra/docker-compose.yml up -d mssql`
+    );
+  }
+
+  try {
+    if (options.resetSchema) {
+      await masterPool
+        .request()
+        .batch(
+          `IF DB_ID(N'${dbName}') IS NOT NULL BEGIN ALTER DATABASE [${dbName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [${dbName}]; END; CREATE DATABASE [${dbName}];`
+        );
+    } else {
+      const checkRes = await masterPool
+        .request()
+        .input('dbName', sql.NVarChar(128), dbName)
+        .query<{ dbId: number | null }>('SELECT DB_ID(@dbName) AS dbId');
+      if (!checkRes.recordset[0]?.dbId) {
+        await masterPool.request().batch(`CREATE DATABASE [${dbName}];`);
+      }
+    }
+  } finally {
+    await masterPool.close().catch(() => {});
+  }
+
   const migrationsRoot = path.join(API_ROOT, 'prisma', 'migrations');
   if (!fs.existsSync(migrationsRoot)) {
     return false;
   }
 
-  const tableCheck = await pglite.query<{ tbl: string | null }>(
-    "SELECT to_regclass('public.users') AS tbl"
-  );
-  const schemaAlreadyExists = Boolean(tableCheck.rows[0]?.tbl);
+  targetConfig.connectionTimeout = 8000;
+  targetConfig.requestTimeout = 30000;
+  const appPool = new sql.ConnectionPool(targetConfig);
+  await appPool.connect();
 
-  await pglite.exec(`
-    CREATE TABLE IF NOT EXISTS "_darb_local_migrations" (
-      "name" TEXT PRIMARY KEY,
-      "applied_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-  `);
+  try {
+    const tableCheck = await appPool
+      .request()
+      .query<{ tbl: number | null }>("SELECT OBJECT_ID(N'[dbo].[users]', N'U') AS tbl");
+    const schemaAlreadyExists = Boolean(tableCheck.recordset[0]?.tbl);
 
-  const appliedRes = await pglite.query<{ name: string }>(
-    'SELECT "name" FROM "_darb_local_migrations"'
-  );
-  const applied = new Set(appliedRes.rows.map((r) => r.name));
-
-  const migrationDirs = fs
-    .readdirSync(migrationsRoot, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort();
-
-  let ranMigration = false;
-  for (const dirName of migrationDirs) {
-    if (applied.has(dirName)) continue;
-    const sqlPath = path.join(migrationsRoot, dirName, 'migration.sql');
-    if (!fs.existsSync(sqlPath)) continue;
-
-    // إذا كانت القاعدة تحتوي مسبقاً على الجداول من تشغيل سابق دون جدول التتبع، نسجل الهجرة الأولى فقط
-    if (schemaAlreadyExists && dirName === '0001_init') {
-      await pglite.query(
-        'INSERT INTO "_darb_local_migrations" ("name") VALUES ($1) ON CONFLICT DO NOTHING',
-        [dirName]
+    await appPool.request().batch(`
+      IF OBJECT_ID(N'[dbo].[_darb_local_migrations]', N'U') IS NULL
+      CREATE TABLE [dbo].[_darb_local_migrations] (
+        [name] NVARCHAR(191) NOT NULL PRIMARY KEY,
+        [applied_at] DATETIME2 NOT NULL CONSTRAINT [DF_darb_local_migrations_applied_at] DEFAULT SYSDATETIME()
       );
-      continue;
+    `);
+
+    const appliedRes = await appPool
+      .request()
+      .query<{ name: string }>('SELECT [name] FROM [dbo].[_darb_local_migrations]');
+    const applied = new Set(appliedRes.recordset.map((r) => r.name));
+
+    const migrationDirs = fs
+      .readdirSync(migrationsRoot, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .sort();
+
+    let ranMigration = false;
+    for (const dirName of migrationDirs) {
+      if (applied.has(dirName)) continue;
+      const sqlPath = path.join(migrationsRoot, dirName, 'migration.sql');
+      if (!fs.existsSync(sqlPath)) continue;
+
+      if (schemaAlreadyExists && dirName === '0001_init_sqlserver') {
+        await appPool
+          .request()
+          .input('name', sql.NVarChar(191), dirName)
+          .query('INSERT INTO [dbo].[_darb_local_migrations] ([name]) VALUES (@name)');
+        continue;
+      }
+
+      let rawSql = fs.readFileSync(sqlPath, 'utf8');
+      if (rawSql.charCodeAt(0) === 0xfeff) {
+        rawSql = rawSql.slice(1);
+      }
+
+      const batches = rawSql
+        .split(/^\s*GO\s*$/gim)
+        .map((chunk) => chunk.trim())
+        .filter(Boolean);
+
+      for (const batch of batches) {
+        await appPool.request().batch(batch);
+      }
+
+      await appPool
+        .request()
+        .input('name', sql.NVarChar(191), dirName)
+        .query('INSERT INTO [dbo].[_darb_local_migrations] ([name]) VALUES (@name)');
+      ranMigration = true;
     }
 
-    const sql = fs.readFileSync(sqlPath, 'utf8');
-    await pglite.exec(sql);
-    await pglite.query(
-      'INSERT INTO "_darb_local_migrations" ("name") VALUES ($1) ON CONFLICT DO NOTHING',
-      [dirName]
-    );
-    ranMigration = true;
+    return ranMigration;
+  } finally {
+    await appPool.close().catch(() => {});
   }
-
-  return ranMigration;
 }
 
 /**
- * تهيئة وتشغيل الخادم الخلفي بقاعدة PGlite مستمرة على القرص
- * دون الحاجة إلى Docker أو خادم PostgreSQL خارجي.
+ * تهيئة وتشغيل الخادم الخلفي بقاعدة Microsoft SQL Server المحلية/التطويرية
  */
 export async function startLocalApiServer(
   options: LocalApiBootOptions = {}
@@ -185,7 +280,7 @@ export async function startLocalApiServer(
   loadEnvFileIntoProcess(envFilePath);
 
   const dataDir = path.resolve(
-    options.dataDir ?? process.env.PGLITE_DATA_DIR ?? path.join(API_ROOT, '.pglite-data')
+    options.dataDir ?? process.env.DARB_LOCAL_STATE_DIR ?? path.join(API_ROOT, '.local-state')
   );
   const storageDir = path.resolve(
     options.storageDir ?? process.env.STORAGE_LOCAL_DIR ?? path.join(API_ROOT, '.storage')
@@ -193,6 +288,8 @@ export async function startLocalApiServer(
   const publicDir = path.resolve(
     options.publicDir ?? process.env.PUBLIC_ASSETS_FALLBACK_DIR ?? path.join(REPO_ROOT, 'public')
   );
+  const databaseUrl =
+    options.databaseUrl ?? process.env.DATABASE_URL ?? DEFAULT_LOCAL_SQLSERVER_URL;
 
   fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(storageDir, { recursive: true });
@@ -207,6 +304,7 @@ export async function startLocalApiServer(
     NODE_ENV: process.env.NODE_ENV || 'development',
     PORT: String(options.port ?? (process.env.PORT || 3000)),
     HOST: options.host ?? (process.env.HOST || '127.0.0.1'),
+    DATABASE_URL: databaseUrl,
     CORS_ORIGIN:
       options.corsOrigin ??
       process.env.CORS_ORIGIN ??
@@ -218,12 +316,10 @@ export async function startLocalApiServer(
     PUBLIC_ASSETS_FALLBACK_DIR: publicDir,
   });
 
-  const pglite = new PGlite(dataDir, { relaxedDurability: true });
-  await pglite.waitReady;
-  const prisma = createPrismaClient({ adapter: new PrismaPGlite(pglite) });
-  const storage = createStorageService(env);
+  await ensureSqlServerDatabaseAndMigrations(databaseUrl);
 
-  await applyLocalMigrations(pglite);
+  const prisma = createPrismaClient({ databaseUrl });
+  const storage = createStorageService(env);
 
   let seededOnBoot = false;
   const usersCount = await prisma.user.count();
@@ -251,17 +347,15 @@ export async function startLocalApiServer(
     if (closed) return;
     closed = true;
     await app.close().catch(() => {});
-    await pglite.exec('CHECKPOINT;').catch(() => {});
     await prisma.$disconnect().catch(() => {});
-    await pglite.close().catch(() => {});
   };
 
   return {
     app,
     prisma,
-    pglite,
     storage,
     env,
+    databaseUrl,
     dataDir,
     storageDir,
     seededOnBoot,
@@ -275,30 +369,25 @@ export async function startLocalApiServer(
 }
 
 async function runLocalCli(): Promise<void> {
-  const configuredDataDir = path.resolve(
-    process.env.PGLITE_DATA_DIR ?? path.join(API_ROOT, '.pglite-data')
-  );
-  if (!fs.existsSync(path.join(configuredDataDir, 'PG_VERSION'))) {
-    console.log(
-      '[darb-local] التشغيل الأول: جاري إنشاء قاعدة PGlite المحلية وتطبيق الترحيل والبذر الأولي (يستغرق عادةً ~20-30 ثانية في المرة الأولى فقط)...'
-    );
-  }
   const runtime = await startLocalApiServer({ logger: false });
   await runtime.app.listen({ port: runtime.env.PORT, host: runtime.env.HOST });
 
+  const sqlCfg = parseSqlServerConfig(runtime.databaseUrl);
   const baseUrl = `http://${runtime.env.HOST}:${runtime.env.PORT}`;
   console.log('');
   console.log('==============================================================');
-  console.log('  🚀 منصة درب — الوضع الحي المحلي المتكامل (PGlite Persistent)');
+  console.log('  🚀 منصة درب — الوضع الحي المحلي المتكامل (Microsoft SQL Server)');
   console.log('==============================================================');
-  console.log(`  • الخادم الخلفي (API):   ${baseUrl}`);
-  console.log(`  • فحص الصحة (Health):   ${baseUrl}/api/v1/health`);
-  console.log(`  • قاعدة البيانات الحية:  ${runtime.dataDir}`);
-  console.log(`  • تخزين الملفات المحلي:  ${runtime.storageDir}`);
+  console.log(`  • الخادم الخلفي (API):    ${baseUrl}`);
+  console.log(`  • فحص الصحة (Health):    ${baseUrl}/api/v1/health`);
   console.log(
-    `  • حالة التهيئة الأولية:  ${
+    `  • خادم SQL Server:        ${sqlCfg.server}:${sqlCfg.port ?? 'dynamic'} / DB: ${sqlCfg.database}`
+  );
+  console.log(`  • تخزين الملفات المحلي:   ${runtime.storageDir}`);
+  console.log(
+    `  • حالة التهيئة الأولية:   ${
       runtime.seededOnBoot
-        ? 'تم ترحيل القاعدة وبذر البيانات الأولية بنجاح'
+        ? 'تم إنشاء الجداول وبذر البيانات الأولية بنجاح'
         : 'تم استئناف قاعدة البيانات المحفوظة من الجلسة السابقة'
     }`
   );
@@ -316,9 +405,9 @@ async function runLocalCli(): Promise<void> {
   const handleShutdown = async (signal: string) => {
     if (exiting) return;
     exiting = true;
-    console.log(`\n[darb-local] تم استلام ${signal} — جاري حفظ قاعدة البيانات وإغلاق الخادم بأمان...`);
+    console.log(`\n[darb-local] تم استلام ${signal} — جاري إغلاق الخادم واتصالات SQL Server...`);
     await runtime.close();
-    console.log('[darb-local] تم إغلاق PGlite والخادم الخلفي بنجاح.');
+    console.log('[darb-local] تم الإغلاق بنجاح.');
     process.exit(0);
   };
 
@@ -343,7 +432,7 @@ const isDirectEntry =
 
 if (isDirectEntry) {
   runLocalCli().catch((err) => {
-    console.error('[darb-local] تعذر تشغيل الخادم المحلي:', err);
+    console.error('[darb-local] تعذر تشغيل الخادم المحلي:\n', err);
     process.exit(1);
   });
 }

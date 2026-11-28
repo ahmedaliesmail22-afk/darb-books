@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import type { Prisma, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { parseJson, stringifyJson } from '../lib/jsonCodec';
 import { recordAuditLog } from '../plugins/audit';
 import { requirePermission } from '../plugins/rbac';
 
@@ -51,7 +52,7 @@ export function registerTaxonomyRoutes(
     const canManage = request.authUser?.permissions.has('taxonomies.manage') ?? false;
     const includeInactive = canManage && q.includeInactive === 'true';
 
-    const items = await prisma.taxonomy.findMany({
+    const rows = await prisma.taxonomy.findMany({
       where: {
         ...(q.group ? { group: q.group } : {}),
         ...(includeInactive ? {} : { isActive: true }),
@@ -59,6 +60,10 @@ export function registerTaxonomyRoutes(
       orderBy: [{ group: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
 
+    const items = rows.map((row) => ({
+      ...row,
+      rulesJson: parseJson(row.rulesJson, {}),
+    }));
     const grouped: Record<string, typeof items> = {};
     for (const item of items) {
       if (!grouped[item.group]) grouped[item.group] = [];
@@ -98,7 +103,7 @@ export function registerTaxonomyRoutes(
             parentId: parsed.data.parentId ?? null,
             sortOrder: parsed.data.sortOrder,
             isActive: parsed.data.isActive,
-            rulesJson: parsed.data.rulesJson as Prisma.InputJsonValue,
+            rulesJson: stringifyJson(parsed.data.rulesJson, '{}'),
           },
         });
 
@@ -107,11 +112,11 @@ export function registerTaxonomyRoutes(
           action: 'taxonomy.create',
           targetType: 'taxonomy',
           targetId: row.id,
-          metadata: { after: row },
+          metadata: { after: { ...row, rulesJson: parsed.data.rulesJson } },
           request,
         });
 
-        return row;
+        return { ...row, rulesJson: parseJson(row.rulesJson, {}) };
       });
 
       return reply.code(201).send({ item: created });
@@ -146,7 +151,7 @@ export function registerTaxonomyRoutes(
             ...(parsed.data.sortOrder !== undefined ? { sortOrder: parsed.data.sortOrder } : {}),
             ...(parsed.data.isActive !== undefined ? { isActive: parsed.data.isActive } : {}),
             ...(parsed.data.rulesJson !== undefined
-              ? { rulesJson: parsed.data.rulesJson as Prisma.InputJsonValue }
+              ? { rulesJson: stringifyJson(parsed.data.rulesJson, '{}') }
               : {}),
           },
         });
@@ -156,11 +161,14 @@ export function registerTaxonomyRoutes(
           action: 'taxonomy.update',
           targetType: 'taxonomy',
           targetId: row.id,
-          metadata: { before: existing, after: row },
+          metadata: {
+            before: { ...existing, rulesJson: parseJson(existing.rulesJson, {}) },
+            after: { ...row, rulesJson: parseJson(row.rulesJson, {}) },
+          },
           request,
         });
 
-        return row;
+        return { ...row, rulesJson: parseJson(row.rulesJson, {}) };
       });
 
       return reply.send({ item: updated });
@@ -217,10 +225,13 @@ export function registerTaxonomyRoutes(
           action: 'taxonomy.deactivate',
           targetType: 'taxonomy',
           targetId: id,
-          metadata: { before: existing, after: row },
+          metadata: {
+            before: { ...existing, rulesJson: parseJson(existing.rulesJson, {}) },
+            after: { ...row, rulesJson: parseJson(row.rulesJson, {}) },
+          },
           request,
         });
-        return row;
+        return { ...row, rulesJson: parseJson(row.rulesJson, {}) };
       });
 
       return reply.send({ item: deactivated });

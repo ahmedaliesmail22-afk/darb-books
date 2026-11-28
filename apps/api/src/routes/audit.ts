@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
+import { parseNullableJson } from '../lib/jsonCodec';
 import { requirePermission } from '../plugins/rbac';
 
 export function registerAuditRoutes(
@@ -24,7 +25,7 @@ export function registerAuditRoutes(
       };
       const limit = Math.min(500, Math.max(1, parseInt(q.limit || '50', 10) || 50));
 
-      const logs = await prisma.auditLog.findMany({
+      const rows = await prisma.auditLog.findMany({
         where: {
           ...(q.action ? { action: q.action } : {}),
           ...(q.targetType ? { targetType: q.targetType } : {}),
@@ -37,6 +38,11 @@ export function registerAuditRoutes(
         orderBy: { createdAt: 'desc' },
         take: limit,
       });
+
+      const logs = rows.map((row) => ({
+        ...row,
+        metadataJson: parseNullableJson(row.metadataJson),
+      }));
 
       return reply.send({ logs, total: logs.length });
     }

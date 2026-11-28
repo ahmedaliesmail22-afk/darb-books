@@ -34,33 +34,37 @@
 
 ---
 
-## 2. التشغيل الحي محلياً (`Local Full-Stack Setup`)
+## 2. التشغيل الحي محلياً (`Local Full-Stack Setup` مع Microsoft SQL Server)
 
-### الخيار أ (الموصى به على ويندوز ودون Docker): الوضع الحي المحلي المتكامل (`npm run dev:local`)
-يتيح هذا الوضع تشغيل المنصة الحية الكاملة (**React/Vite + Fastify API + PostgreSQL المدمجة عبر PGlite + التخزين المحلي**) بأمر واحد دون تثبيت Docker أو إعداد قاعدة بيانات خارجية، مع حفظ كافة التعديلات على القرص:
-
-```powershell
-npm run dev:local
-```
+### الخيار أ: عبر Microsoft SQL Server Express محلياً على ويندوز + `npm run dev:local`
+لتشغيل المنصة على جهاز ويندوز يستخدم **SQL Server Express المحلي**:
+1. افتح PowerShell بصلاحيات المسؤول (**Run as Administrator**) ونفّذ سكربت التهيئة الآمن:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File infra/setup-sqlexpress.ps1
+   ```
+   يقوم السكربت تلقائياً بتفعيل المصادقة المختلطة (`LoginMode=2`)، فتح بروتوكول `TCP/IP` على المنفذ الثابت `1433`، إعادة تشغيل خدمة `MSSQL$SQLEXPRESS`، وإنشاء مستخدم وقاعدة `darb_books` بكلمة المرور التي تدخلها يدوياً دون تخزين أي أسرار في المستودع.
+2. أنشئ ملف `apps/api/.env` من القالب [`apps/api/.env.example`](../apps/api/.env.example) وضع رابط `DATABASE_URL` بكلمة المرور التي اخترتها.
+3. شغّل المنصة الكاملة (الخادم الخلفي + الواجهة):
+   ```powershell
+   npm run dev:local
+   ```
 
 **كيف يعمل [`apps/api/src/local.ts`](../apps/api/src/local.ts) و[`tools/dev-local.mjs`](../tools/dev-local.mjs)؟**
-1. تُحفظ بيانات قاعدة `PGlite` باستمرار داخل مجلد `apps/api/.pglite-data/`، وتُحفظ الملفات والكتب المرفوعة داخل `apps/api/.storage/` (كلاهما مستثنى في [`.gitignore`](../.gitignore)).
-2. عند غياب `apps/api/.env`، يهيئ الخادم قيماً محلية افتراضية آمنة مع توليد أسرار JWT محلية تُحفظ داخل `apps/api/.pglite-data/.local-secrets.json` لاستمرار الجلسات بين عمليات إعادة التشغيل.
-3. في التشغيل الأول فقط: يطبّق الخادم الهجرة [`0001_init/migration.sql`](../apps/api/prisma/migrations/0001_init/migration.sql) ويبذر البيانات الأولية عبر [`seedDatabase.ts`](../apps/api/src/seed/seedDatabase.ts)، ويطبع بريد المدير وكلمة المرور المحلية في الطرفية (`admin@darb-books.local` / `DarbLocal!2026` ما لم تحدد `SEED_ADMIN_*`).
-4. في أي تشغيل لاحق: يستأنف القاعدة المحفوظة تلقائياً دون إعادة بذر فوق تعديلاتك (المستخدمين، التصنيفات، الـ CMS، الكتب المرفوعة، المراجعات، وسجل التدقيق).
-5. ينتظر المشغّل جاهزية `http://127.0.0.1:3000/api/v1/health` ثم يفتح الواجهة على `http://127.0.0.1:4173`؛ وعند الضغط على `Ctrl+C` يغلق العمليتين ويغلق `PGlite` بأمان.
-6. لتشغيل الخادم الخلفي المحلي منفرداً: `npm run dev:api:local`.
+1. يتحقق من اتصال **Microsoft SQL Server** (المحدد في `DATABASE_URL`)، وينشئ القاعدة تلقائياً إن لم تكن موجودة، ثم يطبّق هجرات [`0001_init_sqlserver/migration.sql`](../apps/api/prisma/migrations/0001_init_sqlserver/migration.sql) عبر جدول التتبع `[dbo].[_darb_local_migrations]`.
+2. تحفظ أسرار التطوير المحلية والوسائط المرفوعة في `apps/api/.local-state/` و`apps/api/.storage/` (كلاهما مستثنى في [`.gitignore`](../.gitignore)).
+3. في التشغيل الأول فقط (عندما يكون جدول `users` فارغاً): يبذر البيانات الأولية عبر [`seedDatabase.ts`](../apps/api/src/seed/seedDatabase.ts)، ويطبع بريد المدير وكلمة المرور المحلية في الطرفية، وفي كل تشغيل لاحق يستأنف البيانات المحفوظة بأمان.
+4. لتشغيل الخادم الخلفي المحلي منفرداً: `npm run dev:api:local`.
 
-### الخيار ب: عبر Docker Compose (PostgreSQL + MinIO)
+### الخيار ب: عبر Docker Compose (`SQL Server 2022` + `MinIO`)
 يوفر ملف [`infra/docker-compose.yml`](../infra/docker-compose.yml) خدمتين جاهزتين للتطوير المحلي:
-- **`darb-books-postgres`:** صورة `postgres:16-alpine` على المنفذ `5432` (المستخدم الافتراضي `darb`، كلمة المرور `darb_dev_password`، قاعدة البيانات `darb_books`).
+- **`darb-books-mssql`:** صورة `mcr.microsoft.com/mssql/server:2022-latest` على المنفذ `1433`.
 - **`darb-books-r2-local`:** صورة `minio/minio:latest` متوافقة مع واجهة S3/R2 على المنفذ `9000` (API) والمنفذ `9001` (لوحة التحكم، المستخدم `darbminio`، كلمة المرور `darbminio_dev_secret`).
 
 ```powershell
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-### الخيار ج: استخدام PostgreSQL خارجية
+### الخيار ج: استخدام SQL Server / Azure SQL خارجي
 مرّر رابط الاتصال القياسي في `DATABASE_URL` داخل `apps/api/.env` دون الحاجة لتشغيل Docker Compose.
 
 ---
@@ -74,8 +78,8 @@ docker compose -f infra/docker-compose.yml up -d
 | `NODE_ENV` | `development` | وضع التشغيل (`development`, `test`, `production`) |
 | `PORT` | `3000` | منفذ الاستماع للخادم الخلفي |
 | `HOST` | `127.0.0.1` | عنوان الربط (`0.0.0.0` داخل الحاويات والخوادم الإنتاجية) |
-| `CORS_ORIGIN` | `http://127.0.0.1:4173,http://localhost:4173` | قائمة النطاقات المسموح بها مفصولة بفاصلة |
-| `DATABASE_URL` | `postgresql://darb:darb_dev_password@127.0.0.1:5432/darb_books?schema=public` | سلسلة اتصال PostgreSQL |
+| `CORS_ORIGIN` | `http://127.0.0.1:4173,http://localhost:4173,capacitor://localhost,http://localhost` | قائمة النطاقات المسموح بها مفصولة بفاصلة (تشمل تطبيق Capacitor) |
+| `DATABASE_URL` | `sqlserver://127.0.0.1:1433;database=darb_books;user=darb;password=...;encrypt=false;trustServerCertificate=true` | سلسلة اتصال Microsoft SQL Server |
 | `JWT_ACCESS_SECRET` | — *(مطلوب، ≥ 16 حرفاً)* | سر توقيع رموز الوصول JWT Access Token |
 | `JWT_REFRESH_SECRET` | — *(مطلوب، ≥ 16 حرفاً)* | سر توقيع الجلسات |
 | `JWT_ACCESS_TTL_SEC` | `900` | عمر رمز الوصول بالثواني (15 دقيقة افتراضياً) |
@@ -107,7 +111,7 @@ docker compose -f infra/docker-compose.yml up -d
 # 1. توليد عميل Prisma
 npm run db:generate
 
-# 2. تطبيق الهجرة الأولية (apps/api/prisma/migrations/0001_init)
+# 2. تطبيق الهجرة الأولية (apps/api/prisma/migrations/0001_init_sqlserver)
 npm run db:migrate:deploy --workspace=@darb/api
 
 # 3. البذر الأولي (يتطلب وجود SEED_ADMIN_PASSWORD في البيئة أو apps/api/.env)
@@ -164,5 +168,12 @@ npm start --workspace=@darb/api
 1. **الأسرار والكوكيز:** استخدم قيماً عشوائية طويلة (`≥ 32` محرفاً) لكل من `JWT_ACCESS_SECRET` و`JWT_REFRESH_SECRET`، وفعّل `COOKIE_SECURE=true` عند التقديم عبر HTTPS.
 2. **الحساب الإداري الأولي:** لا تشغّل البذر بكلمات مرور افتراضية ضعيفة، واحذف أو دوّر صلاحيات أي حسابات اختبارية في البيئة الإنتاجية.
 3. **النسخ الاحتياطي:**
-   - قاعدة البيانات PostgreSQL: جدولة `pg_dump --format=custom` يومياً وحفظ النسخ خارج الخادم، مع الاحتفاظ بسجلات `audit_logs` و`book_versions`.
+   - قاعدة البيانات **Microsoft SQL Server**: جدولة النسخ الاحتياطي الكامل (`BACKUP DATABASE [darb_books] TO DISK = ...`) يومياً وحفظ ملفات `.bak` خارج الخادم، مع الاحتفاظ بسجلات `audit_logs` و`book_versions`.
    - وسائط R2: تفعيل Versioning على حاوية R2 ومزامنة احتياطية للأصول المؤرشفة (محتوى النسخ السابقة يبقى غير محذوف تلقائياً عند نشر إصدار أحدث).
+
+---
+
+## 7. تطبيق الأندرويد ومتطلبات Google Play
+
+- يستند تطبيق الأندرويد إلى **Capacitor 8** في [`apps/mobile/`](../apps/mobile/capacitor.config.ts) مع قاعدة SQLite محلية (`@capacitor-community/sqlite`)، وتخزين ملفات بدون إنترنت (`@capacitor/filesystem`)، ومراقبة الشبكة وطابور المزامنة، وصفحات السياسات العامة (`/privacy`, `/usage`, `/terms`)، وحذف الحساب ذاتياً (`DELETE /api/v1/auth/me`).
+- راجع الدليل المتكامل: [**`15` — دليل SQL Server وتطبيق الأندرويد أوفلاين والمتاجر**](./15_MOBILE_APP_AND_SQLSERVER_GUIDE.md) ومسار البناء السحابي [`build-android.yml`](../.github/workflows/build-android.yml).

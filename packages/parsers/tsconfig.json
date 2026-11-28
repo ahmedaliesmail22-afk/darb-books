@@ -4,7 +4,6 @@
     "target": "ES2022",
     "lib": ["ES2022"],
     "types": ["node"],
-    "baseUrl": ".",
     "paths": {
       "@darb/book-schema": ["../book-schema/src/index.ts"]
     }

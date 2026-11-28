@@ -16,6 +16,7 @@ apps/*/.env.*
 !apps/*/.env.example
 apps/api/.storage/
 apps/api/.pglite-data/
+apps/api/.local-state/
 apps/api/generated/
 
 # Python / Build Temp Artifacts

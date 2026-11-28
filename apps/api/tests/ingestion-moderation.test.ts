@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import JSZip from 'jszip';
-import { createTestContext, TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD, type TestContext } from './helpers/testHarness';
+import {
+  createTestContext,
+  sqlServerAvailable,
+  TEST_ADMIN_EMAIL,
+  TEST_ADMIN_PASSWORD,
+  type TestContext,
+} from './helpers/testHarness';
 
 async function createMultipartRequest(
   file: { filename: string; content: Buffer | string; mimeType: string },
@@ -22,7 +28,9 @@ async function createMultipartRequest(
   return { contentType, payload };
 }
 
-describe('Phase 3: Ingestion, Non-Destructive Versioning & Moderation API', () => {
+describe.skipIf(!sqlServerAvailable)(
+  'Phase 3: Ingestion, Non-Destructive Versioning & Moderation API',
+  () => {
   let ctx: TestContext;
   let adminToken = '';
   let authorToken = '';

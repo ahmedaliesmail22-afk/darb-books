@@ -110,6 +110,7 @@ export const RegisterPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const [verifyToken, setVerifyToken] = useState('');
   const [pendingMode, setPendingMode] = useState<'none' | 'email' | 'approval'>('none');
   const [error, setError] = useState<string | null>(null);
@@ -273,10 +274,44 @@ export const RegisterPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              lineHeight: 1.6,
+            }}
+          >
+            <input
+              id="regAcceptPolicies"
+              type="checkbox"
+              required
+              checked={acceptedPolicies}
+              onChange={(e) => setAcceptedPolicies(e.target.checked)}
+              style={{ marginTop: 4 }}
+            />
+            <span>
+              أوافق على{' '}
+              <Link to="/privacy" target="_blank" rel="noopener">
+                سياسة الخصوصية
+              </Link>{' '}
+              و{' '}
+              <Link to="/usage" target="_blank" rel="noopener">
+                سياسة الاستخدام
+              </Link>{' '}
+              و{' '}
+              <Link to="/terms" target="_blank" rel="noopener">
+                الشروط والأحكام
+              </Link>
+              .
+            </span>
+          </label>
           <button
             type="submit"
             className="portal-btn primary"
-            disabled={submitting || !allowSelfRegistration}
+            disabled={submitting || !allowSelfRegistration || !acceptedPolicies}
           >
             {submitting ? 'جاري التسجيل...' : 'تسجيل الحساب'}
           </button>

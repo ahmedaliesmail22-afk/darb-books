@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+
 const API_BASE_STORAGE_KEY = 'darb_api_base';
 const TOKENS_STORAGE_KEY = 'darb_auth_tokens_v1';
 
@@ -56,11 +58,19 @@ export function resolveApiBaseUrl(): string | null {
 
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
   const port = typeof window !== 'undefined' ? window.location.port : '';
-  if (host.endsWith('github.io') || port === '4173') {
+  if (Capacitor.isNativePlatform() || host.endsWith('github.io') || port === '4173') {
     return null;
   }
 
   return '';
+}
+
+export function clearConfiguredApiBaseUrl(): void {
+  try {
+    localStorage.removeItem(API_BASE_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 export function getStoredTokens(): StoredTokens | null {

@@ -9,6 +9,6 @@ export default defineConfig({
   datasource: {
     url:
       process.env.DATABASE_URL ??
-      'postgresql://darb:darb_dev_password@127.0.0.1:5432/darb_books?schema=public',
+      'sqlserver://127.0.0.1:1433;database=darb_books;user=darb;password=darb_dev_password;encrypt=false;trustServerCertificate=true',
   },
 });

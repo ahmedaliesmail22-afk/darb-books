@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import type { FastifyRequest } from 'fastify';
+import { stringifyJson } from '../lib/jsonCodec';
 
 type PrismaLike = PrismaClient | Prisma.TransactionClient;
 
@@ -20,7 +21,7 @@ export async function recordAuditLog(
       action: input.action,
       targetType: input.targetType,
       targetId: input.targetId,
-      metadataJson: (input.metadata ?? {}) as Prisma.InputJsonValue,
+      metadataJson: stringifyJson(input.metadata ?? {}, '{}'),
       ipAddress: input.request?.ip ?? null,
       userAgent:
         typeof input.request?.headers['user-agent'] === 'string'

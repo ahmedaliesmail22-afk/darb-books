@@ -1,7 +1,10 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import type { Prisma, PrismaClient, UserStatus } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import type { AppEnv } from '../env';
+import { parseJson, stringifyJson } from '../lib/jsonCodec';
+
+type UserStatus = 'ACTIVE' | 'PENDING_VERIFICATION' | 'PENDING_APPROVAL' | 'SUSPENDED';
 import {
   ACCESS_COOKIE_NAME,
   REFRESH_COOKIE_NAME,
@@ -515,13 +518,26 @@ export function registerAuthRoutes(
         profile: user.profile
           ? {
               ageGroupId: user.profile.ageGroupId,
-              ageGroup: user.profile.ageGroup,
+              ageGroup: user.profile.ageGroup
+                ? {
+                    ...user.profile.ageGroup,
+                    rulesJson: parseJson(user.profile.ageGroup.rulesJson, {}),
+                  }
+                : null,
               educationLevelId: user.profile.educationLevelId,
-              educationLevel: user.profile.educationLevel,
+              educationLevel: user.profile.educationLevel
+                ? {
+                    ...user.profile.educationLevel,
+                    rulesJson: parseJson(user.profile.educationLevel.rulesJson, {}),
+                  }
+                : null,
               preferredTaxonomyIds: user.profile.preferredTaxonomies.map((p) => p.taxonomyId),
-              preferredTaxonomies: user.profile.preferredTaxonomies.map((p) => p.taxonomy),
+              preferredTaxonomies: user.profile.preferredTaxonomies.map((p) => ({
+                ...p.taxonomy,
+                rulesJson: parseJson(p.taxonomy.rulesJson, {}),
+              })),
               onboardingCompleted: user.profile.onboardingCompleted,
-              uiPrefsJson: user.profile.uiPrefsJson,
+              uiPrefsJson: parseJson(user.profile.uiPrefsJson, {}),
             }
           : null,
       },
@@ -578,13 +594,13 @@ export function registerAuthRoutes(
           ageGroupId: ageGroupId ?? null,
           educationLevelId: educationLevelId ?? null,
           onboardingCompleted: true,
-          uiPrefsJson: (uiPrefsJson ?? {}) as Prisma.InputJsonValue,
+          uiPrefsJson: stringifyJson(uiPrefsJson ?? {}, '{}'),
         },
         update: {
           ...(ageGroupId !== undefined ? { ageGroupId } : {}),
           ...(educationLevelId !== undefined ? { educationLevelId } : {}),
           ...(uiPrefsJson !== undefined
-            ? { uiPrefsJson: uiPrefsJson as Prisma.InputJsonValue }
+            ? { uiPrefsJson: stringifyJson(uiPrefsJson, '{}') }
             : {}),
           onboardingCompleted: true,
         },
@@ -623,7 +639,77 @@ export function registerAuthRoutes(
       });
     });
 
-    return reply.send({ profile: updatedProfile });
+    return reply.send({
+      profile: {
+        ...updatedProfile,
+        ageGroup: updatedProfile.ageGroup
+          ? {
+              ...updatedProfile.ageGroup,
+              rulesJson: parseJson(updatedProfile.ageGroup.rulesJson, {}),
+            }
+          : null,
+        educationLevel: updatedProfile.educationLevel
+          ? {
+              ...updatedProfile.educationLevel,
+              rulesJson: parseJson(updatedProfile.educationLevel.rulesJson, {}),
+            }
+          : null,
+        preferredTaxonomies: updatedProfile.preferredTaxonomies.map((pt) => ({
+          ...pt,
+          taxonomy: {
+            ...pt.taxonomy,
+            rulesJson: parseJson(pt.taxonomy.rulesJson, {}),
+          },
+        })),
+        uiPrefsJson: parseJson(updatedProfile.uiPrefsJson, {}),
+        metadataJson: parseJson(updatedProfile.metadataJson, {}),
+      },
+    });
+  });
+
+  app.delete('/api/v1/auth/me', { preHandler: [authenticate] }, async (request, reply) => {
+    const userId = request.authUser!.userId;
+    const body = (request.body as { password?: string } | undefined) ?? {};
+
+    const existing = await prisma.user.findUnique({ where: { id: userId } });
+    if (!existing) {
+      return reply.code(404).send({ error: 'USER_NOT_FOUND' });
+    }
+
+    if (body.password) {
+      const valid = await verifyPassword(body.password, existing.passwordHash);
+      if (!valid) {
+        return reply.code(401).send({
+          error: 'INVALID_CREDENTIALS',
+          message: 'كلمة المرور المدخلة غير صحيحة',
+        });
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.userRole.deleteMany({ where: { userId } });
+      await tx.userRole.updateMany({ where: { assignedById: userId }, data: { assignedById: null } });
+      await tx.systemConfig.updateMany({ where: { updatedById: userId }, data: { updatedById: null } });
+      await tx.cmsSection.updateMany({ where: { updatedById: userId }, data: { updatedById: null } });
+      await tx.newsPost.updateMany({ where: { authorId: userId }, data: { authorId: null } });
+      await tx.book.updateMany({ where: { authorId: userId }, data: { authorId: null } });
+      await tx.reviewTicket.updateMany({ where: { reviewerId: userId }, data: { reviewerId: null } });
+      await tx.auditLog.updateMany({ where: { actorId: userId }, data: { actorId: null } });
+
+      await recordAuditLog(tx, {
+        actorId: null,
+        action: 'user.self_delete',
+        targetType: 'user',
+        targetId: userId,
+        metadata: { email: existing.email },
+        request,
+      });
+
+      await tx.user.delete({ where: { id: userId } });
+    });
+
+    clearAuthCookies(reply);
+    return reply.send({ ok: true, deleted: true });
   });
 
   app.patch(

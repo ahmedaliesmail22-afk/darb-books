@@ -1,13 +1,16 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import type { MediaAssetType, Prisma, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { BookParserError, createDefaultParserRegistry, type ParsedBookPackage } from '@darb/parsers';
+import { parseJson, stringifyJson } from '../lib/jsonCodec';
 import { recordAuditLog } from '../plugins/audit';
 import { requirePermission } from '../plugins/rbac';
 import { getUploadsPolicy } from '../services/configService';
 import { sanitizeStorageKey, type StorageService } from '../services/storage';
+
+type MediaAssetType = 'SOURCE_DOC' | 'AUDIO' | 'VIDEO' | 'IMAGE' | 'MODEL_3D' | 'OTHER';
 
 const SubmitVersionBodySchema = z.object({
   ipDeclarationSigned: z.boolean(),
@@ -153,7 +156,7 @@ async function persistParsedArtifacts(input: {
     mimeType: string;
     sizeBytes: number;
     checksumSha256: string;
-    metadataJson: Prisma.InputJsonValue;
+    metadataJson: string;
   }> = [
     {
       assetType: 'SOURCE_DOC',
@@ -161,7 +164,10 @@ async function persistParsedArtifacts(input: {
       mimeType: input.sourceFile.mimetype,
       sizeBytes: input.sourceFile.buffer.length,
       checksumSha256: crypto.createHash('sha256').update(input.sourceFile.buffer).digest('hex'),
-      metadataJson: { originalFilename: input.sourceFile.filename, formatId: input.parsed.formatId },
+      metadataJson: stringifyJson({
+        originalFilename: input.sourceFile.filename,
+        formatId: input.parsed.formatId,
+      }),
     },
   ];
 
@@ -192,7 +198,7 @@ async function persistParsedArtifacts(input: {
       mimeType: asset.mimeType,
       sizeBytes: asset.buffer.length,
       checksumSha256: crypto.createHash('sha256').update(asset.buffer).digest('hex'),
-      metadataJson: { relativePath: cleanRel },
+      metadataJson: stringifyJson({ relativePath: cleanRel }),
     });
   }
 
@@ -270,7 +276,10 @@ export function registerAuthorRoutes(
           activeVersionId: book.activeVersionId,
           activeVersion: book.activeVersion,
           updatedAt: book.updatedAt,
-          taxonomies: book.taxonomies.map((t) => t.taxonomy),
+          taxonomies: book.taxonomies.map((t) => ({
+            ...t.taxonomy,
+            rulesJson: parseJson(t.taxonomy.rulesJson, {}),
+          })),
           versions: book.versions.map((v) => ({
             id: v.id,
             versionNumber: v.versionNumber,
@@ -285,7 +294,12 @@ export function registerAuthorRoutes(
             submittedAt: v.submittedAt,
             publishedAt: v.publishedAt,
             createdAt: v.createdAt,
-            latestTicket: v.reviewTickets[0] ?? null,
+            latestTicket: v.reviewTickets[0]
+              ? {
+                  ...v.reviewTickets[0],
+                  checklistJson: parseJson(v.reviewTickets[0].checklistJson, {}),
+                }
+              : null,
           })),
         })),
       });
@@ -356,7 +370,7 @@ export function registerAuthorRoutes(
           spreadsCount: version.spreadsCount,
           status: version.status,
         },
-        editionData: version.canonicalDataJson,
+        editionData: parseJson(version.canonicalDataJson, {}),
       });
     }
   );
@@ -492,7 +506,7 @@ export function registerAuthorRoutes(
             sourceFormat: parsedPkg.formatId,
             sourceFileUrl: persisted.sourceKey,
             canonicalJsonUrl: persisted.canonicalKey,
-            canonicalDataJson: parsedPkg.editionData as unknown as Prisma.InputJsonValue,
+            canonicalDataJson: stringifyJson(parsedPkg.editionData, '{}'),
             audioDir: persisted.audioDir,
             videoDir: persisted.videoDir,
             chaptersCount: parsedPkg.chaptersCount,
@@ -634,7 +648,7 @@ export function registerAuthorRoutes(
             sourceFormat: parsedPkg.formatId,
             sourceFileUrl: persisted.sourceKey,
             canonicalJsonUrl: persisted.canonicalKey,
-            canonicalDataJson: parsedPkg.editionData as unknown as Prisma.InputJsonValue,
+            canonicalDataJson: stringifyJson(parsedPkg.editionData, '{}'),
             audioDir: persisted.audioDir,
             videoDir: persisted.videoDir,
             chaptersCount: parsedPkg.chaptersCount,
@@ -737,7 +751,7 @@ export function registerAuthorRoutes(
         const ticket = await tx.reviewTicket.create({
           data: {
             bookVersionId: version.id,
-            checklistJson: {},
+            checklistJson: '{}',
             contentVerified: false,
             ipVerified: false,
             notes: parsedBody.data.authorNotes ?? null,

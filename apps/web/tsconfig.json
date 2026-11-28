@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
       "@darb/book-schema": ["../../packages/book-schema/src/index.ts"],
       "@darb/book-engine": ["../../packages/book-engine/src/index.ts"],

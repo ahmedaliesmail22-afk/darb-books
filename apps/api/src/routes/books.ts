@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import type { Prisma, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { normalizeArabic } from '@darb/book-schema';
+import { parseJson, stringifyJson } from '../lib/jsonCodec';
 import { recordAuditLog } from '../plugins/audit';
 import { requirePermission } from '../plugins/rbac';
 import {
@@ -131,7 +132,7 @@ export function registerBookRoutes(
         minAge: resolveBookMinAge(taxList, policy),
         isRecommended: personal.isRecommended,
         matchScore: personal.matchScore,
-        taxonomies: taxList,
+        taxonomies: taxList.map((t) => ({ ...t, rulesJson: parseJson(t.rulesJson, {}) })),
         activeVersion: book.activeVersion
           ? {
               id: book.activeVersion.id,
@@ -208,8 +209,13 @@ export function registerBookRoutes(
         direction: book.direction,
         coverUrl: book.coverUrl,
         status: book.status,
-        taxonomies: taxList,
-        activeVersion: book.activeVersion,
+        taxonomies: taxList.map((t) => ({ ...t, rulesJson: parseJson(t.rulesJson, {}) })),
+        activeVersion: book.activeVersion
+          ? {
+              ...book.activeVersion,
+              canonicalDataJson: parseJson(book.activeVersion.canonicalDataJson, {}),
+            }
+          : null,
         versions: canManage
           ? book.versions
           : book.versions.filter((v) => v.id === book.activeVersionId),
@@ -246,7 +252,7 @@ export function registerBookRoutes(
         });
       }
 
-      return reply.send(book.activeVersion.canonicalDataJson);
+      return reply.send(parseJson(book.activeVersion.canonicalDataJson, {}));
     }
   );
 
@@ -293,7 +299,7 @@ export function registerBookRoutes(
             versionNumber: 1,
             versionLabel: 'v1',
             sourceFormat: 'json',
-            canonicalDataJson: parsed.data.canonicalDataJson as Prisma.InputJsonValue,
+            canonicalDataJson: stringifyJson(parsed.data.canonicalDataJson, '{}'),
             audioDir: parsed.data.audioDir ?? null,
             videoDir: parsed.data.videoDir ?? null,
             chaptersCount: parsed.data.chaptersCount,
@@ -332,7 +338,13 @@ export function registerBookRoutes(
           request,
         });
 
-        return { book, version };
+        return {
+          book,
+          version: {
+            ...version,
+            canonicalDataJson: parseJson(version.canonicalDataJson, {}),
+          },
+        };
       });
 
       return reply.code(201).send(created);
@@ -361,16 +373,21 @@ export function registerBookRoutes(
           bookId: book.id,
           currentSpread: parsed.data.currentSpread,
           percent: parsed.data.percent,
-          bookmarksJson: parsed.data.bookmarksJson as Prisma.InputJsonValue,
+          bookmarksJson: stringifyJson(parsed.data.bookmarksJson, '[]'),
         },
         update: {
           currentSpread: parsed.data.currentSpread,
           percent: parsed.data.percent,
-          bookmarksJson: parsed.data.bookmarksJson as Prisma.InputJsonValue,
+          bookmarksJson: stringifyJson(parsed.data.bookmarksJson, '[]'),
         },
       });
 
-      return reply.send({ progress });
+      return reply.send({
+        progress: {
+          ...progress,
+          bookmarksJson: parseJson<unknown[]>(progress.bookmarksJson, []),
+        },
+      });
     }
   );
 
@@ -388,7 +405,14 @@ export function registerBookRoutes(
         where: { userId_bookId: { userId: request.authUser!.userId, bookId: book.id } },
       });
 
-      return reply.send({ progress });
+      return reply.send({
+        progress: progress
+          ? {
+              ...progress,
+              bookmarksJson: parseJson<unknown[]>(progress.bookmarksJson, []),
+            }
+          : null,
+      });
     }
   );
 
@@ -405,7 +429,7 @@ export function registerBookRoutes(
         bySlug[r.book.slug] = {
           currentSpread: r.currentSpread,
           percent: r.percent,
-          bookmarksJson: r.bookmarksJson,
+          bookmarksJson: parseJson<unknown[]>(r.bookmarksJson, []),
           updatedAt: r.updatedAt,
         };
       }

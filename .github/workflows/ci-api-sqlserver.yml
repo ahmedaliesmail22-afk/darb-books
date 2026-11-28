@@ -1,0 +1,53 @@
+name: Backend API & SQL Server CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  api-sqlserver-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: 'Developer'
+          MSSQL_SA_PASSWORD: 'DarbCiSql!2026Pass'
+        ports:
+          - '1433:1433'
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P DarbCiSql!2026Pass -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck & Build Backend API
+        run: npm run build --workspace=@darb/api
+
+      - name: Run Engine & Parser Tests
+        run: |
+          npm run test:engine
+          npm run test:parsers
+
+      - name: Run Backend API Integration Tests against SQL Server
+        env:
+          TEST_SQLSERVER_URL: 'sqlserver://127.0.0.1:1433;database=darb_books_test;user=sa;password=DarbCiSql!2026Pass;encrypt=false;trustServerCertificate=true'
+        run: npm run test:api

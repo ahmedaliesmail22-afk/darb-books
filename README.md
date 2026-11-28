@@ -9,7 +9,7 @@
 
 تجمع منصة **درب** بين محرك قراءة ورقي مجسم ثلاثي الأبعاد (`Three.js` + تقليب `180°` للغة العربية `RTL` والإنجليزية `LTR`) وبين بنية سحابية مرنة تدار مركزياً من قاعدة البيانات دون الحاجة لتعديل الشيفرة أو إعادة بناء التطبيق:
 
-1. **لا قيم جامدة (`No Hardcoding`):** الفئات العمرية، المستويات التعليمية (من التمهيدي إلى البروفيسوراه)، التخصصات، أنواع الكتب، أقسام الصفحة الرئيسية، الأخبار، قوائم التحقق، القالب القياسي، وإعدادات المنصة والهوية البصرية تُدار ديناميكياً من قاعدة البيانات (`PostgreSQL` + `Prisma ORM`).
+1. **لا قيم جامدة (`No Hardcoding`):** الفئات العمرية، المستويات التعليمية (من التمهيدي إلى البروفيسوراه)، التخصصات، أنواع الكتب، أقسام الصفحة الرئيسية، الأخبار، قوائم التحقق، القالب القياسي، وإعدادات المنصة والهوية البصرية تُدار ديناميكياً من قاعدة البيانات (`Microsoft SQL Server` + `Prisma ORM`).
 2. **صلاحيات مرنة (`Dynamic RBAC`):** 5 أدوار نظامية افتراضية و12 صلاحية دقيقة مع إمكانية إنشاء أدوار مخصصة وربطها بصلاحيات انتقائية، وتوثيق التعديلات في `audit_logs`.
 3. **حماية عمرية إلزامية وتخصيص ذكي:** تفرض المكتبة التصفية العمرية حسب `catalog.age_policy`، وتبرز الكتب المطابقة لمستوى المستخدم وتفضيلاته مع بحث عربي مطبّع.
 4. **بوابة تأليف متعددة الصيغ وإصدارات غير هدامة:** سجل محولات مرن (`@darb/parsers`) يستوعب `Template ZIP` و`JSON` و`Markdown` و`DOCX` و`EPUB`، مع رفع إصدارات جديدة (`v2`, `v3`) ومعاينتها ثلاثياً دون المساس بالإصدار المنشور (`activeVersionId`) وإلزامية إقرار الملكية الفكرية وبوابة مراجعة للمحتوى.
@@ -37,21 +37,27 @@
 darb-books/
 ├── .github/
 │   └── workflows/
-│       └── deploy-pages.yml           # مسار CI/CD لنشر الواجهة تلقائياً إلى GitHub Pages
+│       ├── deploy-pages.yml           # مسار CI/CD لنشر الواجهة تلقائياً إلى GitHub Pages
+│       ├── ci-api-sqlserver.yml       # اختبارات الخادم الخلفي أمام حاوية Microsoft SQL Server 2022
+│       └── build-android.yml          # بناء حزمتي Android APK و Release AAB (API 36) سحابياً
 ├── apps/
-│   ├── web/                           # تطبيق React + Vite + TypeScript (الرئيسية، المكتبة، القارئ 3D، المؤلف، المراجعة، الإدارة)
-│   │   ├── src/pages/                 # HomePage, LibraryPage, ReaderPage, AuthPages, OnboardingPage, ProfileSettingsPage, GuideAndNewsPage, AuthorPortalPage, ModerationPortalPage
+│   ├── web/                           # تطبيق React + Vite + TypeScript (الويب والواجهة الموحدة لتطبيق الأندرويد)
+│   │   ├── src/pages/                 # HomePage, LibraryPage, ReaderPage, AuthPages, OnboardingPage, ProfileSettingsPage, LegalPages (/privacy, /usage, /terms), GuideAndNewsPage, AuthorPortalPage, ModerationPortalPage
 │   │   ├── src/admin/                 # AdminLayout, CmsAndNewsManager, TaxonomiesManager, SystemConfigsManager, RbacAndUsersManager, AuditLogsViewer
 │   │   ├── src/components/            # PortalHeader, BookReaderShell
+│   │   ├── src/lib/offline/           # networkMonitor, localDatabase (SQLite/IndexedDB), offlineBookAssets, syncManager
 │   │   └── vite.config.ts
-│   └── api/                           # الخادم الخلفي Node.js + Fastify + Prisma ORM + وضع PGlite المحلي المستمر
-│       ├── .env.example               # نموذج متغيرات البيئة (PostgreSQL, JWT, Seed, Cloudflare R2 / Local Storage)
-│       ├── prisma/                    # schema.prisma, migrations/0001_init/, seed.ts
-│       ├── src/local.ts               # نقطة التشغيل المحلية المستمرة على .pglite-data/ (دون Docker)
-│       ├── src/routes/                # health, auth, systemConfigs, taxonomies, rbac, cms, books, media, templates, author, moderation, audit
-│       ├── src/services/              # security, configService, ageGating, storage (Local & S3/R2 + Range 206)
-│       ├── src/seed/seedDatabase.ts   # بذر الصلاحيات الـ 12 والأدوار الـ 5 والتصنيفات والتهيئة والكتب الثلاثة
-│       └── tests/                     # اختبارات تكامل عبر PGlite المدمج (بما فيها استمرارية التشغيل المحلي)
+│   ├── api/                           # الخادم الخلفي Node.js + Fastify + Prisma ORM + Microsoft SQL Server (@prisma/adapter-mssql)
+│   │   ├── .env.example               # نموذج متغيرات البيئة (SQL Server, JWT, Seed, Cloudflare R2 / Local Storage)
+│   │   ├── prisma/                    # schema.prisma (sqlserver), migrations/0001_init_sqlserver/, seed.ts
+│   │   ├── src/local.ts               # نقطة التشغيل المحلية المتكاملة مع SQL Server (إنشاء القاعدة والترحيل والبذر التلقائي)
+│   │   ├── src/routes/                # health, auth (+ DELETE /api/v1/auth/me), systemConfigs, taxonomies, rbac, cms, books, media, templates, author, moderation, audit
+│   │   ├── src/services/              # security, configService, ageGating, storage (Local & S3/R2 + Range 206)
+│   │   ├── src/seed/seedDatabase.ts   # بذر الصلاحيات الـ 12 والأدوار الـ 5 والتصنيفات والتهيئة والكتب الثلاثة
+│   │   └── tests/                     # اختبارات الوحدات واختبارات تكامل T-SQL عبر testHarness
+│   └── mobile/                        # تطبيق أندرويد بنواة Capacitor 8 (Offline-First + SQLite + Android SDK 36)
+│       ├── capacitor.config.ts        # معرف الحزمة com.darb.books والاسم العربي «درب للكتب التفاعلية»
+│       └── android/                   # مشروع Android / Gradle الجاهز للتوقيع والرفع إلى Google Play
 ├── packages/
 │   ├── book-schema/                   # مخططات TypeScript و Zod المشتركة (Book, Block, Catalog, Theme, Storage)
 │   ├── book-engine/                   # نواة القارئ 3D (BookStage3D, FlipEngine, NarratorController, VideoModal, OfflineManager, InteractiveBlockRegistry)
@@ -62,7 +68,8 @@ darb-books/
 │   ├── engine/                        # ملفات التحويل المتوافقة مع الروابط القديمة
 │   ├── icons/, manifest.webmanifest, sw.js
 ├── infra/
-│   └── docker-compose.yml             # بيئة التطوير المحلية (PostgreSQL 16 + MinIO متوافق مع R2/S3)
+│   ├── docker-compose.yml             # بيئة التطوير المحلية (Microsoft SQL Server 2022 + MinIO متوافق مع R2/S3)
+│   └── setup-sqlexpress.ps1           # سكربت تهيئة منفذ 1433 والمصادقة المختلطة على SQL Server Express محلياً (ويندوز)
 ├── tools/                             # مشغّل الوضع المحلي (dev-local.mjs) وسكربتات توليد الوسائط والمحتوى المرجعي
 ├── docs/                              # الوثائق المرجعية والتوثيق التشغيلي والتقني للمنصة
 └── package.json                       # تعريف مساحات العمل وسكربتات البناء والتشغيل والاختبار الموحدة
@@ -77,48 +84,55 @@ darb-books/
 npm install
 ```
 
-### 2. التشغيل الحي الفوري محلياً بدون Docker (`Full Live Local Mode` — موصى به للتجربة السريعة)
+### 2. التشغيل الحي المتكامل مع Microsoft SQL Server محلياً (`Full Live Local Mode`)
 ```powershell
+# أ) إذا كنت تستخدم SQL Server Express محلياً على ويندوز (للمرة الأولى فقط — بصلاحيات المسؤول):
+powershell -ExecutionPolicy Bypass -File infra/setup-sqlexpress.ps1
+
+# ب) أو لتشغيل SQL Server 2022 + MinIO عبر Docker Compose:
+docker compose -f infra/docker-compose.yml up -d mssql minio
+
+# ثم التشغيل الفوري للخادم الخلفي (3000) والواجهة (4173) مع التهيئة والبذر التلقائي:
 npm run dev:local
 ```
-- يشغّل **الخادم الخلفي (`http://127.0.0.1:3000`)** و**الواجهة الأمامية (`http://127.0.0.1:4173`)** بأمر واحد على ويندوز دون الحاجة إلى Docker أو خادم PostgreSQL خارجي.
-- يحفظ قاعدة البيانات المحلية في `apps/api/.pglite-data/` والملفات المرفوعة في `apps/api/.storage/` باستمرارية كاملة بين جلسات التشغيل.
-- في التشغيل الأول تلقائياً: يطبّق الهجرات، يبذر التصنيفات و`CMS` والكتب الثلاثة، ويطبع بيانات دخول المدير المحلي في الطرفية، وعند الإغلاق بـ `Ctrl+C` يغلق العمليتين ويحفظ البيانات بأمان.
+- يحفظ التعديلات في قاعدة **Microsoft SQL Server** والملفات المرفوعة في `apps/api/.storage/` (مع حفظ أسرار التطوير المحلية في `apps/api/.local-state/.local-secrets.json`).
+- في التشغيل الأول تلقائياً: ينشئ قاعدة البيانات إذا لم تكن موجودة، يطبّق ترحيل `0001_init_sqlserver/migration.sql`، يبذر التصنيفات و`CMS` والكتب الثلاثة، ويطبع بيانات دخول المدير المحلي في الطرفية.
 - لتشغيل الخادم الخلفي المحلي وحده: `npm run dev:api:local`.
 
-### 3. التشغيل في الوضع الثابت (`Static Mode`)
+### 3. التشغيل في الوضع الثابت والأوفلاين (`Static / Offline-First Mode`)
 ```powershell
 npm run build
 npm run preview
 ```
-تعمل الواجهة محلياً على `http://127.0.0.1:4173` مع تفعيل الوضع الثابت تلقائياً عند غياب خادم API.
+تعمل الواجهة محلياً على `http://127.0.0.1:4173` مع تفعيل الوضع الثابت ومزامنة التخزين المحلي تلقائياً عند غياب خادم API.
 
-### 4. التشغيل الحي عبر PostgreSQL / Docker (`Production-like Setup`)
+### 4. التشغيل الحي القياسي الإنتاجي (`Standard API Setup` + Mobile Sync)
 ```powershell
-# 1. تشغيل PostgreSQL و MinIO (R2 محلي)
-docker compose -f infra/docker-compose.yml up -d
-
-# 2. تهيئة apps/api/.env من المثال وتعبئة أسرار JWT و SEED_ADMIN_PASSWORD
+# 1. تهيئة apps/api/.env من المثال وتعبئة DATABASE_URL لـ SQL Server وأسرار JWT
 Copy-Item apps/api/.env.example apps/api/.env
 
-# 3. توليد Prisma Client وتطبيق الهجرات وبذر قاعدة البيانات
+# 2. توليد Prisma Client وتطبيق الهجرات وبذر قاعدة البيانات
 npm run db:generate
 npm run db:migrate:deploy --workspace=@darb/api
 npm run db:seed
 
-# 4. تشغيل الخادم الخلفي (المنفذ 3000) والواجهة (المنفذ 4173) في نافذتين
+# 3. تشغيل الخادم الخلفي (المنفذ 3000) والواجهة (المنفذ 4173) في نافذتين
 npm run dev:api
 npm run dev
+
+# 4. مزامنة حزمة الويب داخل مشروع أندرويد (Capacitor)
+npm run cap:sync --workspace=@darb/mobile
 ```
 
 ### 5. أوامر الاختبارات وفحص الأنواع والبناء
 | الأمر | الوظيفة |
 | :--- | :--- |
-| `npm run dev:local` | تشغيل الوضع الحي المحلي الكامل (PGlite مستمر + API + Vite) بأمر واحد |
-| `npm run dev:api:local` | تشغيل الخادم الخلفي المحلي وحده بقاعدة `PGlite` المستمرة |
+| `npm run dev:local` | تشغيل الوضع الحي المحلي الكامل (SQL Server + API + Vite) بأمر واحد |
+| `npm run dev:api:local` | تشغيل الخادم الخلفي المحلي مع إنشاء القاعدة والترحيل والبذر تلقائياً |
 | `npm run test:engine` | اختبارات سجل الكتل التفاعلية وتنظيف `WebGL` في `@darb/book-engine` |
 | `npm run test:parsers` | اختبارات المحولات الخمس واستخراج `darb-block` وتوليد القالب في `@darb/parsers` |
-| `npm run test:api` | اختبارات التكامل الكاملة لـ `@darb/api` عبر `PGlite` (لا تحتاج PostgreSQL حياً) |
+| `npm run test:api` | اختبارات وحدات `SQL Server/Codec` + اختبارات تكامل API عند توفر خادم SQL Server على المنفذ `1433` |
+| `npm run cap:sync --workspace=@darb/mobile` | بناء الواجهة ومزامنة ملفات `dist/` وإضافات Capacitor داخل `apps/mobile/android` |
 | `npm run typecheck` | تشغيل `tsc --noEmit` عبر جميع مساحات العمل (`--workspaces`) |
 | `npm run build` | فحص الأنواع لكل الحزم + بناء الواجهة الإنتاجية في `dist/` |
 | `npm run build --workspace=@darb/api` | فحص الأنواع وتجميع الخادم الخلفي عبر `esbuild` إلى `apps/api/dist/index.js` |
@@ -143,6 +157,7 @@ npm run dev
 | [`docs/12_PRIVACY_POLICY.md`](docs/12_PRIVACY_POLICY.md) | **سياسة الخصوصية:** معالجة بيانات الحسابات والأعمار وتقدم القراءة وسجل التدقيق |
 | [`docs/13_ACCEPTABLE_USE_POLICY.md`](docs/13_ACCEPTABLE_USE_POLICY.md) | **سياسة الاستخدام المقبول:** حماية القاصرين، ضوابط النشر، وسلامة المختبرات البرمجية |
 | [`docs/14_TERMS_OF_USE.md`](docs/14_TERMS_OF_USE.md) | **شروط الاستخدام:** الحسابات، إقرارات الملكية الفكرية، المراجعة، وإخلاء المسؤولية |
+| [`docs/15_MOBILE_APP_AND_SQLSERVER_GUIDE.md`](docs/15_MOBILE_APP_AND_SQLSERVER_GUIDE.md) | **دليل التحول إلى SQL Server وتطبيق الأندرويد أوفلاين (APK / Google Play):** المعمارية، SQLite، المزامنة، وبناء CI/CD |
 
 ---
 

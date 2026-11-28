@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   createTestContext,
+  sqlServerAvailable,
   TEST_ADMIN_EMAIL,
   TEST_ADMIN_PASSWORD,
   type TestContext,
 } from './helpers/testHarness';
 
-describe('Dynamic Taxonomies & CMS Sections', () => {
+describe.skipIf(!sqlServerAvailable)('Dynamic Taxonomies & CMS Sections', () => {
   let ctx: TestContext;
 
   beforeEach(async () => {

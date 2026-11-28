@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   createTestContext,
+  sqlServerAvailable,
   TEST_ADMIN_EMAIL,
   TEST_ADMIN_PASSWORD,
   type TestContext,
 } from './helpers/testHarness';
 
-describe('Auth, Policies, Refresh Rotation & Dynamic Profile Onboarding', () => {
+describe.skipIf(!sqlServerAvailable)(
+  'Auth, Policies, Refresh Rotation & Dynamic Profile Onboarding',
+  () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
@@ -202,5 +205,52 @@ describe('Auth, Policies, Refresh Rotation & Dynamic Profile Onboarding', () => 
       payload: { email: 'pending@example.com', password: 'StrongPassword!123' },
     });
     expect(activeLogin.statusCode).toBe(200);
+  });
+
+  it('allows an authenticated user to permanently delete their own account (DELETE /api/v1/auth/me)', async () => {
+    const reg = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/register',
+      payload: {
+        email: 'delete-me@example.com',
+        password: 'StrongPassword!123',
+        fullName: 'مستخدم للحذف',
+      },
+    });
+    expect(reg.statusCode).toBe(201);
+    const { accessToken, user } = reg.json() as {
+      accessToken: string;
+      user: { id: string };
+    };
+
+    const wrongPwd = await ctx.app.inject({
+      method: 'DELETE',
+      url: '/api/v1/auth/me',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { password: 'WrongPassword!123' },
+    });
+    expect(wrongPwd.statusCode).toBe(401);
+
+    const delOk = await ctx.app.inject({
+      method: 'DELETE',
+      url: '/api/v1/auth/me',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { password: 'StrongPassword!123' },
+    });
+    expect(delOk.statusCode).toBe(200);
+    expect(delOk.json()).toEqual({ ok: true, deleted: true });
+
+    const meAfter = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/v1/auth/me',
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    expect(meAfter.statusCode).toBe(401);
+
+    const auditEntry = await ctx.prisma.auditLog.findFirst({
+      where: { action: 'user.self_delete', targetId: user.id },
+    });
+    expect(auditEntry).toBeTruthy();
+    expect(auditEntry?.actorId).toBeNull();
   });
 });

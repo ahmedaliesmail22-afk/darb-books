@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   createTestContext,
+  sqlServerAvailable,
   TEST_ADMIN_EMAIL,
   TEST_ADMIN_PASSWORD,
   type TestContext,
 } from './helpers/testHarness';
 
-describe('Dynamic RBAC, Custom Roles & Audit Logs', () => {
+describe.skipIf(!sqlServerAvailable)('Dynamic RBAC, Custom Roles & Audit Logs', () => {
   let ctx: TestContext;
 
   beforeEach(async () => {

@@ -12,6 +12,7 @@ import { GuideAndNewsPage } from './pages/GuideAndNewsPage';
 import { AdminLayout } from './admin/AdminLayout';
 import { AuthorPortalPage } from './pages/AuthorPortalPage';
 import { ModerationPortalPage } from './pages/ModerationPortalPage';
+import { PrivacyPolicyPage, TermsPage, UsagePolicyPage } from './pages/LegalPages';
 
 const AppRoutes: React.FC = () => {
   const { toastMessage } = usePortal();
@@ -56,6 +57,9 @@ const AppRoutes: React.FC = () => {
         <Route path="/author" element={<AuthorPortalPage />} />
         <Route path="/review" element={<ModerationPortalPage />} />
         <Route path="/admin" element={<AdminLayout />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/usage" element={<UsagePolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
       </Routes>
 
       {!isReaderRoute && toastMessage && (

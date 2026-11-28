@@ -7,7 +7,9 @@ export const EnvSchema = z.object({
   CORS_ORIGIN: z.string().default('http://127.0.0.1:4173,http://localhost:4173'),
   DATABASE_URL: z
     .string()
-    .default('postgresql://darb:darb_dev_password@127.0.0.1:5432/darb_books?schema=public'),
+    .default(
+      'sqlserver://127.0.0.1:1433;database=darb_books;user=darb;password=darb_dev_password;encrypt=false;trustServerCertificate=true',
+    ),
   JWT_ACCESS_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_TTL_SEC: z.coerce.number().int().positive().default(900),

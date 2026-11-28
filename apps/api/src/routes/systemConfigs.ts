@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import type { Prisma, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { parseJson, parseNullableJson, stringifyJson } from '../lib/jsonCodec';
 import { recordAuditLog } from '../plugins/audit';
 import { requirePermission } from '../plugins/rbac';
 import { getPublicConfigsMap } from '../services/configService';
@@ -44,8 +45,12 @@ export function registerSystemConfigRoutes(
       }),
     ]);
 
-    const groupedTaxonomies: Record<string, typeof taxonomies> = {};
-    for (const t of taxonomies) {
+    const formattedTaxonomies = taxonomies.map((t) => ({
+      ...t,
+      rulesJson: parseJson(t.rulesJson, {}),
+    }));
+    const groupedTaxonomies: Record<string, typeof formattedTaxonomies> = {};
+    for (const t of formattedTaxonomies) {
       if (!groupedTaxonomies[t.group]) groupedTaxonomies[t.group] = [];
       groupedTaxonomies[t.group].push(t);
     }
@@ -58,8 +63,11 @@ export function registerSystemConfigRoutes(
             slug: homePage.slug,
             titleAr: homePage.titleAr,
             titleEn: homePage.titleEn,
-            seoJson: homePage.seoJson,
-            sections: homePage.sections,
+            seoJson: parseNullableJson(homePage.seoJson),
+            sections: homePage.sections.map((s) => ({
+              ...s,
+              contentJson: parseJson(s.contentJson, {}),
+            })),
           }
         : null,
       latestNews,
@@ -71,10 +79,14 @@ export function registerSystemConfigRoutes(
     { preHandler: [authenticate, requirePermission('configs.manage')] },
     async (request, reply) => {
       const q = request.query as { category?: string };
-      const items = await prisma.systemConfig.findMany({
+      const rows = await prisma.systemConfig.findMany({
         where: q.category ? { category: q.category } : undefined,
         orderBy: [{ category: 'asc' }, { key: 'asc' }],
       });
+      const items = rows.map((row) => ({
+        ...row,
+        valueJson: parseJson(row.valueJson, null),
+      }));
       return reply.send({ items });
     }
   );
@@ -97,14 +109,14 @@ export function registerSystemConfigRoutes(
           create: {
             key,
             category: parsed.data.category,
-            valueJson: parsed.data.valueJson as Prisma.InputJsonValue,
+            valueJson: stringifyJson(parsed.data.valueJson, 'null'),
             description: parsed.data.description ?? null,
             isPublic: parsed.data.isPublic,
             updatedById: request.authUser!.userId,
           },
           update: {
             category: parsed.data.category,
-            valueJson: parsed.data.valueJson as Prisma.InputJsonValue,
+            valueJson: stringifyJson(parsed.data.valueJson, 'null'),
             ...(parsed.data.description !== undefined
               ? { description: parsed.data.description }
               : {}),
@@ -119,8 +131,8 @@ export function registerSystemConfigRoutes(
           targetType: 'system_config',
           targetId: row.key,
           metadata: {
-            before: existing?.valueJson ?? null,
-            after: row.valueJson,
+            before: existing ? parseJson(existing.valueJson, null) : null,
+            after: parsed.data.valueJson ?? null,
             isPublic: row.isPublic,
           },
           request,
@@ -129,7 +141,12 @@ export function registerSystemConfigRoutes(
         return row;
       });
 
-      return reply.send({ item: updated });
+      return reply.send({
+        item: {
+          ...updated,
+          valueJson: parseJson(updated.valueJson, null),
+        },
+      });
     }
   );
 }
